@@ -1,0 +1,18 @@
+﻿{
+  "name": "salon-crm",
+  "version": "1.0.0",
+  "private": true,
+  "description": "CRM Completo para Salao de Beleza com Agendamento Online e Estetica Falcon AI",
+  "main": "server/index.js",
+  "type": "module",
+  "scripts": {
+    "server": "node server/index.js",
+    "dev:server": "node --watch server/index.js",
+    "dev": "node server/index.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2"
+  }
+}

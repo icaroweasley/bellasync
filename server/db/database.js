@@ -1,0 +1,320 @@
+﻿import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const DB_FILE = path.join(__dirname, 'database.json');
+
+const initialData = {
+  settings: {
+    salonName: "Metamorfose Hair",
+    slug: "metamorfose_hair",
+    phone: "(67) 98424-8821",
+    address: "R. Hugo Pereira do Vale, 791 - Mata do Jacinto, Campo Grande - MS",
+    intervalMinutes: 30,
+    showPricesOnline: true,
+    groupByCategory: true,
+    theme: "falcon"
+  },
+  professionals: [
+    {
+      id: "prof_1",
+      name: "Sarah Beatriz",
+      role: "Trancista",
+      phone: "(67) 98424-8821",
+      access: "Gestor",
+      avatar: "https://api.dicebear.com/7.x/bottts/svg?seed=Sarah",
+      showInBooking: true,
+      commissionDefault: 50,
+      active: true
+    },
+    {
+      id: "prof_2",
+      name: "Ana Alice",
+      role: "Hairstylist & Barbeira",
+      phone: "(67) 99162-9269",
+      access: "Gestor",
+      avatar: "https://api.dicebear.com/7.x/bottts/svg?seed=Ana",
+      showInBooking: true,
+      commissionDefault: 50,
+      active: true
+    },
+    {
+      id: "prof_3",
+      name: "Ilda Rodrigues dos Santos",
+      role: "Hairstylist & Colorista",
+      phone: "(67) 99273-4259",
+      access: "Gestor",
+      avatar: "https://api.dicebear.com/7.x/bottts/svg?seed=Ilda",
+      showInBooking: true,
+      commissionDefault: 50,
+      active: true
+    },
+    {
+      id: "prof_4",
+      name: "Priscila dos Santos Jove",
+      role: "Manicure e Auxiliar",
+      phone: "(67) 98454-0935",
+      access: "Profissional de Servicos",
+      avatar: "https://api.dicebear.com/7.x/bottts/svg?seed=Priscila",
+      showInBooking: true,
+      commissionDefault: 40,
+      active: true
+    },
+    {
+      id: "prof_5",
+      name: "Icaro",
+      role: "Gestor Geral",
+      phone: "(67) 8134-8704",
+      access: "Gestor",
+      avatar: "https://api.dicebear.com/7.x/bottts/svg?seed=Icaro",
+      showInBooking: false,
+      commissionDefault: 0,
+      active: true
+    }
+  ],
+  services: [
+    {
+      id: "serv_1",
+      name: "Alisamento / Progressiva Formol",
+      category: "Alisamentos",
+      price: 120.00,
+      durationMinutes: 180,
+      observation: "Comissao padrao e materiais inclusos",
+      commissionPercent: 50,
+      assistantCommissionPercent: 10
+    },
+    {
+      id: "serv_2",
+      name: "Barba Terapia e Alinhamento",
+      category: "Barba",
+      price: 40.00,
+      durationMinutes: 60,
+      observation: "Toalha quente e massagem facial",
+      commissionPercent: 50,
+      assistantCommissionPercent: 0
+    },
+    {
+      id: "serv_3",
+      name: "Aplicacao de Tintura",
+      category: "Coloracao",
+      price: 75.00,
+      durationMinutes: 120,
+      observation: "Tinta por conta do salao",
+      commissionPercent: 50,
+      assistantCommissionPercent: 10
+    },
+    {
+      id: "serv_4",
+      name: "Corte Maquina / Fade",
+      category: "Corte",
+      price: 50.00,
+      durationMinutes: 60,
+      observation: "Acabamento na lamina",
+      commissionPercent: 60,
+      assistantCommissionPercent: 0
+    },
+    {
+      id: "serv_5",
+      name: "Corte Tesoura Curto",
+      category: "Corte",
+      price: 70.00,
+      durationMinutes: 90,
+      observation: "Lavagem e finalizacao",
+      commissionPercent: 50,
+      assistantCommissionPercent: 0
+    },
+    {
+      id: "serv_6",
+      name: "Trancas Nago Artistica",
+      category: "Trancas",
+      price: 150.00,
+      durationMinutes: 240,
+      observation: "Design exclusivo",
+      commissionPercent: 55,
+      assistantCommissionPercent: 15
+    },
+    {
+      id: "serv_7",
+      name: "Escova Modelada",
+      category: "Escova",
+      price: 60.00,
+      durationMinutes: 60,
+      observation: "Hidratacao express inclusa",
+      commissionPercent: 50,
+      assistantCommissionPercent: 0
+    }
+  ],
+  clients: [
+    {
+      id: "cli_1",
+      name: "Wellington Maldonado Silva",
+      phone: "(67) 99343-2640",
+      birthday: "1994-09-22",
+      status: "ativo",
+      balance: 0,
+      notes: "Cliente vip"
+    },
+    {
+      id: "cli_2",
+      name: "Afro Jess",
+      phone: "(67) 99876-5432",
+      birthday: "1998-11-15",
+      status: "ativo",
+      balance: 50.00,
+      notes: "Prefere Sarah para trancas"
+    },
+    {
+      id: "cli_3",
+      name: "Agatha",
+      phone: "(67) 99133-3434",
+      birthday: "2000-09-18",
+      status: "ativo",
+      balance: -30.00,
+      notes: "Agendamento semanal"
+    },
+    {
+      id: "cli_4",
+      name: "Agnaldo Frutuoso",
+      phone: "(55) 679107-2951",
+      birthday: "1985-04-10",
+      status: "ativo",
+      balance: 0,
+      notes: "Corte de barba e cabelo"
+    }
+  ],
+  appointments: [
+    {
+      id: "app_1",
+      professionalId: "prof_1",
+      clientId: "cli_2",
+      clientName: "Afro Jess",
+      clientPhone: "(67) 99876-5432",
+      serviceId: "serv_6",
+      serviceName: "Trancas Nago Artistica",
+      date: "2026-09-15",
+      startTime: "08:00",
+      endTime: "09:30",
+      price: 150.00,
+      status: "indisponivel",
+      notes: "Horario reservado para montagem"
+    },
+    {
+      id: "app_2",
+      professionalId: "prof_2",
+      clientId: "cli_1",
+      clientName: "Wellington Maldonado Silva",
+      clientPhone: "(67) 99343-2640",
+      serviceId: "serv_4",
+      serviceName: "Corte Maquina / Fade",
+      date: "2026-09-15",
+      startTime: "10:00",
+      endTime: "11:00",
+      price: 50.00,
+      status: "agendado",
+      notes: "Degrade navalhado"
+    }
+  ],
+  products: [
+    {
+      id: "prod_1",
+      name: "Tonico Capilar Anticoceira",
+      category: "Outros produtos",
+      brand: "Hello Hair",
+      barcode: "78912345678",
+      canSell: true,
+      price: 25.00,
+      commissionPercent: 10,
+      stock: 15
+    },
+    {
+      id: "prod_2",
+      name: "Pomada Modeladora Matte",
+      category: "Produtos para cabelo",
+      brand: "Metamorfose",
+      barcode: "78912345679",
+      canSell: true,
+      price: 25.00,
+      commissionPercent: 10,
+      stock: 22
+    },
+    {
+      id: "prod_3",
+      name: "Pirulito Promocional",
+      category: "Alimentos e Bebidas",
+      brand: "Doce Arte",
+      barcode: "78912345680",
+      canSell: true,
+      price: 0.50,
+      commissionPercent: 0,
+      stock: 100
+    }
+  ],
+  expenses: [
+    {
+      id: "exp_1",
+      description: "Parcela 3 de 15 - Placa Solar",
+      category: "Energia / Estrutura",
+      paymentType: "Boleto",
+      amount: 266.67,
+      dueDate: "2026-09-08",
+      status: "pendente",
+      monthYear: "2026-09"
+    },
+    {
+      id: "exp_2",
+      description: "Aluguel Salao Mata do Jacinto",
+      category: "Aluguel",
+      paymentType: "Pix",
+      amount: 1800.00,
+      dueDate: "2026-09-10",
+      status: "pago",
+      monthYear: "2026-09"
+    }
+  ],
+  commissions: [
+    {
+      id: "com_1",
+      professionalId: "prof_2",
+      professionalName: "Ana Alice",
+      amount: 3660.00,
+      status: "paga",
+      paymentDate: "2026-04-28"
+    },
+    {
+      id: "com_2",
+      professionalId: "prof_1",
+      professionalName: "Sarah Beatriz",
+      amount: 1305.00,
+      status: "paga",
+      paymentDate: "2026-04-28"
+    },
+    {
+      id: "com_3",
+      professionalId: "prof_2",
+      professionalName: "Ana Alice",
+      amount: 355.00,
+      status: "a_pagar",
+      paymentDate: null
+    }
+  ]
+};
+
+export function getDb() {
+  if (!fs.existsSync(DB_FILE)) {
+    fs.writeFileSync(DB_FILE, JSON.stringify(initialData, null, 2), 'utf8');
+    return initialData;
+  }
+  try {
+    const raw = fs.readFileSync(DB_FILE, 'utf8');
+    return JSON.parse(raw);
+  } catch (err) {
+    console.error("Erro ao ler banco:", err);
+    return initialData;
+  }
+}
+
+export function saveDb(data) {
+  fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2), 'utf8');
+}

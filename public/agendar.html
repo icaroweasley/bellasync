@@ -1,0 +1,282 @@
+﻿<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Agendamento Online — Metamorfose Hair</title>
+  <link rel="stylesheet" href="/css/crm.css">
+  <style>
+    body {
+      background: #faf7f5;
+      display: block;
+      padding-bottom: 40px;
+    }
+    .booking-wrapper {
+      max-width: 520px;
+      margin: 0 auto;
+      padding: 20px 16px;
+    }
+    .booking-header {
+      text-align: center;
+      padding: 30px 20px 20px;
+      background: var(--surface);
+      border-radius: 20px;
+      border: 1px solid var(--border-peach);
+      box-shadow: var(--shadow-card);
+      margin-bottom: 20px;
+    }
+    .booking-header img {
+      width: 76px;
+      height: 76px;
+      border-radius: 50%;
+      background: #111;
+      padding: 4px;
+      margin-bottom: 12px;
+      border: 2px solid var(--orange);
+    }
+    .booking-header h1 {
+      font-size: 1.35rem;
+      font-weight: var(--weight-bold);
+      color: var(--ink);
+    }
+    .booking-header p {
+      font-size: 0.9rem;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+    .accordion-category {
+      background: var(--surface);
+      border: 1px solid var(--border-peach);
+      border-radius: 14px;
+      margin-bottom: 12px;
+      overflow: hidden;
+      box-shadow: 0 2px 6px rgba(44, 35, 29, 0.04);
+    }
+    .category-header {
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      font-weight: var(--weight-semibold);
+      background: var(--surface);
+      transition: background 0.2s;
+    }
+    .category-header:hover {
+      background: var(--panel);
+    }
+    .category-body {
+      padding: 0 16px 16px;
+      display: none;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .category-body.open {
+      display: flex;
+    }
+    .service-book-card {
+      padding: 14px 16px;
+      background: var(--panel);
+      border-radius: 12px;
+      border: 1px solid rgb(255 233 218 / 60%);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .service-book-info h4 {
+      font-size: 0.98rem;
+      font-weight: var(--weight-semibold);
+      color: var(--ink);
+    }
+    .service-book-info span {
+      font-size: 0.85rem;
+      color: var(--muted);
+      display: block;
+      margin-top: 3px;
+    }
+    .service-book-cta {
+      text-align: right;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 6px;
+    }
+  </style>
+</head>
+<body>
+  <div class="booking-wrapper">
+    <div class="booking-header">
+      <div style="display:inline-block;">
+        <div class="salon-avatar" style="width:70px; height:70px; font-size:1.6rem; margin: 0 auto 10px;">MH</div>
+      </div>
+      <p style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--orange); font-weight: var(--weight-bold);">Seja bem-vindo(a) ao</p>
+      <h1 id="bSalonName">Metamorfose Hair</h1>
+      <p id="bSalonPhone">(67) 98424-8821</p>
+    </div>
+
+    <h3 style="font-size: 1.15rem; font-weight: var(--weight-bold); margin-bottom: 14px; padding-left: 4px;">Serviços Disponíveis</h3>
+    <div id="servicesAccordion"></div>
+  </div>
+
+  <!-- Modal de Agendamento Online do Cliente -->
+  <div class="modal-backdrop" id="bookingModal">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 id="bModalTitle">Reservar Horário</h3>
+        <button onclick="closeBookingModal()" style="background:none;border:none;font-size:1.5rem;cursor:pointer;">&times;</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="bookServId">
+        <div class="form-group">
+          <label>Seu Nome Completo</label>
+          <input type="text" class="form-control" id="bookClientName" placeholder="Ex: Lucas Gabriel">
+        </div>
+        <div class="form-group">
+          <label>Seu WhatsApp</label>
+          <input type="text" class="form-control" id="bookClientPhone" placeholder="(67) 99999-9999">
+        </div>
+        <div class="form-group">
+          <label>Escolha o Profissional</label>
+          <select class="form-control" id="bookProfSelect"></select>
+        </div>
+        <div class="form-group">
+          <label>Data de Preferência</label>
+          <input type="date" class="form-control" id="bookDate">
+        </div>
+        <div class="form-group">
+          <label>Horário</label>
+          <select class="form-control" id="bookTime">
+            <option value="09:00">09:00</option>
+            <option value="10:00">10:00</option>
+            <option value="11:00">11:00</option>
+            <option value="14:00">14:00</option>
+            <option value="15:00">15:00</option>
+            <option value="16:00">16:00</option>
+            <option value="17:00">17:00</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-falcon btn-secondary" onclick="closeBookingModal()">Voltar</button>
+        <button class="btn-falcon btn-primary" onclick="confirmOnlineBooking()">Confirmar Agendamento</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let services = [];
+    let professionals = [];
+    let settings = {};
+    let selectedService = null;
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      document.getElementById('bookDate').value = new Date().toISOString().split('T')[0];
+      const [sRes, pRes, setRes] = await Promise.all([
+        fetch('/api/services').then(r => r.json()),
+        fetch('/api/professionals').then(r => r.json()),
+        fetch('/api/settings').then(r => r.json())
+      ]);
+      services = sRes;
+      professionals = pRes.filter(p => p.showInBooking);
+      settings = setRes;
+
+      if (settings.salonName) document.getElementById('bSalonName').innerText = settings.salonName;
+      if (settings.phone) document.getElementById('bSalonPhone').innerText = settings.phone;
+
+      renderAccordion();
+    });
+
+    function renderAccordion() {
+      const categories = [...new Set(services.map(s => s.category || 'Outros'))];
+      const accordion = document.getElementById('servicesAccordion');
+
+      accordion.innerHTML = categories.map((cat, idx) => {
+        const catServices = services.filter(s => (s.category || 'Outros') === cat);
+        const servicesHtml = catServices.map(s => `
+          <div class="service-book-card">
+            <div class="service-book-info">
+              <h4>${s.name}</h4>
+              <span>🕒 ${s.durationMinutes} min</span>
+            </div>
+            <div class="service-book-cta">
+              <span class="item-badge-price">R$ ${s.price.toFixed(2)}</span>
+              <button class="btn-falcon btn-success" style="padding: 6px 14px; font-size:0.8rem;" onclick="openBookingModal('${s.id}')">
+                Reservar
+              </button>
+            </div>
+          </div>
+        `).join('');
+
+        return `
+          <div class="accordion-category">
+            <div class="category-header" onclick="toggleCategory(${idx})">
+              <span>${cat} <small style="color:var(--muted)">(${catServices.length} serviço${catServices.length > 1 ? 's' : ''})</small></span>
+              <span id="cat-arrow-${idx}">▼</span>
+            </div>
+            <div class="category-body ${idx === 0 ? 'open' : ''}" id="cat-body-${idx}">
+              ${servicesHtml}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function toggleCategory(idx) {
+      const body = document.getElementById(`cat-body-${idx}`);
+      body.classList.toggle('open');
+      document.getElementById(`cat-arrow-${idx}`).innerText = body.classList.contains('open') ? '▲' : '▼';
+    }
+
+    function openBookingModal(serviceId) {
+      selectedService = services.find(s => s.id === serviceId);
+      document.getElementById('bModalTitle').innerText = `Reservar: ${selectedService.name}`;
+      document.getElementById('bookServId').value = serviceId;
+
+      const profSelect = document.getElementById('bookProfSelect');
+      profSelect.innerHTML = professionals.map(p => `<option value="${p.id}">${p.name} (${p.role})</option>`).join('');
+
+      document.getElementById('bookingModal').classList.add('open');
+    }
+
+    function closeBookingModal() {
+      document.getElementById('bookingModal').classList.remove('open');
+    }
+
+    async function confirmOnlineBooking() {
+      const name = document.getElementById('bookClientName').value;
+      const phone = document.getElementById('bookClientPhone').value;
+      const profId = document.getElementById('bookProfSelect').value;
+      const date = document.getElementById('bookDate').value;
+      const time = document.getElementById('bookTime').value;
+
+      if (!name || !phone) {
+        alert('Por favor preencha seu nome e WhatsApp');
+        return;
+      }
+
+      const prof = professionals.find(p => p.id === profId);
+
+      await fetch('/api/appointments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          professionalId: profId,
+          clientName: name,
+          clientPhone: phone,
+          serviceId: selectedService.id,
+          serviceName: selectedService.name,
+          price: selectedService.price,
+          date: date,
+          startTime: time,
+          endTime: time,
+          status: 'agendado',
+          notes: 'Agendamento Online pelo site'
+        })
+      });
+
+      closeBookingModal();
+      alert(`Agendamento realizado com sucesso para ${name} com ${prof.name}!`);
+    }
+  </script>
+</body>
+</html>
