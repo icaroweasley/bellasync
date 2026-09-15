@@ -1,4 +1,4 @@
-﻿let currentView = 'agenda';
+let currentView = 'agenda';
 let selectedProfessionalId = 'prof_1';
 let selectedDate = new Date().toISOString().split('T')[0];
 
@@ -133,14 +133,33 @@ function renderView(view) {
 }
 
 // 1. Render Agenda
+let agendaPollingInterval = null;
+
 function renderAgenda(container, actions) {
   actions.innerHTML = `
-    <input type="date" value="${selectedDate}" class="form-control" style="width: auto;" id="agendaDateInput">
+    <div style="display:flex; align-items:center; gap:10px;">
+      <input type="date" value="${selectedDate}" class="form-control" style="width: auto;" id="agendaDateInput">
+      <button class="btn-falcon btn-secondary" onclick="refreshAgendaData()" title="Atualizar dados">🔄 Atualizar</button>
+    </div>
   `;
   document.getElementById('agendaDateInput').addEventListener('change', (e) => {
     selectedDate = e.target.value;
     renderAgenda(container, actions);
   });
+
+  // Garante auto-refresh a cada 5 segundos na view de agenda para receber agendamentos online em tempo real
+  if (!agendaPollingInterval) {
+    agendaPollingInterval = setInterval(async () => {
+      if (currentView === 'agenda') {
+        const apps = await fetch('/api/appointments').then(r => r.json());
+        state.appointments = apps;
+        const currentProfAppointments = state.appointments.filter(
+          a => a.professionalId === selectedProfessionalId && a.date === selectedDate
+        );
+        updateScheduleSlots(currentProfAppointments);
+      }
+    }, 4000);
+  }
 
   // Filtro de profissionais
   let profsHtml = state.professionals.map(p => `
@@ -163,36 +182,12 @@ function renderAgenda(container, actions) {
   );
 
   let scheduleRowsHtml = times.map(time => {
-    const match = currentProfAppointments.find(a => a.startTime <= time && time < a.endTime);
-    let slotContent = `<div class="slot-block empty" onclick="openNewAppointmentModal('${time}')">+ Disponível</div>`;
-
-    if (match) {
-      if (match.status === 'indisponivel') {
-        slotContent = `
-          <div class="slot-block indisponivel">
-            <strong>${match.startTime} às ${match.endTime} - Indisponível</strong>
-            <small>${match.notes || ''}</small>
-          </div>
-        `;
-      } else {
-        slotContent = `
-          <div class="slot-block agendado">
-            <div>
-              <strong>${match.clientName}</strong> — <span>${match.serviceName}</span>
-              <div style="font-size: 0.75rem; color: var(--muted);">${match.clientPhone}</div>
-            </div>
-            <div style="text-align: right;">
-              <span class="item-badge-price">R$ ${match.price.toFixed(2)}</span>
-            </div>
-          </div>
-        `;
-      }
-    }
-
     return `
-      <div class="schedule-row">
+      <div class="schedule-row" data-time="${time}">
         <div class="schedule-time-col">${time}</div>
-        <div class="schedule-slot-col">${slotContent}</div>
+        <div class="schedule-slot-col" id="slot-col-${time.replace(':', '')}">
+          ${getSlotContentForTime(time, currentProfAppointments)}
+        </div>
       </div>
     `;
   }).join('');
@@ -204,6 +199,56 @@ function renderAgenda(container, actions) {
     </div>
   `;
 }
+
+function getSlotContentForTime(time, appointments) {
+  // Procura agendamento que engloba este horário
+  const match = appointments.find(a => a.startTime <= time && time < a.endTime);
+
+  if (!match) {
+    return `<div class="slot-block empty" onclick="openNewAppointmentModal('${time}')">+ Disponível</div>`;
+  }
+
+  if (match.status === 'indisponivel') {
+    return `
+      <div class="slot-block indisponivel">
+        <strong>${match.startTime} às ${match.endTime} - Indisponível</strong>
+        <small>${match.notes || ''}</small>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="slot-block agendado">
+      <div>
+        <strong>${match.clientName}</strong> — <span>${match.serviceName}</span>
+        <div style="font-size: 0.75rem; color: var(--muted);">${match.clientPhone} (${match.startTime} às ${match.endTime})</div>
+      </div>
+      <div style="text-align: right;">
+        <span class="item-badge-price">R$ ${match.price.toFixed(2)}</span>
+      </div>
+    </div>
+  `;
+}
+
+function updateScheduleSlots(appointments) {
+  const times = [
+    "08:00", "08:30", "09:00", "09:30", "10:00", "10:30",
+    "11:00", "11:30", "12:00", "12:30", "13:00", "13:30",
+    "14:00", "14:30", "15:00", "15:30", "16:00", "16:30",
+    "17:00", "17:30", "18:00", "18:30", "19:00"
+  ];
+  times.forEach(time => {
+    const col = document.getElementById(`slot-col-${time.replace(':', '')}`);
+    if (col) {
+      col.innerHTML = getSlotContentForTime(time, appointments);
+    }
+  });
+}
+
+window.refreshAgendaData = async function() {
+  await loadInitialData();
+  renderView('agenda');
+};
 
 window.selectProfessional = function(profId) {
   selectedProfessionalId = profId;
@@ -510,8 +555,8 @@ function closeModal() {
 }
 
 window.openNewAppointmentModal = function(defaultTime = "10:00") {
-  const profOptions = state.professionals.map(p => `<option value="${p.id}">${p.name} (${p.role})</option>`).join('');
-  const servOptions = state.services.map(s => `<option value="${s.id}" data-price="${s.price}">${s.name} - R$ ${s.price.toFixed(2)}</option>`).join('');
+  const profOptions = state.professionals.map(p => `<option value="${p.id}" ${p.id === selectedProfessionalId ? 'selected' : ''}>${p.name} (${p.role})</option>`).join('');
+  const servOptions = state.services.map(s => `<option value="${s.id}" data-price="${s.price}" data-duration="${s.durationMinutes}">${s.name} (${s.durationMinutes} min) - R$ ${s.price.toFixed(2)}</option>`).join('');
 
   const html = `
     <div class="form-group">
@@ -528,28 +573,29 @@ window.openNewAppointmentModal = function(defaultTime = "10:00") {
     </div>
     <div class="form-group">
       <label>Serviço</label>
-      <select class="form-control" id="modalAppService">${servOptions}</select>
+      <select class="form-control" id="modalAppService" onchange="updateModalEndTime()">${servOptions}</select>
     </div>
     <div class="form-group" style="display:flex; gap:10px;">
       <div style="flex:1;">
         <label>Horário Início</label>
-        <input type="time" class="form-control" id="modalAppStart" value="${defaultTime}">
+        <input type="time" class="form-control" id="modalAppStart" value="${defaultTime}" onchange="updateModalEndTime()">
       </div>
       <div style="flex:1;">
-        <label>Horário Fim</label>
-        <input type="time" class="form-control" id="modalAppEnd" value="11:00">
+        <label>Horário Fim (calculado)</label>
+        <input type="time" class="form-control" id="modalAppEnd" value="10:30">
       </div>
     </div>
   `;
 
   openModal('Novo Agendamento', html, async () => {
     const profId = document.getElementById('modalAppProf').value;
-    const clientName = document.getElementById('modalAppName').value;
-    const clientPhone = document.getElementById('modalAppPhone').value;
+    const clientName = document.getElementById('modalAppName').value.trim();
+    const clientPhone = document.getElementById('modalAppPhone').value.trim();
     const serviceSelect = document.getElementById('modalAppService');
     const serviceId = serviceSelect.value;
-    const serviceName = serviceSelect.options[serviceSelect.selectedIndex].text.split(' - ')[0];
-    const price = Number(serviceSelect.options[serviceSelect.selectedIndex].dataset.price) || 50;
+    const selectedOption = serviceSelect.options[serviceSelect.selectedIndex];
+    const serviceName = selectedOption.text.split(' (')[0];
+    const price = Number(selectedOption.dataset.price) || 50;
     const startTime = document.getElementById('modalAppStart').value;
     const endTime = document.getElementById('modalAppEnd').value;
 
@@ -558,7 +604,7 @@ window.openNewAppointmentModal = function(defaultTime = "10:00") {
       return;
     }
 
-    await fetch('/api/appointments', {
+    const res = await fetch('/api/appointments', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -575,10 +621,34 @@ window.openNewAppointmentModal = function(defaultTime = "10:00") {
       })
     });
 
+    if (!res.ok) {
+      const err = await res.json();
+      alert(err.error || 'Erro ao agendar horário.');
+      return;
+    }
+
     closeModal();
     await loadInitialData();
     renderView('agenda');
   });
+
+  setTimeout(updateModalEndTime, 50);
+};
+
+window.updateModalEndTime = function() {
+  const serviceSelect = document.getElementById('modalAppService');
+  const startInput = document.getElementById('modalAppStart');
+  const endInput = document.getElementById('modalAppEnd');
+  if (!serviceSelect || !startInput || !endInput) return;
+
+  const duration = Number(serviceSelect.options[serviceSelect.selectedIndex]?.dataset?.duration) || 30;
+  const [h, m] = startInput.value.split(':').map(Number);
+  if (isNaN(h) || isNaN(m)) return;
+
+  const totalMin = h * 60 + m + duration;
+  const endH = Math.floor(totalMin / 60);
+  const endM = totalMin % 60;
+  endInput.value = `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
 };
 
 window.openNewServiceModal = function() {

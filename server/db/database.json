@@ -206,6 +206,21 @@
       "price": 50,
       "status": "agendado",
       "notes": "Degrade navalhado"
+    },
+    {
+      "id": "app_1789494014886",
+      "professionalId": "prof_1",
+      "clientId": null,
+      "clientName": "oie",
+      "clientPhone": "6799999999999",
+      "serviceId": "serv_1",
+      "serviceName": "Alisamento / Progressiva Formol",
+      "date": "2026-09-15",
+      "startTime": "09:00",
+      "endTime": "09:00",
+      "price": 120,
+      "status": "agendado",
+      "notes": "Agendamento Online pelo site"
     }
   ],
   "products": [

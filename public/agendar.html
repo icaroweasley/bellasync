@@ -12,27 +12,18 @@
       padding-bottom: 40px;
     }
     .booking-wrapper {
-      max-width: 520px;
+      max-width: 540px;
       margin: 0 auto;
       padding: 20px 16px;
     }
     .booking-header {
       text-align: center;
-      padding: 30px 20px 20px;
+      padding: 26px 20px;
       background: var(--surface);
       border-radius: 20px;
       border: 1px solid var(--border-peach);
       box-shadow: var(--shadow-card);
       margin-bottom: 20px;
-    }
-    .booking-header img {
-      width: 76px;
-      height: 76px;
-      border-radius: 50%;
-      background: #111;
-      padding: 4px;
-      margin-bottom: 12px;
-      border: 2px solid var(--orange);
     }
     .booking-header h1 {
       font-size: 1.35rem;
@@ -101,6 +92,15 @@
       align-items: flex-end;
       gap: 6px;
     }
+    .duration-badge {
+      display: inline-block;
+      background: var(--orange-soft);
+      color: var(--orange);
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: var(--weight-bold);
+    }
   </style>
 </head>
 <body>
@@ -112,53 +112,65 @@
       <p style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--orange); font-weight: var(--weight-bold);">Seja bem-vindo(a) ao</p>
       <h1 id="bSalonName">Metamorfose Hair</h1>
       <p id="bSalonPhone">(67) 98424-8821</p>
+      <small style="color:var(--muted); margin-top:6px; display:block;">Agende online com disponibilidade em tempo real</small>
     </div>
 
-    <h3 style="font-size: 1.15rem; font-weight: var(--weight-bold); margin-bottom: 14px; padding-left: 4px;">Serviços Disponíveis</h3>
+    <h3 style="font-size: 1.15rem; font-weight: var(--weight-bold); margin-bottom: 14px; padding-left: 4px;">Selecione o Serviço Desejado</h3>
     <div id="servicesAccordion"></div>
   </div>
 
-  <!-- Modal de Agendamento Online do Cliente -->
+  <!-- Modal Interativo de Agendamento com Grade de Disponibilidade -->
   <div class="modal-backdrop" id="bookingModal">
-    <div class="modal-dialog">
+    <div class="modal-dialog" style="max-width: 540px;">
       <div class="modal-header">
-        <h3 id="bModalTitle">Reservar Horário</h3>
-        <button onclick="closeBookingModal()" style="background:none;border:none;font-size:1.5rem;cursor:pointer;">&times;</button>
+        <div>
+          <h3 id="bModalTitle">Reservar Horário</h3>
+          <span id="bModalDuration" class="duration-badge" style="margin-top:4px;">Duração: 60 min</span>
+        </div>
+        <button onclick="closeBookingModal()" style="background:none;border:none;font-size:1.5rem;cursor:pointer;color:var(--muted);">&times;</button>
       </div>
       <div class="modal-body">
         <input type="hidden" id="bookServId">
+        
         <div class="form-group">
-          <label>Seu Nome Completo</label>
-          <input type="text" class="form-control" id="bookClientName" placeholder="Ex: Lucas Gabriel">
+          <label>1. Escolha o Profissional</label>
+          <select class="form-control" id="bookProfSelect" onchange="fetchAvailableSlots()"></select>
         </div>
+
         <div class="form-group">
-          <label>Seu WhatsApp</label>
-          <input type="text" class="form-control" id="bookClientPhone" placeholder="(67) 99999-9999">
+          <label>2. Data Desejada</label>
+          <input type="date" class="form-control" id="bookDate" onchange="fetchAvailableSlots()">
         </div>
+
         <div class="form-group">
-          <label>Escolha o Profissional</label>
-          <select class="form-control" id="bookProfSelect"></select>
+          <label style="display:flex; justify-content:space-between; align-items:center;">
+            <span>3. Tabela de Horários no Dia</span>
+            <small style="color:var(--muted); font-size:0.75rem;">Verde/Laranja = Disponível | Cinza = Ocupado</small>
+          </label>
+          <div class="slots-table-container" id="slotsContainer">
+            <div style="padding: 20px; text-align: center; color: var(--muted); font-size: 0.88rem;">
+              Carregando horários disponíveis...
+            </div>
+          </div>
+          <div id="selectedSlotNotice" style="margin-top:8px; font-size:0.85rem; color:var(--orange); font-weight:var(--weight-semibold); min-height:20px;">
+            Nenhum horário selecionado.
+          </div>
         </div>
-        <div class="form-group">
-          <label>Data de Preferência</label>
-          <input type="date" class="form-control" id="bookDate">
-        </div>
-        <div class="form-group">
-          <label>Horário</label>
-          <select class="form-control" id="bookTime">
-            <option value="09:00">09:00</option>
-            <option value="10:00">10:00</option>
-            <option value="11:00">11:00</option>
-            <option value="14:00">14:00</option>
-            <option value="15:00">15:00</option>
-            <option value="16:00">16:00</option>
-            <option value="17:00">17:00</option>
-          </select>
+
+        <div style="border-top: 1px solid var(--border-peach); padding-top: 14px;">
+          <div class="form-group" style="margin-bottom:12px;">
+            <label>4. Seu Nome Completo</label>
+            <input type="text" class="form-control" id="bookClientName" placeholder="Ex: Lucas Ferreira">
+          </div>
+          <div class="form-group">
+            <label>5. Seu WhatsApp</label>
+            <input type="text" class="form-control" id="bookClientPhone" placeholder="(67) 99999-9999">
+          </div>
         </div>
       </div>
       <div class="modal-footer">
         <button class="btn-falcon btn-secondary" onclick="closeBookingModal()">Voltar</button>
-        <button class="btn-falcon btn-primary" onclick="confirmOnlineBooking()">Confirmar Agendamento</button>
+        <button class="btn-falcon btn-primary" id="btnConfirmBooking" onclick="confirmOnlineBooking()" disabled>Confirmar Agendamento</button>
       </div>
     </div>
   </div>
@@ -168,6 +180,7 @@
     let professionals = [];
     let settings = {};
     let selectedService = null;
+    let selectedSlot = null; // { time, endTime }
 
     document.addEventListener('DOMContentLoaded', async () => {
       document.getElementById('bookDate').value = new Date().toISOString().split('T')[0];
@@ -177,7 +190,7 @@
         fetch('/api/settings').then(r => r.json())
       ]);
       services = sRes;
-      professionals = pRes.filter(p => p.showInBooking);
+      professionals = pRes.filter(p => p.showInBooking && p.active);
       settings = setRes;
 
       if (settings.salonName) document.getElementById('bSalonName').innerText = settings.salonName;
@@ -196,11 +209,12 @@
           <div class="service-book-card">
             <div class="service-book-info">
               <h4>${s.name}</h4>
-              <span>🕒 ${s.durationMinutes} min</span>
+              <span>🕒 Duração: <strong>${s.durationMinutes} min</strong></span>
+              ${s.observation ? `<small style="color:#999; font-size:0.75rem;">${s.observation}</small>` : ''}
             </div>
             <div class="service-book-cta">
               <span class="item-badge-price">R$ ${s.price.toFixed(2)}</span>
-              <button class="btn-falcon btn-success" style="padding: 6px 14px; font-size:0.8rem;" onclick="openBookingModal('${s.id}')">
+              <button class="btn-falcon btn-success" style="padding: 7px 16px; font-size:0.82rem;" onclick="openBookingModal('${s.id}')">
                 Reservar
               </button>
             </div>
@@ -229,53 +243,140 @@
 
     function openBookingModal(serviceId) {
       selectedService = services.find(s => s.id === serviceId);
-      document.getElementById('bModalTitle').innerText = `Reservar: ${selectedService.name}`;
+      selectedSlot = null;
+      document.getElementById('btnConfirmBooking').disabled = true;
+      document.getElementById('selectedSlotNotice').innerText = 'Nenhum horário selecionado.';
+
+      document.getElementById('bModalTitle').innerText = selectedService.name;
+      document.getElementById('bModalDuration').innerText = `Duração total: ${selectedService.durationMinutes} minutos`;
       document.getElementById('bookServId').value = serviceId;
 
       const profSelect = document.getElementById('bookProfSelect');
       profSelect.innerHTML = professionals.map(p => `<option value="${p.id}">${p.name} (${p.role})</option>`).join('');
 
       document.getElementById('bookingModal').classList.add('open');
+      fetchAvailableSlots();
     }
 
     function closeBookingModal() {
       document.getElementById('bookingModal').classList.remove('open');
     }
 
-    async function confirmOnlineBooking() {
-      const name = document.getElementById('bookClientName').value;
-      const phone = document.getElementById('bookClientPhone').value;
+    async function fetchAvailableSlots() {
       const profId = document.getElementById('bookProfSelect').value;
       const date = document.getElementById('bookDate').value;
-      const time = document.getElementById('bookTime').value;
+      const container = document.getElementById('slotsContainer');
+      selectedSlot = null;
+      document.getElementById('btnConfirmBooking').disabled = true;
+      document.getElementById('selectedSlotNotice').innerText = 'Nenhum horário selecionado.';
+
+      if (!profId || !date || !selectedService) return;
+
+      container.innerHTML = '<div style="padding:20px; text-align:center; color:var(--muted);">Buscando horários na agenda...</div>';
+
+      try {
+        const res = await fetch(`/api/appointments/availability?date=${date}&professionalId=${profId}&serviceId=${selectedService.id}`);
+        const data = await res.json();
+
+        if (!data.slots || data.slots.length === 0) {
+          container.innerHTML = '<div style="padding:20px; text-align:center; color:var(--muted);">Nenhum horário configurado para esta data.</div>';
+          return;
+        }
+
+        const gridHtml = data.slots.map(slot => {
+          if (!slot.available) {
+            return `
+              <div class="slot-item-btn unavailable" title="${slot.reason}">
+                <span>${slot.time}</span>
+                <small>${slot.reason}</small>
+              </div>
+            `;
+          }
+
+          return `
+            <div class="slot-item-btn" onclick="selectSlot('${slot.time}', '${slot.endTime}', this)">
+              <span>${slot.time}</span>
+              <small>até ${slot.endTime}</small>
+            </div>
+          `;
+        }).join('');
+
+        container.innerHTML = `<div class="slots-grid">${gridHtml}</div>`;
+      } catch (err) {
+        console.error("Erro ao buscar slots:", err);
+        container.innerHTML = '<div style="padding:20px; text-align:center; color:var(--red);">Erro ao carregar horários.</div>';
+      }
+    }
+
+    function selectSlot(time, endTime, element) {
+      document.querySelectorAll('.slot-item-btn').forEach(btn => btn.classList.remove('selected'));
+      element.classList.add('selected');
+      selectedSlot = { time, endTime };
+
+      document.getElementById('selectedSlotNotice').innerHTML = `
+        ✓ Horário escolhido: <strong>${time} às ${endTime}</strong> (${selectedService.durationMinutes} min)
+      `;
+      document.getElementById('btnConfirmBooking').disabled = false;
+    }
+
+    async function confirmOnlineBooking() {
+      if (!selectedSlot) {
+        alert('Por favor selecione um horário disponível na tabela.');
+        return;
+      }
+
+      const name = document.getElementById('bookClientName').value.trim();
+      const phone = document.getElementById('bookClientPhone').value.trim();
+      const profId = document.getElementById('bookProfSelect').value;
+      const date = document.getElementById('bookDate').value;
 
       if (!name || !phone) {
-        alert('Por favor preencha seu nome e WhatsApp');
+        alert('Por favor preencha seu nome completo e WhatsApp para confirmação.');
         return;
       }
 
       const prof = professionals.find(p => p.id === profId);
+      const btn = document.getElementById('btnConfirmBooking');
+      btn.disabled = true;
+      btn.innerText = 'Agendando...';
 
-      await fetch('/api/appointments', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          professionalId: profId,
-          clientName: name,
-          clientPhone: phone,
-          serviceId: selectedService.id,
-          serviceName: selectedService.name,
-          price: selectedService.price,
-          date: date,
-          startTime: time,
-          endTime: time,
-          status: 'agendado',
-          notes: 'Agendamento Online pelo site'
-        })
-      });
+      try {
+        const response = await fetch('/api/appointments', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            professionalId: profId,
+            clientName: name,
+            clientPhone: phone,
+            serviceId: selectedService.id,
+            serviceName: selectedService.name,
+            price: selectedService.price,
+            date: date,
+            startTime: selectedSlot.time,
+            endTime: selectedSlot.endTime,
+            status: 'agendado',
+            notes: `Agendamento Online (${selectedService.durationMinutes} min)`
+          })
+        });
 
-      closeBookingModal();
-      alert(`Agendamento realizado com sucesso para ${name} com ${prof.name}!`);
+        if (!response.ok) {
+          const errData = await response.json();
+          alert(errData.error || 'Erro ao realizar agendamento.');
+          btn.disabled = false;
+          btn.innerText = 'Confirmar Agendamento';
+          fetchAvailableSlots();
+          return;
+        }
+
+        closeBookingModal();
+        alert(`🎉 Agendamento confirmado com sucesso!\n\nCliente: ${name}\nProfissional: ${prof.name}\nServiço: ${selectedService.name} (${selectedService.durationMinutes} min)\nData: ${date} das ${selectedSlot.time} às ${selectedSlot.endTime}`);
+      } catch (err) {
+        console.error(err);
+        alert('Ocorreu um erro ao comunicar com o servidor.');
+      } finally {
+        btn.disabled = false;
+        btn.innerText = 'Confirmar Agendamento';
+      }
     }
   </script>
 </body>
