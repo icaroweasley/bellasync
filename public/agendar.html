@@ -144,8 +144,8 @@
 
         <div class="form-group">
           <label style="display:flex; justify-content:space-between; align-items:center;">
-            <span>3. Tabela de Horários no Dia</span>
-            <small style="color:var(--muted); font-size:0.75rem;">Verde/Laranja = Disponível | Cinza = Ocupado</small>
+            <span>3. Escolha o Horário Disponível</span>
+            <small style="color:var(--orange); font-size:0.75rem; font-weight:var(--weight-semibold);">Apenas vagas livres</small>
           </label>
           <div class="slots-table-container" id="slotsContainer">
             <div style="padding: 20px; text-align: center; color: var(--muted); font-size: 0.88rem;">
@@ -284,28 +284,25 @@
         const res = await fetch(`/api/appointments/availability?date=${date}&professionalId=${profId}&serviceId=${selectedService.id}`);
         const data = await res.json();
 
-        if (!data.slots || data.slots.length === 0) {
-          container.innerHTML = '<div style="padding:20px; text-align:center; color:var(--muted);">Nenhum horário configurado para esta data.</div>';
+        const availableSlots = (data.slots || []).filter(s => s.available);
+
+        if (availableSlots.length === 0) {
+          container.innerHTML = `
+            <div style="padding:28px 20px; text-align:center; color:var(--muted);">
+              <div style="font-size:1.6rem; margin-bottom:6px;">📅</div>
+              <strong style="color:var(--ink); font-size:0.95rem;">Não há mais horários disponíveis para este dia.</strong>
+              <div style="font-size:0.82rem; margin-top:4px;">Por favor selecione outra data acima ou outro profissional.</div>
+            </div>
+          `;
           return;
         }
 
-        const gridHtml = data.slots.map(slot => {
-          if (!slot.available) {
-            return `
-              <div class="slot-item-btn unavailable" title="${slot.reason}">
-                <span>${slot.time}</span>
-                <small>${slot.reason}</small>
-              </div>
-            `;
-          }
-
-          return `
-            <div class="slot-item-btn" onclick="selectSlot('${slot.time}', '${slot.endTime}', this)">
-              <span>${slot.time}</span>
-              <small>até ${slot.endTime}</small>
-            </div>
-          `;
-        }).join('');
+        const gridHtml = availableSlots.map(slot => `
+          <div class="slot-item-btn" onclick="selectSlot('${slot.time}', '${slot.endTime}', this)">
+            <span style="font-size:0.95rem; color:var(--ink);">${slot.time}</span>
+            <small style="color:var(--muted);">até ${slot.endTime}</small>
+          </div>
+        `).join('');
 
         container.innerHTML = `<div class="slots-grid">${gridHtml}</div>`;
       } catch (err) {
