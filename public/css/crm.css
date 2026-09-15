@@ -1,4 +1,4 @@
-﻿:root {
+:root {
   --aspect: 1.5204255;
   --page: #f0f0f0;
   --surface: #ffffff;
@@ -348,72 +348,99 @@ body {
   color: var(--ink);
 }
 
-/* Schedule Time Slots */
 .schedule-table {
   width: 100%;
-  border-collapse: collapse;
   background: var(--surface);
   border-radius: 16px;
   overflow: hidden;
   box-shadow: var(--shadow-warm);
   border: 1px solid var(--border-peach);
+  position: relative;
 }
 
-.schedule-row {
+.schedule-grid-container {
   display: flex;
-  border-bottom: 1px solid #f3ece7;
-  min-height: 52px;
+  position: relative;
+  min-height: 1144px; /* 22 slots * 52px */
 }
 
-.schedule-time-col {
+.schedule-time-column {
   width: 90px;
-  padding: 14px 16px;
+  background: #faf8f7;
+  border-right: 1px solid #f3ece7;
+  display: flex;
+  flex-direction: column;
+}
+
+.schedule-time-cell {
+  height: 52px;
+  padding: 0 16px;
   font-size: 0.85rem;
   font-weight: var(--weight-semibold);
   color: #888;
-  border-right: 1px solid #f3ece7;
   display: flex;
   align-items: center;
-  background: #faf8f7;
+  border-bottom: 1px solid #f3ece7;
 }
 
-.schedule-slot-col {
+.schedule-slots-column {
   flex: 1;
-  padding: 6px 12px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.schedule-slot-cell {
+  height: 52px;
+  border-bottom: 1px solid #f3ece7;
   display: flex;
   align-items: center;
+  padding: 0 10px;
+}
+
+.schedule-appointments-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
 }
 
 .slot-block {
   width: 100%;
-  height: 100%;
-  min-height: 42px;
   border-radius: 8px;
-  padding: 8px 14px;
+  padding: 10px 14px;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   font-size: 0.88rem;
+  box-sizing: border-box;
+  pointer-events: auto;
 }
 
 .slot-block.indisponivel {
-  background: #ededed;
-  color: #777;
+  background: #e2dedc;
+  color: #444;
   font-weight: var(--weight-medium);
+  border-left: 4px solid #999;
 }
 
 .slot-block.agendado {
-  background: #fff3eb;
-  border-left: 4px solid var(--orange);
+  background: #fff4ed;
+  border-left: 5px solid var(--orange);
   color: var(--ink);
-  box-shadow: 0 2px 6px rgba(255, 105, 0, 0.1);
+  box-shadow: 0 2px 8px rgba(255, 105, 0, 0.12);
 }
 
 .slot-block.empty {
+  height: 38px;
   border: 1px dashed #e8dcd4;
   color: #aaa;
   cursor: pointer;
   background: transparent;
+  display: flex;
+  align-items: center;
   transition: all 0.2s;
 }
 

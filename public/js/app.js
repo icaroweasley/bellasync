@@ -147,16 +147,13 @@ function renderAgenda(container, actions) {
     renderAgenda(container, actions);
   });
 
-  // Garante auto-refresh a cada 5 segundos na view de agenda para receber agendamentos online em tempo real
+  // Auto-refresh a cada 4 segundos para manter sincronia em tempo real
   if (!agendaPollingInterval) {
     agendaPollingInterval = setInterval(async () => {
       if (currentView === 'agenda') {
         const apps = await fetch('/api/appointments').then(r => r.json());
         state.appointments = apps;
-        const currentProfAppointments = state.appointments.filter(
-          a => a.professionalId === selectedProfessionalId && a.date === selectedDate
-        );
-        updateScheduleSlots(currentProfAppointments);
+        updateScheduleView();
       }
     }, 4000);
   }
@@ -169,7 +166,18 @@ function renderAgenda(container, actions) {
     </div>
   `).join('');
 
-  // Grade de Horários (08:00 até 19:00 com intervalo de 30m)
+  container.innerHTML = `
+    <div class="profs-horizontal-bar">${profsHtml}</div>
+    <div class="schedule-table" id="scheduleTableWrapper"></div>
+  `;
+
+  updateScheduleView();
+}
+
+function updateScheduleView() {
+  const wrapper = document.getElementById('scheduleTableWrapper');
+  if (!wrapper) return;
+
   const times = [
     "08:00", "08:30", "09:00", "09:30", "10:00", "10:30",
     "11:00", "11:30", "12:00", "12:30", "13:00", "13:30",
@@ -178,81 +186,89 @@ function renderAgenda(container, actions) {
   ];
 
   const currentProfAppointments = state.appointments.filter(
-    a => a.professionalId === selectedProfessionalId && a.date === selectedDate
+    a => a.professionalId === selectedProfessionalId && a.date === selectedDate && a.status !== 'cancelado'
   );
 
-  let scheduleRowsHtml = times.map(time => {
+  // 1. Coluna de horários
+  const timeCellsHtml = times.map(t => `<div class="schedule-time-cell">${t}</div>`).join('');
+
+  // 2. Coluna de slots vazios com botão "+ Disponível"
+  const slotCellsHtml = times.map(time => {
+    // Se há algum agendamento cobrindo este horário exato de início, não mostramos o botão disponível por baixo
+    const isCovered = currentProfAppointments.some(a => a.startTime <= time && time < a.endTime);
     return `
-      <div class="schedule-row" data-time="${time}">
-        <div class="schedule-time-col">${time}</div>
-        <div class="schedule-slot-col" id="slot-col-${time.replace(':', '')}">
-          ${getSlotContentForTime(time, currentProfAppointments)}
+      <div class="schedule-slot-cell" data-time="${time}">
+        ${!isCovered ? `<div class="slot-block empty" onclick="openNewAppointmentModal('${time}')">+ Disponível</div>` : ''}
+      </div>
+    `;
+  }).join('');
+
+  // 3. Camada de blocos de agendamentos contínuos
+  const startDayMin = 8 * 60; // 08:00
+  const slotHeight = 52;      // 52px por 30 minutos
+
+  const appointmentBlocksHtml = currentProfAppointments.map(app => {
+    const [sh, sm] = app.startTime.split(':').map(Number);
+    const [eh, em] = app.endTime.split(':').map(Number);
+    const appStartMin = sh * 60 + sm;
+    const appEndMin = eh * 60 + em;
+
+    // Distância do topo a partir de 08:00
+    const topPx = ((appStartMin - startDayMin) / 30) * slotHeight;
+    const heightPx = Math.max(38, ((appEndMin - appStartMin) / 30) * slotHeight - 6);
+
+    if (app.status === 'indisponivel') {
+      return `
+        <div class="slot-block indisponivel" style="position:absolute; top:${topPx + 3}px; left:10px; right:10px; height:${heightPx}px;">
+          <div>
+            <strong style="font-size:0.92rem;">${app.startTime} às ${app.endTime} — Indisponível</strong>
+            <div style="font-size:0.8rem; color:#666; margin-top:3px;">${app.notes || 'Horário reservado / bloqueio'}</div>
+          </div>
+        </div>
+      `;
+    }
+
+    return `
+      <div class="slot-block agendado" style="position:absolute; top:${topPx + 3}px; left:10px; right:10px; height:${heightPx}px;">
+        <div style="display:flex; flex-direction:column; justify-content:space-between; height:100%;">
+          <div>
+            <strong style="font-size:0.95rem; color:var(--ink);">${app.clientName}</strong> — <span style="font-weight:600; color:var(--orange);">${app.serviceName}</span>
+            <div style="font-size:0.8rem; color:var(--muted); margin-top:3px;">
+              📞 ${app.clientPhone} • Horário: <strong>${app.startTime} às ${app.endTime}</strong>
+            </div>
+            ${app.notes ? `<div style="font-size:0.75rem; color:#888; margin-top:2px;">${app.notes}</div>` : ''}
+          </div>
+        </div>
+        <div style="text-align:right;">
+          <span class="item-badge-price" style="font-size:1.15rem;">R$ ${Number(app.price).toFixed(2)}</span>
         </div>
       </div>
     `;
   }).join('');
 
-  container.innerHTML = `
-    <div class="profs-horizontal-bar">${profsHtml}</div>
-    <div class="schedule-table">
-      ${scheduleRowsHtml}
-    </div>
-  `;
-}
-
-function getSlotContentForTime(time, appointments) {
-  // Procura agendamento que engloba este horário
-  const match = appointments.find(a => a.startTime <= time && time < a.endTime);
-
-  if (!match) {
-    return `<div class="slot-block empty" onclick="openNewAppointmentModal('${time}')">+ Disponível</div>`;
-  }
-
-  if (match.status === 'indisponivel') {
-    return `
-      <div class="slot-block indisponivel">
-        <strong>${match.startTime} às ${match.endTime} - Indisponível</strong>
-        <small>${match.notes || ''}</small>
+  wrapper.innerHTML = `
+    <div class="schedule-grid-container" style="min-height:${times.length * slotHeight}px;">
+      <div class="schedule-time-column">
+        ${timeCellsHtml}
       </div>
-    `;
-  }
-
-  return `
-    <div class="slot-block agendado">
-      <div>
-        <strong>${match.clientName}</strong> — <span>${match.serviceName}</span>
-        <div style="font-size: 0.75rem; color: var(--muted);">${match.clientPhone} (${match.startTime} às ${match.endTime})</div>
-      </div>
-      <div style="text-align: right;">
-        <span class="item-badge-price">R$ ${match.price.toFixed(2)}</span>
+      <div class="schedule-slots-column">
+        ${slotCellsHtml}
+        <div class="schedule-appointments-layer">
+          ${appointmentBlocksHtml}
+        </div>
       </div>
     </div>
   `;
-}
-
-function updateScheduleSlots(appointments) {
-  const times = [
-    "08:00", "08:30", "09:00", "09:30", "10:00", "10:30",
-    "11:00", "11:30", "12:00", "12:30", "13:00", "13:30",
-    "14:00", "14:30", "15:00", "15:30", "16:00", "16:30",
-    "17:00", "17:30", "18:00", "18:30", "19:00"
-  ];
-  times.forEach(time => {
-    const col = document.getElementById(`slot-col-${time.replace(':', '')}`);
-    if (col) {
-      col.innerHTML = getSlotContentForTime(time, appointments);
-    }
-  });
 }
 
 window.refreshAgendaData = async function() {
   await loadInitialData();
-  renderView('agenda');
+  updateScheduleView();
 };
 
 window.selectProfessional = function(profId) {
   selectedProfessionalId = profId;
-  renderView('agenda');
+  updateScheduleView();
 };
 
 // 2. Render Comissões & Vales
