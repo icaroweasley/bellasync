@@ -182,27 +182,48 @@
     let selectedService = null;
     let selectedSlot = null; // { time, endTime }
 
+    let salonSlug = new URLSearchParams(window.location.search).get('salao') || 'metamorfose_hair';
+    let currentTenantId = 'tenant_metamorfose';
+
     document.addEventListener('DOMContentLoaded', async () => {
-      // Data de hoje em Mato Grosso do Sul (America/Campo_Grande)
-      const nowMs = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Campo_Grande' }));
-      const todayStr = `${nowMs.getFullYear()}-${String(nowMs.getMonth() + 1).padStart(2, '0')}-${String(nowMs.getDate()).padStart(2, '0')}`;
       const dateInput = document.getElementById('bookDate');
+      const now = new Date();
+      const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
       dateInput.value = todayStr;
-      dateInput.min = todayStr; // Bloqueia datas passadas no calendário
+      dateInput.min = todayStr;
 
-      const [sRes, pRes, setRes] = await Promise.all([
-        fetch('/api/services').then(r => r.json()),
-        fetch('/api/professionals').then(r => r.json()),
-        fetch('/api/settings').then(r => r.json())
-      ]);
-      services = sRes;
-      professionals = pRes.filter(p => p.showInBooking && p.active);
-      settings = setRes;
+      try {
+        const res = await fetch(`/api/public/salon/${salonSlug}`);
+        if (!res.ok) {
+          throw new Error('Falha ao obter salão');
+        }
+        const data = await res.json();
+        services = data.services || [];
+        professionals = (data.professionals || []).filter(p => p.showInBooking !== false);
+        settings = data.tenant.settings || {};
+        currentTenantId = data.tenant.id;
 
-      if (settings.salonName) document.getElementById('bSalonName').innerText = settings.salonName;
-      if (settings.phone) document.getElementById('bSalonPhone').innerText = settings.phone;
+        if (data.tenant.name) {
+          document.getElementById('bSalonName').innerText = data.tenant.name;
+          document.title = `Agendamento Online — ${data.tenant.name}`;
+        }
+        if (data.tenant.phone) document.getElementById('bSalonPhone').innerText = data.tenant.phone;
 
-      renderAccordion();
+        renderAccordion();
+      } catch (err) {
+        console.warn("Carregando via fallback padrão...");
+        const [sRes, pRes, setRes] = await Promise.all([
+          fetch('/api/services').then(r => r.json()),
+          fetch('/api/professionals').then(r => r.json()),
+          fetch('/api/settings').then(r => r.json())
+        ]);
+        services = sRes;
+        professionals = pRes.filter(p => p.showInBooking && p.active);
+        settings = setRes;
+        if (settings.salonName) document.getElementById('bSalonName').innerText = settings.salonName;
+        if (settings.phone) document.getElementById('bSalonPhone').innerText = settings.phone;
+        renderAccordion();
+      }
     });
 
     function renderAccordion() {
@@ -281,7 +302,9 @@
       container.innerHTML = '<div style="padding:20px; text-align:center; color:var(--muted);">Buscando horários na agenda...</div>';
 
       try {
-        const res = await fetch(`/api/appointments/availability?date=${date}&professionalId=${profId}&serviceId=${selectedService.id}`);
+        const res = await fetch(`/api/appointments/availability?date=${date}&professionalId=${profId}&serviceId=${selectedService.id}`, {
+          headers: { 'x-tenant-id': currentTenantId }
+        });
         const data = await res.json();
 
         const availableSlots = (data.slots || []).filter(s => s.available);
@@ -346,7 +369,10 @@
       try {
         const response = await fetch('/api/appointments', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'x-tenant-id': currentTenantId
+          },
           body: JSON.stringify({
             professionalId: profId,
             clientName: name,

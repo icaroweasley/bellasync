@@ -7,6 +7,51 @@ const __dirname = path.dirname(__filename);
 const DB_FILE = path.join(__dirname, 'database.json');
 
 const initialData = {
+  tenants: [
+    {
+      id: "tenant_metamorfose",
+      name: "Metamorfose Hair",
+      slug: "metamorfose_hair",
+      phone: "(67) 98424-8821",
+      address: "R. Hugo Pereira do Vale, 791 - Mata do Jacinto, Campo Grande - MS",
+      createdAt: "2026-09-01",
+      settings: {
+        intervalMinutes: 30,
+        showPricesOnline: true,
+        groupByCategory: true,
+        theme: "falcon"
+      }
+    }
+  ],
+  users: [
+    {
+      id: "user_admin_metamorfose",
+      tenantId: "tenant_metamorfose",
+      professionalId: "prof_5",
+      name: "Icaro (Gestor Geral)",
+      email: "admin@metamorfose.com",
+      password: "123",
+      role: "admin"
+    },
+    {
+      id: "user_sarah",
+      tenantId: "tenant_metamorfose",
+      professionalId: "prof_1",
+      name: "Sarah Beatriz",
+      email: "sarah@metamorfose.com",
+      password: "123",
+      role: "professional"
+    },
+    {
+      id: "user_ana",
+      tenantId: "tenant_metamorfose",
+      professionalId: "prof_2",
+      name: "Ana Alice",
+      email: "ana@metamorfose.com",
+      password: "123",
+      role: "professional"
+    }
+  ],
   settings: {
     salonName: "Metamorfose Hair",
     slug: "metamorfose_hair",
@@ -20,9 +65,11 @@ const initialData = {
   professionals: [
     {
       id: "prof_1",
+      tenantId: "tenant_metamorfose",
       name: "Sarah Beatriz",
       role: "Trancista",
       phone: "(67) 98424-8821",
+      email: "sarah@metamorfose.com",
       access: "Gestor",
       avatar: "https://api.dicebear.com/7.x/bottts/svg?seed=Sarah",
       showInBooking: true,
@@ -31,9 +78,11 @@ const initialData = {
     },
     {
       id: "prof_2",
+      tenantId: "tenant_metamorfose",
       name: "Ana Alice",
       role: "Hairstylist & Barbeira",
       phone: "(67) 99162-9269",
+      email: "ana@metamorfose.com",
       access: "Gestor",
       avatar: "https://api.dicebear.com/7.x/bottts/svg?seed=Ana",
       showInBooking: true,
@@ -42,9 +91,11 @@ const initialData = {
     },
     {
       id: "prof_3",
+      tenantId: "tenant_metamorfose",
       name: "Ilda Rodrigues dos Santos",
       role: "Hairstylist & Colorista",
       phone: "(67) 99273-4259",
+      email: "ilda@metamorfose.com",
       access: "Gestor",
       avatar: "https://api.dicebear.com/7.x/bottts/svg?seed=Ilda",
       showInBooking: true,
@@ -53,9 +104,11 @@ const initialData = {
     },
     {
       id: "prof_4",
+      tenantId: "tenant_metamorfose",
       name: "Priscila dos Santos Jove",
       role: "Manicure e Auxiliar",
       phone: "(67) 98454-0935",
+      email: "priscila@metamorfose.com",
       access: "Profissional de Servicos",
       avatar: "https://api.dicebear.com/7.x/bottts/svg?seed=Priscila",
       showInBooking: true,
@@ -64,9 +117,11 @@ const initialData = {
     },
     {
       id: "prof_5",
+      tenantId: "tenant_metamorfose",
       name: "Icaro",
       role: "Gestor Geral",
       phone: "(67) 8134-8704",
+      email: "admin@metamorfose.com",
       access: "Gestor",
       avatar: "https://api.dicebear.com/7.x/bottts/svg?seed=Icaro",
       showInBooking: false,
@@ -77,6 +132,7 @@ const initialData = {
   services: [
     {
       id: "serv_1",
+      tenantId: "tenant_metamorfose",
       name: "Alisamento / Progressiva Formol",
       category: "Alisamentos",
       price: 120.00,
@@ -87,6 +143,7 @@ const initialData = {
     },
     {
       id: "serv_2",
+      tenantId: "tenant_metamorfose",
       name: "Barba Terapia e Alinhamento",
       category: "Barba",
       price: 40.00,
@@ -97,6 +154,7 @@ const initialData = {
     },
     {
       id: "serv_3",
+      tenantId: "tenant_metamorfose",
       name: "Aplicacao de Tintura",
       category: "Coloracao",
       price: 75.00,
@@ -107,6 +165,7 @@ const initialData = {
     },
     {
       id: "serv_4",
+      tenantId: "tenant_metamorfose",
       name: "Corte Maquina / Fade",
       category: "Corte",
       price: 50.00,
@@ -117,6 +176,7 @@ const initialData = {
     },
     {
       id: "serv_5",
+      tenantId: "tenant_metamorfose",
       name: "Corte Tesoura Curto",
       category: "Corte",
       price: 70.00,
@@ -127,6 +187,7 @@ const initialData = {
     },
     {
       id: "serv_6",
+      tenantId: "tenant_metamorfose",
       name: "Trancas Nago Artistica",
       category: "Trancas",
       price: 150.00,
@@ -137,6 +198,7 @@ const initialData = {
     },
     {
       id: "serv_7",
+      tenantId: "tenant_metamorfose",
       name: "Escova Modelada",
       category: "Escova",
       price: 60.00,
@@ -149,6 +211,7 @@ const initialData = {
   clients: [
     {
       id: "cli_1",
+      tenantId: "tenant_metamorfose",
       name: "Wellington Maldonado Silva",
       phone: "(67) 99343-2640",
       birthday: "1994-09-22",
@@ -158,6 +221,7 @@ const initialData = {
     },
     {
       id: "cli_2",
+      tenantId: "tenant_metamorfose",
       name: "Afro Jess",
       phone: "(67) 99876-5432",
       birthday: "1998-11-15",
@@ -167,6 +231,7 @@ const initialData = {
     },
     {
       id: "cli_3",
+      tenantId: "tenant_metamorfose",
       name: "Agatha",
       phone: "(67) 99133-3434",
       birthday: "2000-09-18",
@@ -176,6 +241,7 @@ const initialData = {
     },
     {
       id: "cli_4",
+      tenantId: "tenant_metamorfose",
       name: "Agnaldo Frutuoso",
       phone: "(55) 679107-2951",
       birthday: "1985-04-10",
@@ -187,6 +253,7 @@ const initialData = {
   appointments: [
     {
       id: "app_1",
+      tenantId: "tenant_metamorfose",
       professionalId: "prof_1",
       clientId: "cli_2",
       clientName: "Afro Jess",
@@ -202,6 +269,7 @@ const initialData = {
     },
     {
       id: "app_2",
+      tenantId: "tenant_metamorfose",
       professionalId: "prof_2",
       clientId: "cli_1",
       clientName: "Wellington Maldonado Silva",
@@ -219,6 +287,7 @@ const initialData = {
   products: [
     {
       id: "prod_1",
+      tenantId: "tenant_metamorfose",
       name: "Tonico Capilar Anticoceira",
       category: "Outros produtos",
       brand: "Hello Hair",
@@ -230,6 +299,7 @@ const initialData = {
     },
     {
       id: "prod_2",
+      tenantId: "tenant_metamorfose",
       name: "Pomada Modeladora Matte",
       category: "Produtos para cabelo",
       brand: "Metamorfose",
@@ -241,6 +311,7 @@ const initialData = {
     },
     {
       id: "prod_3",
+      tenantId: "tenant_metamorfose",
       name: "Pirulito Promocional",
       category: "Alimentos e Bebidas",
       brand: "Doce Arte",
@@ -254,6 +325,7 @@ const initialData = {
   expenses: [
     {
       id: "exp_1",
+      tenantId: "tenant_metamorfose",
       description: "Parcela 3 de 15 - Placa Solar",
       category: "Energia / Estrutura",
       paymentType: "Boleto",
@@ -264,6 +336,7 @@ const initialData = {
     },
     {
       id: "exp_2",
+      tenantId: "tenant_metamorfose",
       description: "Aluguel Salao Mata do Jacinto",
       category: "Aluguel",
       paymentType: "Pix",
@@ -276,6 +349,7 @@ const initialData = {
   commissions: [
     {
       id: "com_1",
+      tenantId: "tenant_metamorfose",
       professionalId: "prof_2",
       professionalName: "Ana Alice",
       amount: 3660.00,
@@ -284,6 +358,7 @@ const initialData = {
     },
     {
       id: "com_2",
+      tenantId: "tenant_metamorfose",
       professionalId: "prof_1",
       professionalName: "Sarah Beatriz",
       amount: 1305.00,
@@ -292,6 +367,7 @@ const initialData = {
     },
     {
       id: "com_3",
+      tenantId: "tenant_metamorfose",
       professionalId: "prof_2",
       professionalName: "Ana Alice",
       amount: 355.00,
@@ -300,6 +376,30 @@ const initialData = {
     }
   ]
 };
+
+function sanitizeDb(data) {
+  if (!data.tenants || !Array.isArray(data.tenants) || data.tenants.length === 0) {
+    data.tenants = initialData.tenants;
+  }
+  if (!data.users || !Array.isArray(data.users) || data.users.length === 0) {
+    data.users = initialData.users;
+  }
+  const defaultTenantId = data.tenants[0].id;
+
+  const collections = ['professionals', 'services', 'clients', 'appointments', 'products', 'expenses', 'commissions'];
+  for (const col of collections) {
+    if (Array.isArray(data[col])) {
+      for (const item of data[col]) {
+        if (!item.tenantId) {
+          item.tenantId = defaultTenantId;
+        }
+      }
+    } else {
+      data[col] = initialData[col] || [];
+    }
+  }
+  return data;
+}
 
 export function getDb() {
   if (!fs.existsSync(DB_FILE)) {
@@ -311,7 +411,8 @@ export function getDb() {
     if (raw.charCodeAt(0) === 0xFEFF) {
       raw = raw.slice(1);
     }
-    return JSON.parse(raw);
+    const data = JSON.parse(raw);
+    return sanitizeDb(data);
   } catch (err) {
     console.error("Erro ao ler banco:", err);
     return initialData;
@@ -321,3 +422,4 @@ export function getDb() {
 export function saveDb(data) {
   fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2), 'utf8');
 }
+

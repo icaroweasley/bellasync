@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Login & Acesso — Salon Soft CRM</title>
+  <link rel="stylesheet" href="/css/crm.css">
+  <style>
+    body {
+      background: var(--page);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 24px 16px;
+      font-family: var(--font-stack);
+    }
+    .auth-card {
+      background: var(--surface);
+      border: 1px solid var(--border-peach);
+      border-radius: 20px;
+      padding: 36px 32px;
+      width: 100%;
+      max-width: 440px;
+      box-shadow: var(--shadow-card);
+    }
+    .auth-header {
+      text-align: center;
+      margin-bottom: 28px;
+    }
+    .auth-header .logo-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 54px;
+      height: 54px;
+      background: #fff3eb;
+      color: var(--orange);
+      border-radius: 16px;
+      font-weight: 800;
+      font-size: 1.3rem;
+      margin-bottom: 12px;
+      border: 1px solid var(--border-peach);
+    }
+    .auth-header h1 {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: var(--ink);
+    }
+    .auth-header p {
+      font-size: 0.88rem;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+    .auth-tabs {
+      display: flex;
+      background: var(--panel);
+      padding: 4px;
+      border-radius: 12px;
+      margin-bottom: 24px;
+      gap: 4px;
+    }
+    .auth-tab-btn {
+      flex: 1;
+      padding: 10px;
+      border: none;
+      background: transparent;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 0.88rem;
+      color: var(--muted);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .auth-tab-btn.active {
+      background: var(--surface);
+      color: var(--orange);
+      box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+    }
+    .auth-form-group {
+      margin-bottom: 16px;
+    }
+    .auth-form-group label {
+      display: block;
+      font-size: 0.84rem;
+      font-weight: 600;
+      color: var(--ink);
+      margin-bottom: 6px;
+    }
+    .auth-form-group input {
+      width: 100%;
+      padding: 12px 14px;
+      border: 1px solid var(--border-peach);
+      border-radius: 10px;
+      font-size: 0.95rem;
+      background: #fff;
+      box-sizing: border-box;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .auth-form-group input:focus {
+      border-color: var(--orange);
+    }
+    .btn-auth-submit {
+      width: 100%;
+      padding: 13px;
+      background: linear-gradient(100deg, #ff9b5b 0%, #ff8840 38%, #ff6b05 100%);
+      color: #fff;
+      border: none;
+      border-radius: 999px;
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(255, 105, 0, 0.35);
+      transition: all 0.2s;
+      margin-top: 10px;
+    }
+    .btn-auth-submit:hover {
+      filter: brightness(1.06);
+      transform: translateY(-1px);
+    }
+    .auth-footer-help {
+      margin-top: 22px;
+      text-align: center;
+      font-size: 0.8rem;
+      color: var(--muted);
+      line-height: 1.4;
+      border-top: 1px dashed var(--border-peach);
+      padding-top: 16px;
+    }
+    .auth-footer-help strong {
+      color: var(--ink);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="auth-card">
+    <div class="auth-header">
+      <div class="logo-badge">MH</div>
+      <h1 id="authMainTitle">Salon Soft Gestão</h1>
+      <p id="authSubtitle">Acesso ao Painel do Salão & Profissionais</p>
+    </div>
+
+    <div class="auth-tabs">
+      <button class="auth-tab-btn active" id="tabBtnLogin" onclick="switchAuthTab('login')">Entrar na Conta</button>
+      <button class="auth-tab-btn" id="tabBtnRegister" onclick="switchAuthTab('register')">Cadastrar Salão</button>
+    </div>
+
+    <!-- Form de Login -->
+    <form id="loginForm" onsubmit="handleLogin(event)">
+      <div class="auth-form-group">
+        <label>Email do Salão ou Profissional</label>
+        <input type="email" id="loginEmail" placeholder="admin@metamorfose.com" required>
+      </div>
+      <div class="auth-form-group">
+        <label>Senha de Acesso</label>
+        <input type="password" id="loginPassword" placeholder="••••••••" required>
+      </div>
+      <button type="submit" class="btn-auth-submit" id="btnLoginSubmit">Entrar no Sistema</button>
+    </form>
+
+    <!-- Form de Cadastro de Novo Salão (Multi-Tenant) -->
+    <form id="registerForm" style="display: none;" onsubmit="handleRegisterSalon(event)">
+      <div class="auth-form-group">
+        <label>Nome do Salão</label>
+        <input type="text" id="regSalonName" placeholder="Ex: Studio Bella Hair" required>
+      </div>
+      <div class="auth-form-group">
+        <label>Identificador URL (Slug)</label>
+        <input type="text" id="regSalonSlug" placeholder="Ex: studio_bella" required>
+      </div>
+      <div class="auth-form-group">
+        <label>Telefone / WhatsApp</label>
+        <input type="text" id="regSalonPhone" placeholder="(67) 99999-9999" required>
+      </div>
+      <div class="auth-form-group">
+        <label>Endereço</label>
+        <input type="text" id="regSalonAddress" placeholder="Rua / Bairro / Cidade">
+      </div>
+      <div class="auth-form-group">
+        <label>Nome do Gestor / Proprietário</label>
+        <input type="text" id="regAdminName" placeholder="Seu nome completo" required>
+      </div>
+      <div class="auth-form-group">
+        <label>Email de Acesso (Login)</label>
+        <input type="email" id="regAdminEmail" placeholder="gestor@seusalao.com" required>
+      </div>
+      <div class="auth-form-group">
+        <label>Criar Senha</label>
+        <input type="password" id="regAdminPassword" placeholder="Mínimo 4 caracteres" required>
+      </div>
+      <button type="submit" class="btn-auth-submit" id="btnRegisterSubmit">Criar Conta do Salão</button>
+    </form>
+
+    <div class="auth-footer-help">
+      <span>Contas de demonstração pré-configuradas:</span><br>
+      <strong>admin@metamorfose.com</strong> / Senha: <strong>123</strong> (Gestor)<br>
+      <strong>sarah@metamorfose.com</strong> / Senha: <strong>123</strong> (Trancista)<br>
+      <strong>ana@metamorfose.com</strong> / Senha: <strong>123</strong> (Hairstylist)
+    </div>
+  </div>
+
+  <script>
+    function switchAuthTab(mode) {
+      const loginForm = document.getElementById('loginForm');
+      const registerForm = document.getElementById('registerForm');
+      const tabBtnLogin = document.getElementById('tabBtnLogin');
+      const tabBtnRegister = document.getElementById('tabBtnRegister');
+
+      if (mode === 'login') {
+        loginForm.style.display = 'block';
+        registerForm.style.display = 'none';
+        tabBtnLogin.classList.add('active');
+        tabBtnRegister.classList.remove('active');
+        document.getElementById('authSubtitle').innerText = 'Acesso ao Painel do Salão & Profissionais';
+      } else {
+        loginForm.style.display = 'none';
+        registerForm.style.display = 'block';
+        tabBtnLogin.classList.remove('active');
+        tabBtnRegister.classList.add('active');
+        document.getElementById('authSubtitle').innerText = 'Cadastre seu Salão para usar o sistema';
+      }
+    }
+
+    async function handleLogin(e) {
+      e.preventDefault();
+      const email = document.getElementById('loginEmail').value.trim();
+      const password = document.getElementById('loginPassword').value;
+      const btn = document.getElementById('btnLoginSubmit');
+
+      btn.disabled = true;
+      btn.innerText = 'Entrando...';
+
+      try {
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+          alert(data.error || 'Erro ao realizar login.');
+          btn.disabled = false;
+          btn.innerText = 'Entrar no Sistema';
+          return;
+        }
+
+        // Salva sessão no localStorage
+        localStorage.setItem('salon_token', data.token);
+        localStorage.setItem('salon_user', JSON.stringify(data.user));
+        localStorage.setItem('salon_tenant', JSON.stringify(data.tenant));
+
+        // Redireciona para o painel principal
+        window.location.href = '/';
+      } catch (err) {
+        console.error(err);
+        alert('Erro de comunicação com o servidor.');
+        btn.disabled = false;
+        btn.innerText = 'Entrar no Sistema';
+      }
+    }
+
+    async function handleRegisterSalon(e) {
+      e.preventDefault();
+      const salonName = document.getElementById('regSalonName').value.trim();
+      const slug = document.getElementById('regSalonSlug').value.trim();
+      const phone = document.getElementById('regSalonPhone').value.trim();
+      const address = document.getElementById('regSalonAddress').value.trim();
+      const adminName = document.getElementById('regAdminName').value.trim();
+      const adminEmail = document.getElementById('regAdminEmail').value.trim();
+      const adminPassword = document.getElementById('regAdminPassword').value;
+      const btn = document.getElementById('btnRegisterSubmit');
+
+      btn.disabled = true;
+      btn.innerText = 'Criando Salão...';
+
+      try {
+        const res = await fetch('/api/auth/register-salon', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            salonName,
+            slug,
+            phone,
+            address,
+            adminName,
+            adminEmail,
+            adminPassword
+          })
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+          alert(data.error || 'Erro ao cadastrar salão.');
+          btn.disabled = false;
+          btn.innerText = 'Criar Conta do Salão';
+          return;
+        }
+
+        // Auto login
+        const loginRes = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: adminEmail, password: adminPassword })
+        });
+        const loginData = await loginRes.json();
+
+        localStorage.setItem('salon_token', loginData.token);
+        localStorage.setItem('salon_user', JSON.stringify(loginData.user));
+        localStorage.setItem('salon_tenant', JSON.stringify(loginData.tenant));
+
+        alert(`Salão ${salonName} cadastrado com sucesso! Redirecionando para o seu novo painel.`);
+        window.location.href = '/';
+      } catch (err) {
+        console.error(err);
+        alert('Erro de comunicação com o servidor.');
+        btn.disabled = false;
+        btn.innerText = 'Criar Conta do Salão';
+      }
+    }
+
+    // Se já estiver logado, redireciona para a home
+    if (localStorage.getItem('salon_user')) {
+      window.location.href = '/';
+    }
+  </script>
+</body>
+</html>

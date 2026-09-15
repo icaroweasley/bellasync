@@ -1,5 +1,25 @@
+// Sessão de Usuário e Multi-Tenant
+let currentUser = null;
+let currentTenant = null;
+
+try {
+  currentUser = JSON.parse(localStorage.getItem('salon_user'));
+  currentTenant = JSON.parse(localStorage.getItem('salon_tenant'));
+} catch (e) {
+  currentUser = null;
+  currentTenant = null;
+}
+
+// Se não estiver logado, redireciona para a página de login
+if (!currentUser || !currentTenant) {
+  window.location.href = '/login';
+}
+
+window.currentUser = currentUser;
+window.currentTenant = currentTenant;
+
 let currentView = 'agenda';
-let selectedProfessionalId = 'prof_1';
+let selectedProfessionalId = null;
 let selectedDate = new Date().toISOString().split('T')[0];
 
 let state = {
@@ -13,8 +33,44 @@ let state = {
   commissions: []
 };
 
+// Helper universal de fetch para injetar o x-tenant-id automaticamente
+async function tenantFetch(url, options = {}) {
+  options.headers = {
+    ...(options.headers || {}),
+    'x-tenant-id': currentTenant ? currentTenant.id : 'tenant_metamorfose'
+  };
+  return fetch(url, options);
+}
+
+window.logout = function() {
+  if (confirm('Deseja realmente sair do sistema?')) {
+    localStorage.removeItem('salon_token');
+    localStorage.removeItem('salon_user');
+    localStorage.removeItem('salon_tenant');
+    window.location.href = '/login';
+  }
+};
+
 // Inicialização
 document.addEventListener('DOMContentLoaded', async () => {
+  // Atualiza identificação do usuário e salão na tela
+  const nameEl = document.getElementById('userDisplayName');
+  const roleEl = document.getElementById('userDisplayRole');
+  const salonNameEl = document.getElementById('salonHeaderName');
+  const publicLinkEl = document.getElementById('publicBookingLink');
+
+  if (nameEl && currentUser) nameEl.innerText = currentUser.name;
+  if (roleEl && currentUser) roleEl.innerText = currentUser.role === 'admin' ? 'Gestor Geral' : 'Profissional';
+  if (salonNameEl && currentTenant) salonNameEl.innerText = currentTenant.name;
+  if (publicLinkEl && currentTenant) {
+    publicLinkEl.href = `/agendar?salao=${currentTenant.slug || currentTenant.id}`;
+  }
+
+  // Se o usuário logado for profissional com ID associado, foca nele por padrão
+  if (currentUser && currentUser.professionalId) {
+    selectedProfessionalId = currentUser.professionalId;
+  }
+
   setupNavigation();
   setupMobileToggle();
   await loadInitialData();
@@ -31,14 +87,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 async function loadInitialData() {
   try {
     const [settings, profs, servs, clis, apps, prods, exps, comms] = await Promise.all([
-      fetch('/api/settings').then(r => r.json()),
-      fetch('/api/professionals').then(r => r.json()),
-      fetch('/api/services').then(r => r.json()),
-      fetch('/api/clients').then(r => r.json()),
-      fetch('/api/appointments').then(r => r.json()),
-      fetch('/api/products').then(r => r.json()),
-      fetch('/api/expenses').then(r => r.json()),
-      fetch('/api/commissions').then(r => r.json())
+      tenantFetch('/api/settings').then(r => r.json()),
+      tenantFetch('/api/professionals').then(r => r.json()),
+      tenantFetch('/api/services').then(r => r.json()),
+      tenantFetch('/api/clients').then(r => r.json()),
+      tenantFetch('/api/appointments').then(r => r.json()),
+      tenantFetch('/api/products').then(r => r.json()),
+      tenantFetch('/api/expenses').then(r => r.json()),
+      tenantFetch('/api/commissions').then(r => r.json())
     ]);
 
     state = {
@@ -218,22 +274,44 @@ function updateScheduleView() {
       if (appStartingHere.status === 'indisponivel') {
         html += `
           <td class="salon-block-indisponivel" rowspan="${rowSpan}">
-            <strong>${appStartingHere.startTime} às ${appStartingHere.endTime}</strong>
-            <strong>Indisponível</strong>
-            <span>${appStartingHere.notes || ''}</span>
+            <div>
+              <strong>${appStartingHere.startTime} às ${appStartingHere.endTime}</strong>
+              <div style="font-weight: 600; color: #555; margin-top: 4px;">Horário Bloqueado / Indisponível</div>
+              <span>${appStartingHere.notes || ''}</span>
+            </div>
+            <div style="margin-top: 10px;">
+              <button class="btn-delete-app" onclick="deleteAppointment('${appStartingHere.id}', event)">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18m-2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                Desbloquear Horário
+              </button>
+            </div>
           </td>
         `;
       } else {
         html += `
-          <td class="salon-block-agendado" rowspan="${rowSpan}">
-            <div class="app-info">
-              <strong>${appStartingHere.clientName}</strong>
-              <span>${appStartingHere.serviceName}</span>
-              <small>${appStartingHere.clientPhone} • ${appStartingHere.startTime} às ${appStartingHere.endTime}</small>
-              ${appStartingHere.notes ? `<small style="color:#999;">${appStartingHere.notes}</small>` : ''}
-            </div>
-            <div class="app-price">
-              R$ ${Number(appStartingHere.price).toFixed(2)}
+          <td class="cell-agendado" rowspan="${rowSpan}">
+            <div class="salon-block-agendado">
+              <div class="app-top-row">
+                <div class="app-info">
+                  <strong>${appStartingHere.clientName}</strong>
+                  <span>${appStartingHere.serviceName}</span>
+                  <small>${appStartingHere.clientPhone || 'Sem telefone'} • Duração: ${spanMin} min</small>
+                  ${appStartingHere.notes ? `<small style="color:#666; display:block; margin-top:4px;">Obs: ${appStartingHere.notes}</small>` : ''}
+                </div>
+                <div class="app-actions">
+                  <div class="app-price">
+                    R$ ${Number(appStartingHere.price).toFixed(2)}
+                  </div>
+                  <button class="btn-delete-app" onclick="deleteAppointment('${appStartingHere.id}', event)" title="Excluir / Cancelar este agendamento">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18m-2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+              <div class="app-bottom-bar">
+                <span>Horário reservado: <b>${appStartingHere.startTime} às ${appStartingHere.endTime}</b></span>
+                <span style="color: var(--orange); font-weight: 600;">Sessão Ativa (${spanMin}m)</span>
+              </div>
             </div>
           </td>
         `;
@@ -255,6 +333,30 @@ function updateScheduleView() {
 window.refreshAgendaData = async function() {
   await loadInitialData();
   updateScheduleView();
+};
+
+window.deleteAppointment = async function(appId, event) {
+  if (event) event.stopPropagation();
+  if (!confirm("Tem certeza que deseja excluir / desmarcar este agendamento?")) {
+    return;
+  }
+  try {
+    const res = await fetch(`/api/appointments/${appId}`, {
+      method: 'DELETE',
+      headers: {
+        'x-tenant-id': (window.currentUser && window.currentUser.tenantId) || 'tenant_metamorfose'
+      }
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      alert("Erro ao excluir: " + (err.error || 'Falha na requisição'));
+      return;
+    }
+    await loadInitialData();
+    updateScheduleView();
+  } catch (err) {
+    alert("Erro de conexão ao excluir agendamento.");
+  }
 };
 
 window.selectProfessional = function(profId) {
@@ -533,7 +635,7 @@ window.saveSettings = async function() {
     address: document.getElementById('cfgAddress').value,
     intervalMinutes: Number(document.getElementById('cfgInterval').value)
   };
-  await fetch('/api/settings', {
+  await tenantFetch('/api/settings', {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(updated)
@@ -611,7 +713,7 @@ window.openNewAppointmentModal = function(defaultTime = "10:00") {
       return;
     }
 
-    const res = await fetch('/api/appointments', {
+    const res = await tenantFetch('/api/appointments', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -694,7 +796,7 @@ window.openNewServiceModal = function() {
       return;
     }
 
-    await fetch('/api/services', {
+    await tenantFetch('/api/services', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name, category, price, durationMinutes, commissionPercent })
@@ -732,7 +834,7 @@ window.openNewClientModal = function() {
       return;
     }
 
-    await fetch('/api/clients', {
+    await tenantFetch('/api/clients', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name, phone, birthday })
@@ -780,7 +882,7 @@ window.openNewExpenseModal = function() {
       return;
     }
 
-    await fetch('/api/expenses', {
+    await tenantFetch('/api/expenses', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ description, category, amount, paymentType, status: 'pendente' })
@@ -789,5 +891,123 @@ window.openNewExpenseModal = function() {
     closeModal();
     await loadInitialData();
     renderView('despesas');
+  });
+};
+
+window.openNewProfessionalModal = function() {
+  const html = `
+    <div class="form-group">
+      <label>Nome Completo</label>
+      <input type="text" class="form-control" id="mProfName" placeholder="Ex: Juliana Castro">
+    </div>
+    <div class="form-group">
+      <label>Especialidade / Cargo</label>
+      <input type="text" class="form-control" id="mProfRole" placeholder="Ex: Cabeleireira, Manicure, Barbeiro">
+    </div>
+    <div class="form-group">
+      <label>WhatsApp / Celular</label>
+      <input type="text" class="form-control" id="mProfPhone" placeholder="(67) 99999-9999">
+    </div>
+    <div class="form-group">
+      <label>Email de Acesso (Login)</label>
+      <input type="email" class="form-control" id="mProfEmail" placeholder="juliana@salao.com">
+    </div>
+    <div class="form-group">
+      <label>Senha de Acesso ao Sistema</label>
+      <input type="password" class="form-control" id="mProfPass" placeholder="Senha do funcionário">
+    </div>
+    <div class="form-group">
+      <label>Nível de Acesso</label>
+      <select class="form-control" id="mProfAccess">
+        <option value="Profissional de Servicos">Profissional de Serviços (Apenas sua agenda e comissões)</option>
+        <option value="Gestor">Gestor Geral (Acesso total)</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Comissão Padrão (%)</label>
+      <input type="number" class="form-control" id="mProfComm" value="50">
+    </div>
+    <div class="form-group" style="display:flex; align-items:center; gap:8px; margin-top:8px;">
+      <input type="checkbox" id="mProfBooking" checked>
+      <label for="mProfBooking" style="margin:0; font-size:0.88rem;">Exibir na página pública de agendamento online</label>
+    </div>
+  `;
+
+  openModal('Cadastrar Profissional & Criar Login', html, async () => {
+    const name = document.getElementById('mProfName').value.trim();
+    const role = document.getElementById('mProfRole').value.trim();
+    const phone = document.getElementById('mProfPhone').value.trim();
+    const email = document.getElementById('mProfEmail').value.trim();
+    const password = document.getElementById('mProfPass').value;
+    const access = document.getElementById('mProfAccess').value;
+    const commissionDefault = Number(document.getElementById('mProfComm').value);
+    const showInBooking = document.getElementById('mProfBooking').checked;
+
+    if (!name) {
+      alert('Nome é obrigatório!');
+      return;
+    }
+
+    await tenantFetch('/api/professionals', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name,
+        role,
+        phone,
+        email,
+        password,
+        access,
+        commissionDefault,
+        showInBooking
+      })
+    });
+
+    closeModal();
+    await loadInitialData();
+    renderView('profissionais');
+  });
+};
+
+window.openNewProductModal = function() {
+  const html = `
+    <div class="form-group">
+      <label>Nome do Produto</label>
+      <input type="text" class="form-control" id="mProdName" placeholder="Ex: Shampoo Revitalizante 300ml">
+    </div>
+    <div class="form-group">
+      <label>Categoria</label>
+      <input type="text" class="form-control" id="mProdCat" placeholder="Ex: Cabelo, Barba, Cuidados">
+    </div>
+    <div class="form-group">
+      <label>Preço de Venda (R$)</label>
+      <input type="number" class="form-control" id="mProdPrice" placeholder="45.00" step="0.50">
+    </div>
+    <div class="form-group">
+      <label>Quantidade em Estoque</label>
+      <input type="number" class="form-control" id="mProdStock" value="10">
+    </div>
+  `;
+
+  openModal('Cadastrar Produto', html, async () => {
+    const name = document.getElementById('mProdName').value;
+    const category = document.getElementById('mProdCat').value;
+    const price = Number(document.getElementById('mProdPrice').value);
+    const stock = Number(document.getElementById('mProdStock').value);
+
+    if (!name || !price) {
+      alert('Nome e Preço são obrigatórios!');
+      return;
+    }
+
+    await tenantFetch('/api/products', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, category, price, stock })
+    });
+
+    closeModal();
+    await loadInitialData();
+    renderView('produtos');
   });
 };
