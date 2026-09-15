@@ -1,4 +1,4 @@
-﻿import fs from 'fs';
+import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -307,7 +307,10 @@ export function getDb() {
     return initialData;
   }
   try {
-    const raw = fs.readFileSync(DB_FILE, 'utf8');
+    let raw = fs.readFileSync(DB_FILE, 'utf8');
+    if (raw.charCodeAt(0) === 0xFEFF) {
+      raw = raw.slice(1);
+    }
     return JSON.parse(raw);
   } catch (err) {
     console.error("Erro ao ler banco:", err);

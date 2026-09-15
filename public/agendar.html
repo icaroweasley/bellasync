@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
@@ -183,7 +183,13 @@
     let selectedSlot = null; // { time, endTime }
 
     document.addEventListener('DOMContentLoaded', async () => {
-      document.getElementById('bookDate').value = new Date().toISOString().split('T')[0];
+      // Data de hoje em Mato Grosso do Sul (America/Campo_Grande)
+      const nowMs = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Campo_Grande' }));
+      const todayStr = `${nowMs.getFullYear()}-${String(nowMs.getMonth() + 1).padStart(2, '0')}-${String(nowMs.getDate()).padStart(2, '0')}`;
+      const dateInput = document.getElementById('bookDate');
+      dateInput.value = todayStr;
+      dateInput.min = todayStr; // Bloqueia datas passadas no calendário
+
       const [sRes, pRes, setRes] = await Promise.all([
         fetch('/api/services').then(r => r.json()),
         fetch('/api/professionals').then(r => r.json()),

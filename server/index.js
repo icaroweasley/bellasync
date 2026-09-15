@@ -152,11 +152,29 @@ app.get('/api/appointments/availability', (req, res) => {
     a => a.professionalId === professionalId && a.date === date && a.status !== 'cancelado'
   );
 
+  // Obter data e hora atual no fuso horário do Mato Grosso do Sul (America/Campo_Grande)
+  const nowMs = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Campo_Grande' }));
+  const todayMsStr = `${nowMs.getFullYear()}-${String(nowMs.getMonth() + 1).padStart(2, '0')}-${String(nowMs.getDate()).padStart(2, '0')}`;
+  const currentMinutesMs = nowMs.getHours() * 60 + nowMs.getMinutes();
+
+  const isToday = (date === todayMsStr);
+
   const slots = [];
   for (let m = startDayMin; m + interval <= endDayMin; m += interval) {
     const slotStart = minutesToTime(m);
     const slotEnd = minutesToTime(m + serviceDuration);
     const slotEndMin = m + serviceDuration;
+
+    // Se a data selecionada é hoje e o horário de início já passou
+    if (isToday && m < currentMinutesMs) {
+      slots.push({
+        time: slotStart,
+        endTime: slotEnd,
+        available: false,
+        reason: 'Horário já passou'
+      });
+      continue;
+    }
 
     // Se o serviço ultrapassa o horário de funcionamento do salão
     if (slotEndMin > endDayMin) {
@@ -199,6 +217,7 @@ app.get('/api/appointments/availability', (req, res) => {
     date,
     professionalId,
     serviceDuration,
+    serverTimeMS: `${String(nowMs.getHours()).padStart(2, '0')}:${String(nowMs.getMinutes()).padStart(2, '0')}`,
     slots
   });
 });
