@@ -189,76 +189,67 @@ function updateScheduleView() {
     a => a.professionalId === selectedProfessionalId && a.date === selectedDate && a.status !== 'cancelado'
   );
 
-  // 1. Coluna de horários
-  const timeCellsHtml = times.map(t => `<div class="schedule-time-cell">${t}</div>`).join('');
+  let html = `<table class="salon-schedule-table"><tbody>`;
+  let skipCount = 0;
 
-  // 2. Coluna de slots vazios com botão "+ Disponível"
-  const slotCellsHtml = times.map(time => {
-    // Se há algum agendamento cobrindo este horário exato de início, não mostramos o botão disponível por baixo
-    const isCovered = currentProfAppointments.some(a => a.startTime <= time && time < a.endTime);
-    return `
-      <div class="schedule-slot-cell" data-time="${time}">
-        ${!isCovered ? `<div class="slot-block empty" onclick="openNewAppointmentModal('${time}')">+ Disponível</div>` : ''}
-      </div>
-    `;
-  }).join('');
+  for (let i = 0; i < times.length; i++) {
+    const time = times[i];
+    html += `<tr>`;
+    html += `<td class="salon-time-cell">${time}</td>`;
 
-  // 3. Camada de blocos de agendamentos contínuos
-  const startDayMin = 8 * 60; // 08:00
-  const slotHeight = 52;      // 52px por 30 minutos
+    if (skipCount > 0) {
+      skipCount--;
+      html += `</tr>`;
+      continue;
+    }
 
-  const appointmentBlocksHtml = currentProfAppointments.map(app => {
-    const [sh, sm] = app.startTime.split(':').map(Number);
-    const [eh, em] = app.endTime.split(':').map(Number);
-    const appStartMin = sh * 60 + sm;
-    const appEndMin = eh * 60 + em;
+    // Procura agendamento que inicia exatamente neste horário
+    const appStartingHere = currentProfAppointments.find(a => a.startTime === time);
 
-    // Distância do topo a partir de 08:00
-    const topPx = ((appStartMin - startDayMin) / 30) * slotHeight;
-    const heightPx = Math.max(38, ((appEndMin - appStartMin) / 30) * slotHeight - 6);
+    if (appStartingHere) {
+      // Calcula quantos slots de 30 min ele ocupa
+      const [sh, sm] = appStartingHere.startTime.split(':').map(Number);
+      const [eh, em] = appStartingHere.endTime.split(':').map(Number);
+      const spanMin = (eh * 60 + em) - (sh * 60 + sm);
+      const rowSpan = Math.max(1, Math.round(spanMin / 30));
 
-    if (app.status === 'indisponivel') {
-      return `
-        <div class="slot-block indisponivel" style="position:absolute; top:${topPx + 3}px; left:10px; right:10px; height:${heightPx}px;">
-          <div>
-            <strong style="font-size:0.92rem;">${app.startTime} às ${app.endTime} — Indisponível</strong>
-            <div style="font-size:0.8rem; color:#666; margin-top:3px;">${app.notes || 'Horário reservado / bloqueio'}</div>
-          </div>
-        </div>
+      skipCount = rowSpan - 1;
+
+      if (appStartingHere.status === 'indisponivel') {
+        html += `
+          <td class="salon-block-indisponivel" rowspan="${rowSpan}">
+            <strong>${appStartingHere.startTime} às ${appStartingHere.endTime}</strong>
+            <strong>Indisponível</strong>
+            <span>${appStartingHere.notes || ''}</span>
+          </td>
+        `;
+      } else {
+        html += `
+          <td class="salon-block-agendado" rowspan="${rowSpan}">
+            <div class="app-info">
+              <strong>${appStartingHere.clientName}</strong>
+              <span>${appStartingHere.serviceName}</span>
+              <small>${appStartingHere.clientPhone} • ${appStartingHere.startTime} às ${appStartingHere.endTime}</small>
+              ${appStartingHere.notes ? `<small style="color:#999;">${appStartingHere.notes}</small>` : ''}
+            </div>
+            <div class="app-price">
+              R$ ${Number(appStartingHere.price).toFixed(2)}
+            </div>
+          </td>
+        `;
+      }
+    } else {
+      // Slot vazio disponível para clique
+      html += `
+        <td class="salon-empty-cell" onclick="openNewAppointmentModal('${time}')" title="Clique para agendar às ${time}"></td>
       `;
     }
 
-    return `
-      <div class="slot-block agendado" style="position:absolute; top:${topPx + 3}px; left:10px; right:10px; height:${heightPx}px;">
-        <div style="display:flex; flex-direction:column; justify-content:space-between; height:100%;">
-          <div>
-            <strong style="font-size:0.95rem; color:var(--ink);">${app.clientName}</strong> — <span style="font-weight:600; color:var(--orange);">${app.serviceName}</span>
-            <div style="font-size:0.8rem; color:var(--muted); margin-top:3px;">
-              📞 ${app.clientPhone} • Horário: <strong>${app.startTime} às ${app.endTime}</strong>
-            </div>
-            ${app.notes ? `<div style="font-size:0.75rem; color:#888; margin-top:2px;">${app.notes}</div>` : ''}
-          </div>
-        </div>
-        <div style="text-align:right;">
-          <span class="item-badge-price" style="font-size:1.15rem;">R$ ${Number(app.price).toFixed(2)}</span>
-        </div>
-      </div>
-    `;
-  }).join('');
+    html += `</tr>`;
+  }
 
-  wrapper.innerHTML = `
-    <div class="schedule-grid-container" style="min-height:${times.length * slotHeight}px;">
-      <div class="schedule-time-column">
-        ${timeCellsHtml}
-      </div>
-      <div class="schedule-slots-column">
-        ${slotCellsHtml}
-        <div class="schedule-appointments-layer">
-          ${appointmentBlocksHtml}
-        </div>
-      </div>
-    </div>
-  `;
+  html += `</tbody></table>`;
+  wrapper.innerHTML = html;
 }
 
 window.refreshAgendaData = async function() {

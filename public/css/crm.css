@@ -348,106 +348,100 @@ body {
   color: var(--ink);
 }
 
-.schedule-table {
+/* Schedule Table Estilo Salon Soft Oficial */
+.salon-schedule-table {
   width: 100%;
+  border-collapse: collapse;
   background: var(--surface);
-  border-radius: 16px;
-  overflow: hidden;
-  box-shadow: var(--shadow-warm);
-  border: 1px solid var(--border-peach);
-  position: relative;
+  border: 1px solid #e0e0e0;
 }
 
-.schedule-grid-container {
-  display: flex;
-  position: relative;
-  min-height: 1144px; /* 22 slots * 52px */
+.salon-schedule-table td {
+  border: 1px solid #e8e8e8;
+  padding: 0;
+  vertical-align: top;
 }
 
-.schedule-time-column {
-  width: 90px;
-  background: #faf8f7;
-  border-right: 1px solid #f3ece7;
-  display: flex;
-  flex-direction: column;
+.salon-time-cell {
+  width: 65px;
+  height: 48px;
+  font-size: 0.8rem;
+  color: #555;
+  text-align: center;
+  vertical-align: middle !important;
+  background: #fff;
+  user-select: none;
+  border-right: 1px solid #ddd !important;
 }
 
-.schedule-time-cell {
-  height: 52px;
-  padding: 0 16px;
-  font-size: 0.85rem;
-  font-weight: var(--weight-semibold);
-  color: #888;
-  display: flex;
-  align-items: center;
-  border-bottom: 1px solid #f3ece7;
-}
-
-.schedule-slots-column {
-  flex: 1;
-  position: relative;
-  display: flex;
-  flex-direction: column;
-}
-
-.schedule-slot-cell {
-  height: 52px;
-  border-bottom: 1px solid #f3ece7;
-  display: flex;
-  align-items: center;
-  padding: 0 10px;
-}
-
-.schedule-appointments-layer {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  pointer-events: none;
-}
-
-.slot-block {
-  width: 100%;
-  border-radius: 8px;
-  padding: 10px 14px;
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  font-size: 0.88rem;
-  box-sizing: border-box;
-  pointer-events: auto;
-}
-
-.slot-block.indisponivel {
-  background: #e2dedc;
-  color: #444;
-  font-weight: var(--weight-medium);
-  border-left: 4px solid #999;
-}
-
-.slot-block.agendado {
-  background: #fff4ed;
-  border-left: 5px solid var(--orange);
-  color: var(--ink);
-  box-shadow: 0 2px 8px rgba(255, 105, 0, 0.12);
-}
-
-.slot-block.empty {
-  height: 38px;
-  border: 1px dashed #e8dcd4;
-  color: #aaa;
+.salon-empty-cell {
+  height: 48px;
+  background: #fff;
   cursor: pointer;
-  background: transparent;
-  display: flex;
-  align-items: center;
-  transition: all 0.2s;
+  transition: background 0.15s;
 }
 
-.slot-block.empty:hover {
-  background: var(--panel);
-  border-color: var(--orange);
+.salon-empty-cell:hover {
+  background: #faf7f5;
+}
+
+.salon-block-indisponivel {
+  background: #dcdcdc !important;
+  color: #222;
+  padding: 10px 14px;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+.salon-block-indisponivel strong {
+  font-size: 0.88rem;
+  display: block;
+  font-weight: var(--weight-bold);
+}
+
+.salon-block-indisponivel span {
+  font-size: 0.78rem;
+  color: #555;
+  display: block;
+  margin-top: 2px;
+}
+
+.salon-block-agendado {
+  background: #fff3eb !important;
+  border-left: 4px solid var(--orange) !important;
+  padding: 10px 14px;
+  height: 100%;
+  box-sizing: border-box;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.salon-block-agendado .app-info strong {
+  font-size: 0.92rem;
+  color: #111;
+  display: block;
+}
+
+.salon-block-agendado .app-info span {
+  font-size: 0.82rem;
   color: var(--orange);
+  font-weight: var(--weight-semibold);
+  display: block;
+  margin-top: 2px;
+}
+
+.salon-block-agendado .app-info small {
+  font-size: 0.75rem;
+  color: #777;
+  display: block;
+  margin-top: 3px;
+}
+
+.salon-block-agendado .app-price {
+  font-size: 1.05rem;
+  font-weight: var(--weight-bold);
+  color: var(--green);
 }
 
 /* Cards de Métricas (Financeiro) */

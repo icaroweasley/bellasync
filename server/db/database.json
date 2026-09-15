@@ -1,4 +1,4 @@
-{
+﻿{
   "settings": {
     "salonName": "Metamorfose Hair",
     "slug": "metamorfose_hair",
@@ -82,7 +82,7 @@
       "name": "Barba Terapia e Alinhamento",
       "category": "Barba",
       "price": 40,
-      "durationMinutes": 60,
+      "durationMinutes: 60,
       "observation": "Toalha quente e massagem facial",
       "commissionPercent": 50,
       "assistantCommissionPercent": 0
@@ -174,30 +174,21 @@
       "status": "ativo",
       "balance": 0,
       "notes": "Corte de barba e cabelo"
-    },
-    {
-      "id": "cli_1789494824082",
-      "name": "oie",
-      "phone": "67999999999",
-      "birthday": "",
-      "status": "ativo",
-      "balance": 0,
-      "notes": "Cadastrado via Agendamento Online"
     }
   ],
   "appointments": [
     {
       "id": "app_1",
       "professionalId": "prof_1",
-      "clientId": "cli_2",
-      "clientName": "Afro Jess",
-      "clientPhone": "(67) 99876-5432",
-      "serviceId": "serv_6",
-      "serviceName": "Trancas Nago Artistica",
+      "clientId": null,
+      "clientName": "Indisponível",
+      "clientPhone": "",
+      "serviceId": null,
+      "serviceName": "Bloqueio de Horário",
       "date": "2026-09-15",
       "startTime": "08:00",
       "endTime": "09:30",
-      "price": 150,
+      "price": 0,
       "status": "indisponivel",
       "notes": "Horario reservado para montagem"
     },
@@ -217,31 +208,16 @@
       "notes": "Degrade navalhado"
     },
     {
-      "id": "app_1789494014886",
+      "id": "app_progressiva_teste",
       "professionalId": "prof_1",
       "clientId": null,
-      "clientName": "oie",
-      "clientPhone": "6799999999999",
+      "clientName": "Carla Mendes",
+      "clientPhone": "(67) 99888-7766",
       "serviceId": "serv_1",
       "serviceName": "Alisamento / Progressiva Formol",
       "date": "2026-09-15",
-      "startTime": "09:00",
-      "endTime": "09:00",
-      "price": 120,
-      "status": "agendado",
-      "notes": "Agendamento Online pelo site"
-    },
-    {
-      "id": "app_1789494824082",
-      "professionalId": "prof_1",
-      "clientId": null,
-      "clientName": "oie",
-      "clientPhone": "67999999999",
-      "serviceId": "serv_1",
-      "serviceName": "Alisamento / Progressiva Formol",
-      "date": "2026-09-15",
-      "startTime": "09:30",
-      "endTime": "12:30",
+      "startTime": "10:00",
+      "endTime": "13:00",
       "price": 120,
       "status": "agendado",
       "notes": "Agendamento Online (180 min)"
