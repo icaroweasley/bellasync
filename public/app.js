@@ -763,7 +763,7 @@ function renderAgenda(container, actions) {
   container.innerHTML = `
     <div class="card-shell agenda-container-card">
       <!-- Controles Mobile da Agenda (Data e Ações Rápidas de fácil toque) -->
-      <div class="agenda-mobile-toolbar mobile-only">
+      <div class="agenda-mobile-toolbar">
         <div class="agenda-mobile-date-row">
           <input type="date" value="${selectedDate}" class="form-control" id="agendaDateInputMobile" title="Data da Agenda">
           <button class="btn-falcon btn-secondary" onclick="refreshAgendaData()" title="Atualizar grade" style="height:42px; min-width:44px; padding:0 12px; border-radius:12px;">
