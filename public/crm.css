@@ -331,38 +331,50 @@ body {
 .top-bar-actions {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-right: 0;
-  height: 38px;
+  gap: 10px;
+  margin-left: auto;
+  height: 100%;
+  max-height: 44px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 
-.top-bar-actions > div {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  height: 38px;
+.top-bar-actions::-webkit-scrollbar {
+  display: none;
+}
+
+.top-bar-actions > div,
+.agenda-actions-wrapper {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  height: 38px !important;
+  flex-wrap: nowrap !important;
+  flex-shrink: 0 !important;
 }
 
 /* Date input elegante no top-bar */
 .top-bar-actions .form-control[type="date"],
 .top-bar-actions input[type="date"],
 .agenda-date-picker {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
   height: 38px !important;
   min-height: 38px !important;
   max-height: 38px !important;
-  padding: 0 16px !important;
+  padding: 0 14px !important;
   margin: 0 !important;
-  background: rgba(255, 255, 255, 0.75);
+  background: rgba(255, 255, 255, 0.85);
   backdrop-filter: var(--blur-sm);
   -webkit-backdrop-filter: var(--blur-sm);
-  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  border: 1px solid rgba(0, 0, 0, 0.1) !important;
   border-radius: 999px !important;
   font-family: var(--font-stack) !important;
-  font-size: 0.86rem !important;
-  line-height: 38px !important;
+  font-size: 0.84rem !important;
+  line-height: 1 !important;
   font-weight: 500;
   color: var(--ink);
   cursor: pointer;
@@ -370,13 +382,15 @@ body {
   transition: all 0.2s var(--ease);
   outline: none;
   box-sizing: border-box !important;
+  white-space: nowrap !important;
+  flex-shrink: 0 !important;
 }
 
 .top-bar-actions .form-control[type="date"]:hover,
 .top-bar-actions input[type="date"]:hover,
 .agenda-date-picker:hover {
   background: rgba(255, 255, 255, 0.95);
-  border-color: rgba(0, 0, 0, 0.15) !important;
+  border-color: rgba(0, 0, 0, 0.18) !important;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
 }
 
@@ -387,33 +401,44 @@ body {
   box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.08);
 }
 
-/* Botões Estilo JungleMind Ultra-Modernos */
+/* Botões Estilo Ultra-Modernos */
 .btn-falcon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  height: 38px;
-  min-height: 38px;
-  max-height: 38px;
-  padding: 0 18px;
-  border-radius: 999px;
-  font-size: 0.86rem;
-  font-weight: 500;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 6px !important;
+  height: 38px !important;
+  min-height: 38px !important;
+  max-height: 38px !important;
+  padding: 0 16px !important;
+  border-radius: 999px !important;
+  font-size: 0.84rem !important;
+  font-weight: 500 !important;
   cursor: pointer;
   border: 1px solid transparent;
   transition: all 0.2s var(--ease);
   text-decoration: none;
   font-family: var(--font-stack);
   letter-spacing: -0.01em;
-  box-sizing: border-box;
-  line-height: 38px;
+  box-sizing: border-box !important;
+  line-height: 1 !important;
+  white-space: nowrap !important;
+  flex-shrink: 0 !important;
+}
+
+.btn-falcon span,
+.btn-falcon strong {
+  white-space: nowrap !important;
+  line-height: 1 !important;
+  display: inline-block !important;
 }
 
 .btn-falcon svg {
-  width: 16px;
-  height: 16px;
-  display: block;
+  width: 15px !important;
+  height: 15px !important;
+  flex-shrink: 0 !important;
+  display: inline-block !important;
+  vertical-align: middle;
 }
 
 .btn-primary {
