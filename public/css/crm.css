@@ -298,12 +298,23 @@ body {
   border-bottom: 1px solid var(--border-subtle);
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 0 40px;
   position: sticky;
   top: 0;
   z-index: 50;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+  width: 100%;
+}
+
+.top-bar-container {
+  max-width: 1200px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  box-sizing: border-box;
 }
 
 .top-bar-title {
