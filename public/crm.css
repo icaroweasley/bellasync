@@ -362,10 +362,13 @@ body {
   display: inline-flex !important;
   align-items: center !important;
   gap: 6px !important;
+  width: 140px !important;
+  min-width: 130px !important;
+  max-width: 145px !important;
   height: 38px !important;
   min-height: 38px !important;
   max-height: 38px !important;
-  padding: 0 14px !important;
+  padding: 0 10px !important;
   margin: 0 !important;
   background: rgba(255, 255, 255, 0.85);
   backdrop-filter: var(--blur-sm);
@@ -373,7 +376,7 @@ body {
   border: 1px solid rgba(0, 0, 0, 0.1) !important;
   border-radius: 999px !important;
   font-family: var(--font-stack) !important;
-  font-size: 0.84rem !important;
+  font-size: 0.82rem !important;
   line-height: 1 !important;
   font-weight: 500;
   color: var(--ink);

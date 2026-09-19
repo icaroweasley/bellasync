@@ -726,14 +726,13 @@ let agendaPollingInterval = null;
 
 function renderAgenda(container, actions) {
   const maxDays = state.settings.maxBookingDaysAhead || 30;
-  const sameDayText = state.settings.allowSameDayBooking !== false ? 'Hoje liberado' : 'A partir de amanhã';
 
   actions.innerHTML = `
     <div class="agenda-actions-wrapper" style="display:flex; align-items:center; gap:8px;">
       <input type="date" value="${selectedDate}" class="form-control agenda-date-picker" id="agendaDateInput" title="Selecionar Data da Agenda">
       <button class="btn-falcon btn-secondary" onclick="openBlockTimeModal()" title="Bloquear horários ou fechar mais cedo">
         <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg>
-        <span>Bloquear Horário</span>
+        <span>Bloquear</span>
       </button>
       <button class="btn-falcon btn-secondary" onclick="openBookingRulesModal()" title="Configurar janela de dias futuros e regras de agendamento online">
         <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
@@ -750,8 +749,6 @@ function renderAgenda(container, actions) {
     renderAgenda(container, actions);
   });
 
-
-
   // Filtro de profissionais
   let profsHtml = state.professionals.map(p => `
     <div class="prof-badge-card ${p.id === selectedProfessionalId ? 'active' : ''}" data-prof-id="${p.id}" onclick="selectProfessional('${p.id}')">
@@ -762,38 +759,10 @@ function renderAgenda(container, actions) {
 
   container.innerHTML = `
     <div class="card-shell agenda-container-card">
-      <!-- Controles Mobile da Agenda (Data e Ações Rápidas de fácil toque) -->
-      <div class="agenda-mobile-toolbar">
-        <div class="agenda-mobile-date-row">
-          <input type="date" value="${selectedDate}" class="form-control" id="agendaDateInputMobile" title="Data da Agenda">
-          <button class="btn-falcon btn-secondary" onclick="refreshAgendaData()" title="Atualizar grade" style="height:42px; min-width:44px; padding:0 12px; border-radius:12px;">
-            <svg fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" viewBox="0 0 24 24"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
-          </button>
-        </div>
-        <div class="agenda-mobile-btns-row">
-          <button class="btn-falcon btn-secondary" onclick="openBlockTimeModal()">
-            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg>
-            <span>Bloquear</span>
-          </button>
-          <button class="btn-falcon btn-secondary" onclick="openBookingRulesModal()">
-            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-            <span>Online: ${maxDays}d</span>
-          </button>
-        </div>
-      </div>
-
       <div class="profs-horizontal-bar" id="profsHorizontalBar">${profsHtml}</div>
       <div class="schedule-table" id="scheduleTableWrapper"></div>
     </div>
   `;
-
-  const mobileDateInput = document.getElementById('agendaDateInputMobile');
-  if (mobileDateInput) {
-    mobileDateInput.addEventListener('change', (e) => {
-      selectedDate = e.target.value;
-      renderAgenda(container, actions);
-    });
-  }
 
   updateScheduleView();
 }
