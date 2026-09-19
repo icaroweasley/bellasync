@@ -1406,14 +1406,16 @@ function renderBirthdays(container, actions) {
   }
 
   container.innerHTML = `
-    <div class="card-shell">
-      <h3 style="display:flex; align-items:center; gap:8px;">
-        <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="color:var(--orange);"><rect x="3" y="8" width="18" height="12" rx="2"></rect><path d="M12 8v12"></path><path d="M19 12H5"></path><path d="M12 8a3 3 0 0 1 0-6c2.5 0 3 6 3 6"></path><path d="M12 8a3 3 0 0 0 0-6c-2.5 0-3 6-3 6"></path></svg>
-        Aniversariantes do Mês
-      </h3>
-      <p style="color:var(--muted); font-size:0.9rem; margin-top:4px;">
-        Aproveite para enviar um cupom especial ou mensagem de carinho pelo WhatsApp!
-      </p>
+    <div class="mobile-add-banner" style="cursor:default;">
+      <div class="mobile-add-banner-content">
+        <div class="mobile-add-banner-icon">
+          <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><rect x="3" y="8" width="18" height="12" rx="2"></rect><path d="M12 8v12"></path><path d="M19 12H5"></path><path d="M12 8a3 3 0 0 1 0-6c2.5 0 3 6 3 6"></path><path d="M12 8a3 3 0 0 0 0-6c-2.5 0-3 6-3 6"></path></svg>
+        </div>
+        <div class="mobile-add-banner-text">
+          <strong>Aniversariantes do Mês</strong>
+          <span>Aproveite para enviar um cupom especial ou mensagem de carinho pelo WhatsApp!</span>
+        </div>
+      </div>
     </div>
     <div class="data-list">${bdaysHtml}</div>
   `;

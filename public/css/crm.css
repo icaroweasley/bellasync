@@ -306,10 +306,10 @@ body {
 }
 
 .top-bar-container {
-  max-width: 1200px;
-  width: 100%;
-  margin: 0 auto;
-  padding: 0 24px;
+  width: 100% !important;
+  max-width: 100% !important;
+  margin: 0 !important;
+  padding: 0 32px !important;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -532,10 +532,11 @@ body {
 
 /* Conteúdo das Views */
 .view-container {
-  padding: 24px;
-  max-width: 1200px;
-  width: 100%;
-  margin: 0 auto;
+  padding: 24px 32px !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  margin: 0 !important;
+  box-sizing: border-box !important;
 }
 
 /* Cards e Painéis com Glassmorphism Translúcido */
@@ -1241,22 +1242,23 @@ td.cell-agendado {
     flex-wrap: wrap !important;
   }
 
-  /* 4. Banner de Adicionar (Cadastro Rápido) - Desktop e Mobile */
+  /* 4. Banner de Adicionar (Cadastro Rápido) */
   .mobile-add-banner {
     display: flex !important;
     align-items: center;
     justify-content: space-between;
-    width: 100%;
-    padding: 14px 18px;
-    margin-bottom: 18px;
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 16px 22px !important;
+    margin-bottom: 20px !important;
     background: rgba(255, 255, 255, 0.85) !important;
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
     border: 1px solid rgba(255, 105, 0, 0.18) !important;
-    border-radius: 16px;
+    border-radius: 18px !important;
     box-shadow: 0 4px 16px rgba(255, 105, 0, 0.06) !important;
     cursor: pointer;
-    box-sizing: border-box;
+    box-sizing: border-box !important;
     text-decoration: none;
     color: var(--ink, #0f172a);
     transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
