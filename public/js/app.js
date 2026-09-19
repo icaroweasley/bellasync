@@ -1199,7 +1199,7 @@ function renderClients(container, actions) {
         </div>
         <div class="mobile-add-banner-text">
           <strong>Cadastrar Novo Cliente</strong>
-          <span>${state.clients.length} clientes cadastrados na base</span>
+          <span>Cadastrar membro ou cliente na base do salão</span>
         </div>
       </div>
       <div class="mobile-add-banner-arrow">
