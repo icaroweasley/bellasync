@@ -729,7 +729,10 @@ function renderAgenda(container, actions) {
 
   actions.innerHTML = `
     <div class="agenda-actions-wrapper" style="display:flex; align-items:center; gap:8px;">
-      <input type="date" value="${selectedDate}" class="form-control agenda-date-picker" id="agendaDateInput" title="Selecionar Data da Agenda">
+      <div class="agenda-date-wrapper" title="Selecionar Data da Agenda">
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+        <input type="date" value="${selectedDate}" class="agenda-date-picker" id="agendaDateInput">
+      </div>
       <button class="btn-falcon btn-secondary" onclick="openBlockTimeModal()" title="Bloquear horários ou fechar mais cedo">
         <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg>
         <span>Bloquear</span>

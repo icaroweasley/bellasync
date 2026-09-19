@@ -355,38 +355,71 @@ body {
   flex-shrink: 0 !important;
 }
 
-/* Date input elegante no top-bar */
-.top-bar-actions .form-control[type="date"],
-.top-bar-actions input[type="date"],
-.agenda-date-picker {
+/* Container pílula elegante do Datepicker no top-bar */
+.agenda-date-wrapper {
+  position: relative !important;
   display: inline-flex !important;
   align-items: center !important;
   gap: 6px !important;
-  width: 140px !important;
-  min-width: 130px !important;
-  max-width: 145px !important;
   height: 38px !important;
   min-height: 38px !important;
   max-height: 38px !important;
-  padding: 0 10px !important;
+  padding: 0 14px !important;
   margin: 0 !important;
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: var(--blur-sm);
-  -webkit-backdrop-filter: var(--blur-sm);
+  background: rgba(255, 255, 255, 0.85) !important;
+  backdrop-filter: var(--blur-sm) !important;
+  -webkit-backdrop-filter: var(--blur-sm) !important;
   border: 1px solid rgba(0, 0, 0, 0.1) !important;
   border-radius: 999px !important;
-  font-family: var(--font-stack) !important;
-  font-size: 0.82rem !important;
-  line-height: 1 !important;
-  font-weight: 500;
-  color: var(--ink);
-  cursor: pointer;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
-  transition: all 0.2s var(--ease);
-  outline: none;
+  cursor: pointer !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03) !important;
+  transition: all 0.2s var(--ease) !important;
   box-sizing: border-box !important;
   white-space: nowrap !important;
   flex-shrink: 0 !important;
+}
+
+.agenda-date-wrapper:hover {
+  background: rgba(255, 255, 255, 0.95) !important;
+  border-color: rgba(0, 0, 0, 0.18) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06) !important;
+}
+
+.agenda-date-wrapper svg {
+  width: 15px !important;
+  height: 15px !important;
+  color: var(--ink, #0f172a) !important;
+  flex-shrink: 0 !important;
+  pointer-events: none !important;
+}
+
+.agenda-date-picker {
+  border: none !important;
+  background: transparent !important;
+  font-family: var(--font-stack) !important;
+  font-size: 0.83rem !important;
+  font-weight: 500 !important;
+  color: var(--ink, #0f172a) !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  height: 100% !important;
+  outline: none !important;
+  cursor: pointer !important;
+  box-shadow: none !important;
+  width: 105px !important;
+}
+
+/* Oculta o ícone nativo feio da direita no Chrome/Edge/Safari e estende a área clicável */
+.agenda-date-picker::-webkit-calendar-picker-indicator {
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  opacity: 0 !important;
+  cursor: pointer !important;
 }
 
 .top-bar-actions .form-control[type="date"]:hover,
