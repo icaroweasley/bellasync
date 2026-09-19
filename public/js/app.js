@@ -33,23 +33,399 @@ let state = {
   commissions: []
 };
 
-// Helper universal de fetch para injetar o x-tenant-id automaticamente
+const isSuperAdmin = currentUser && currentUser.role === 'superadmin';
+const isManager = currentUser && (currentUser.role === 'admin' || currentUser.role === 'superadmin');
+window.isSuperAdmin = isSuperAdmin;
+window.isManager = isManager;
+
+// Helper universal de fetch para injetar o x-tenant-id e autenticação automaticamente
 async function tenantFetch(url, options = {}) {
   options.headers = {
     ...(options.headers || {}),
-    'x-tenant-id': currentTenant ? currentTenant.id : 'tenant_metamorfose'
+    'x-tenant-id': currentTenant ? currentTenant.id : 'tenant_metamorfose',
+    'x-user-role': (currentUser && currentUser.role) || 'professional'
   };
   return fetch(url, options);
 }
 
-window.logout = function() {
-  if (confirm('Deseja realmente sair do sistema?')) {
+// Sistema de Modais Customizados (Substitutos de confirm() e alert() nativos)
+window.asyncConfirm = function(message, title = 'Confirmação', options = {}) {
+  return new Promise((resolve) => {
+    const modal = document.getElementById('customConfirmModal');
+    if (!modal) {
+      resolve(window.confirm(message));
+      return;
+    }
+    const titleEl = document.getElementById('customConfirmTitle');
+    const msgEl = document.getElementById('customConfirmMessage');
+    const okBtn = document.getElementById('customConfirmOkBtn');
+    const cancelBtn = document.getElementById('customConfirmCancelBtn');
+    const iconEl = document.getElementById('customConfirmIcon');
+
+    if (titleEl) titleEl.innerText = title;
+    if (msgEl) msgEl.innerText = message;
+
+    if (options.isDanger) {
+      if (okBtn) okBtn.className = 'btn-falcon btn-danger';
+      if (iconEl) {
+        iconEl.style.background = 'rgba(211, 47, 47, 0.12)';
+        iconEl.style.color = '#d32f2f';
+      }
+    } else {
+      if (okBtn) okBtn.className = 'btn-falcon btn-primary';
+      if (iconEl) {
+        iconEl.style.background = 'rgba(255, 105, 0, 0.12)';
+        iconEl.style.color = '#ff6900';
+      }
+    }
+
+    if (options.okText && okBtn) okBtn.innerText = options.okText;
+    else if (okBtn) okBtn.innerText = 'Confirmar';
+
+    if (options.cancelText && cancelBtn) cancelBtn.innerText = options.cancelText;
+    else if (cancelBtn) cancelBtn.innerText = 'Cancelar';
+
+    modal.classList.add('active');
+
+    function cleanup(result) {
+      modal.classList.remove('active');
+      if (okBtn) okBtn.removeEventListener('click', onOk);
+      if (cancelBtn) cancelBtn.removeEventListener('click', onCancel);
+      resolve(result);
+    }
+
+    function onOk() { cleanup(true); }
+    function onCancel() { cleanup(false); }
+
+    if (okBtn) okBtn.addEventListener('click', onOk);
+    if (cancelBtn) cancelBtn.addEventListener('click', onCancel);
+  });
+};
+
+const nativeAlert = window.alert;
+window.asyncAlert = function(message, title = 'Aviso', type = 'info') {
+  return new Promise((resolve) => {
+    const modal = document.getElementById('customAlertModal');
+    if (!modal) {
+      if (typeof nativeAlert === 'function') nativeAlert(message);
+      resolve();
+      return;
+    }
+    const titleEl = document.getElementById('customAlertTitle');
+    const msgEl = document.getElementById('customAlertMessage');
+    const okBtn = document.getElementById('customAlertOkBtn');
+    const iconEl = document.getElementById('customAlertIcon');
+
+    if (titleEl) titleEl.innerText = title;
+    if (msgEl) msgEl.innerText = message;
+
+    if (type === 'error' || type === 'danger') {
+      if (iconEl) {
+        iconEl.style.background = 'rgba(211, 47, 47, 0.12)';
+        iconEl.style.color = '#d32f2f';
+        iconEl.innerHTML = `<svg width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>`;
+      }
+    } else if (type === 'success') {
+      if (iconEl) {
+        iconEl.style.background = 'rgba(26, 102, 54, 0.14)';
+        iconEl.style.color = '#1a6636';
+        iconEl.innerHTML = `<svg width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>`;
+      }
+    } else {
+      if (iconEl) {
+        iconEl.style.background = 'rgba(255, 105, 0, 0.12)';
+        iconEl.style.color = '#ff6900';
+        iconEl.innerHTML = `<svg width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>`;
+      }
+    }
+
+    modal.classList.add('active');
+
+    function onOk() {
+      modal.classList.remove('active');
+      if (okBtn) okBtn.removeEventListener('click', onOk);
+      resolve();
+    }
+
+    if (okBtn) okBtn.addEventListener('click', onOk);
+  });
+};
+
+window.alert = function(msg) {
+  window.asyncAlert(msg, 'Aviso', 'info');
+};
+
+window.logout = async function() {
+  const confirmed = await asyncConfirm('Deseja realmente sair do sistema?', 'Sair do Sistema', { isDanger: true });
+  if (confirmed) {
     localStorage.removeItem('salon_token');
     localStorage.removeItem('salon_user');
     localStorage.removeItem('salon_tenant');
     window.location.href = '/login';
   }
 };
+
+// Sistema de Notificações Nativas do Navegador & Push PWA
+let knownAppointmentIds = new Set();
+let notificationsInitialized = false;
+let notificationHistory = [];
+
+// Carrega histórico salvo em localStorage
+try {
+  const savedNotifs = localStorage.getItem('salon_notif_history');
+  if (savedNotifs) {
+    notificationHistory = JSON.parse(savedNotifs);
+  }
+} catch (e) {
+  notificationHistory = [];
+}
+
+function saveNotificationToHistory(notifItem) {
+  notificationHistory.unshift(notifItem);
+  if (notificationHistory.length > 20) {
+    notificationHistory = notificationHistory.slice(0, 20);
+  }
+  try {
+    localStorage.setItem('salon_notif_history', JSON.stringify(notificationHistory));
+  } catch (e) {}
+  renderNotificationDropdown();
+}
+
+function renderNotificationDropdown() {
+  const listEl = document.getElementById('notifDropdownList');
+  if (!listEl) return;
+
+  if (notificationHistory.length === 0) {
+    listEl.innerHTML = '<div class="notif-empty">Nenhuma notificação recente.</div>';
+    return;
+  }
+
+  listEl.innerHTML = notificationHistory.map(item => `
+    <div class="notif-item" onclick="handleNotificationItemClick('${item.id}', '${item.date || ''}', '${item.profId || ''}')">
+      <div class="notif-item-icon">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+      </div>
+      <div class="notif-item-content">
+        <div class="notif-item-title">${item.title}</div>
+        <div class="notif-item-desc">${item.body}</div>
+        <div class="notif-item-time">${item.timeStr || 'Agora'}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+window.handleNotificationItemClick = function(id, date, profId) {
+  const drop = document.getElementById('notifDropdown');
+  if (drop) drop.style.display = 'none';
+
+  if (date) selectedDate = date;
+  if (profId) selectedProfessionalId = profId;
+  if (typeof renderView === 'function') {
+    renderView('agenda');
+  }
+};
+
+window.handleNotificationBellClick = async function() {
+  const dropdown = document.getElementById('notifDropdown');
+  if (!dropdown) return;
+
+  // Se não tem permissão concedida ainda, primeiro solicita permissão
+  if ('Notification' in window && Notification.permission === 'default') {
+    await requestPushPermissionManually();
+    return;
+  }
+
+  // Se já tem permissão concedida ou recusada, abre/fecha o painel com as últimas notificações
+  const isCurrentlyOpen = dropdown.style.display === 'block';
+  if (isCurrentlyOpen) {
+    dropdown.style.display = 'none';
+  } else {
+    renderNotificationDropdown();
+    dropdown.style.display = 'block';
+  }
+};
+
+// Fecha o dropdown ao clicar fora
+document.addEventListener('click', (e) => {
+  const notifWrapper = document.querySelector('.notif-wrapper');
+  const dropdown = document.getElementById('notifDropdown');
+  if (dropdown && dropdown.style.display === 'block') {
+    if (notifWrapper && !notifWrapper.contains(e.target)) {
+      dropdown.style.display = 'none';
+    }
+  }
+});
+
+function playNotificationSound() {
+  try {
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'sine';
+    // Tom suave e agradável: acorde rápido de notificação
+    osc.frequency.setValueAtTime(587.33, audioCtx.currentTime); // D5
+    osc.frequency.setValueAtTime(880, audioCtx.currentTime + 0.12); // A5
+    gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.4);
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start();
+    osc.stop(audioCtx.currentTime + 0.4);
+  } catch (e) {
+    // Áudio opcional se bloqueado pelo navegador
+  }
+}
+
+function updateNotificationBadge() {
+  const badge = document.getElementById('notifBadge');
+  const btn = document.getElementById('notifToggleBtn');
+  const permBtn = document.getElementById('notifPermBtn');
+  if (!btn || !badge) return;
+
+  if (!('Notification' in window)) {
+    btn.style.display = 'none';
+    return;
+  }
+
+  if (Notification.permission === 'granted') {
+    btn.classList.add('active');
+    btn.classList.remove('denied');
+    btn.title = 'Notificações ativadas (Clique para ver o histórico)';
+    badge.style.display = 'block';
+    if (permBtn) permBtn.innerText = 'Push Ativo ✓';
+  } else if (Notification.permission === 'denied') {
+    btn.classList.remove('active');
+    btn.classList.add('denied');
+    btn.title = 'Notificações bloqueadas nas permissões do navegador';
+    badge.style.display = 'block';
+    if (permBtn) permBtn.innerText = 'Bloqueado';
+  } else {
+    btn.classList.remove('active');
+    btn.classList.remove('denied');
+    btn.title = 'Clique para ativar notificações de novos agendamentos';
+    badge.style.display = 'none';
+    if (permBtn) permBtn.innerText = 'Ativar Push';
+  }
+}
+
+window.requestPushPermissionManually = async function() {
+  if (!('Notification' in window)) {
+    asyncAlert('Seu navegador não suporta notificações.');
+    return;
+  }
+
+  if (Notification.permission === 'denied') {
+    asyncAlert('As notificações estão bloqueadas nas configurações do navegador para este site. Por favor, clique no ícone de ajustes/cadeado na barra de endereços para permitir notificações.');
+    return;
+  }
+
+  try {
+    const perm = await Notification.requestPermission();
+    updateNotificationBadge();
+    if (perm === 'granted') {
+      // Registra Service Worker se suportado para push em background
+      if ('serviceWorker' in navigator) {
+        try {
+          await navigator.serviceWorker.register('/sw.js');
+        } catch (swErr) {
+          console.warn('SW register note:', swErr);
+        }
+      }
+
+      playNotificationSound();
+      showSystemOrSwNotification('BellaSync — Notificações Ativadas! 🔔', {
+        body: 'Pronto! Você receberá alertas de agendamentos na tela do seu celular e computador.',
+        icon: '/images/logo.png'
+      });
+    }
+  } catch (e) {
+    console.error('Erro ao pedir permissão:', e);
+  }
+};
+
+window.toggleBrowserNotifications = window.handleNotificationBellClick;
+
+async function showSystemOrSwNotification(title, options) {
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+
+  // Se o Service Worker estiver ativo no celular/PWA, exibe através dele para notificação push no sistema
+  if ('serviceWorker' in navigator) {
+    try {
+      const reg = await navigator.serviceWorker.getRegistration();
+      if (reg && reg.showNotification) {
+        return reg.showNotification(title, options);
+      }
+    } catch (e) {
+      // Fallback para new Notification
+    }
+  }
+
+  // Fallback padrão
+  try {
+    const notif = new Notification(title, options);
+    if (options.data && options.data.url) {
+      notif.onclick = () => {
+        window.focus();
+      };
+    }
+  } catch (e) {}
+}
+
+function checkAndNotifyNewAppointments(appointmentsList) {
+  if (!Array.isArray(appointmentsList)) return;
+
+  // Na primeira carga, apenas memoriza os IDs existentes para não disparar enxurrada
+  if (!notificationsInitialized) {
+    appointmentsList.forEach(a => knownAppointmentIds.add(a.id));
+    notificationsInitialized = true;
+    return;
+  }
+
+  const myProfId = currentUser?.professionalId;
+  const isAdm = currentUser?.role === 'admin' || currentUser?.role === 'superadmin';
+
+  appointmentsList.forEach(app => {
+    if (!knownAppointmentIds.has(app.id)) {
+      knownAppointmentIds.add(app.id);
+
+      // Dispara se for para o profissional logado OU se for gestor/admin
+      const shouldNotify = (myProfId && app.professionalId === myProfId) || isAdm;
+      if (shouldNotify && app.status !== 'cancelado' && app.status !== 'indisponivel') {
+        playNotificationSound();
+
+        const profName = state.professionals.find(p => p.id === app.professionalId)?.name || '';
+        const bodyText = isAdm && !myProfId 
+          ? `${app.clientName} agendou ${app.serviceName} com ${profName} para ${app.date} às ${app.startTime}.`
+          : `Olá! ${app.clientName} agendou ${app.serviceName} com você para ${app.date} às ${app.startTime}.`;
+
+        const now = new Date();
+        const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+        // Salva no histórico do sino
+        saveNotificationToHistory({
+          id: app.id,
+          title: 'Novo Agendamento Confirmado! 📅',
+          body: bodyText,
+          timeStr: timeStr,
+          date: app.date,
+          profId: app.professionalId
+        });
+
+        // Dispara notificação push / nativa
+        showSystemOrSwNotification('Novo Agendamento Confirmado! 📅', {
+          body: bodyText,
+          icon: '/images/logo.png',
+          badge: '/images/logo.png',
+          tag: app.id,
+          data: {
+            url: '/',
+            appId: app.id
+          }
+        });
+      }
+    }
+  });
+}
 
 // Inicialização
 document.addEventListener('DOMContentLoaded', async () => {
@@ -60,10 +436,24 @@ document.addEventListener('DOMContentLoaded', async () => {
   const publicLinkEl = document.getElementById('publicBookingLink');
 
   if (nameEl && currentUser) nameEl.innerText = currentUser.name;
-  if (roleEl && currentUser) roleEl.innerText = currentUser.role === 'admin' ? 'Gestor Geral' : 'Profissional';
+  if (roleEl && currentUser) {
+    if (currentUser.role === 'superadmin') {
+      roleEl.innerText = 'Administrador Master';
+    } else if (currentUser.role === 'admin') {
+      roleEl.innerText = 'Gestor Geral';
+    } else {
+      roleEl.innerText = 'Profissional';
+    }
+  }
   if (salonNameEl && currentTenant) salonNameEl.innerText = currentTenant.name;
   if (publicLinkEl && currentTenant) {
     publicLinkEl.href = `/agendar?salao=${currentTenant.slug || currentTenant.id}`;
+  }
+
+  // Se for superadmin, exibe o botão da Gestão Master no sidebar
+  const navSuperAdmin = document.getElementById('navItemSuperAdmin');
+  if (navSuperAdmin && isSuperAdmin) {
+    navSuperAdmin.style.display = 'flex';
   }
 
   // Se o usuário logado for profissional com ID associado, foca nele por padrão
@@ -74,14 +464,55 @@ document.addEventListener('DOMContentLoaded', async () => {
   setupNavigation();
   setupMobileToggle();
   await loadInitialData();
+  
+  // Se voltou do checkout de assinatura do Mercado Pago com sucesso
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.get('status') === 'success' || urlParams.get('subscription') === 'success') {
+    asyncAlert('Sua assinatura no Cartão foi cadastrada com sucesso! O acesso está liberado.');
+    window.history.replaceState({}, document.title, window.location.pathname);
+  }
+
+  await checkSubscriptionStatus();
   renderView(currentView);
 
-  document.getElementById('fabBtn').addEventListener('click', () => {
-    openNewAppointmentModal();
-  });
+  const fab = document.getElementById('fabBtn');
+  if (fab) {
+    fab.addEventListener('click', () => {
+      handleFabClick();
+    });
+  }
 
   document.getElementById('modalCloseBtn').addEventListener('click', closeModal);
   document.getElementById('modalCancelBtn').addEventListener('click', closeModal);
+
+  // Registra Service Worker se suportado
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js').catch(() => {});
+  }
+
+  let lastAppointmentsHash = '';
+
+  // Polling inteligente em segundo plano a cada 4s para sincronia instantânea sem re-render desnecessário
+  setInterval(async () => {
+    try {
+      const res = await tenantFetch('/api/appointments');
+      if (res.ok) {
+        const apps = await res.json();
+        const newHash = JSON.stringify(apps);
+        checkAndNotifyNewAppointments(apps);
+        
+        if (newHash !== lastAppointmentsHash) {
+          lastAppointmentsHash = newHash;
+          state.appointments = apps;
+          if (currentView === 'agenda') {
+            updateScheduleView();
+          }
+        }
+      }
+    } catch (e) {
+      // Ignora pequenos soluços de rede transitórios
+    }
+  }, 4000);
 });
 
 async function loadInitialData() {
@@ -108,6 +539,9 @@ async function loadInitialData() {
       commissions: comms
     };
 
+    checkAndNotifyNewAppointments(apps);
+    updateNotificationBadge();
+
     if (state.professionals.length > 0 && !selectedProfessionalId) {
       selectedProfessionalId = state.professionals[0].id;
     }
@@ -126,7 +560,10 @@ function setupNavigation() {
       renderView(currentView);
 
       // Fecha sidebar no mobile
-      document.getElementById('sidebar').classList.remove('open');
+      const sidebar = document.getElementById('sidebar');
+      const overlay = document.getElementById('sidebarOverlay');
+      if (sidebar) sidebar.classList.remove('open');
+      if (overlay) overlay.classList.remove('active');
     });
   });
 }
@@ -134,17 +571,109 @@ function setupNavigation() {
 function setupMobileToggle() {
   const toggleBtn = document.getElementById('menuToggle');
   const sidebar = document.getElementById('sidebar');
-  toggleBtn.addEventListener('click', () => {
-    sidebar.classList.toggle('open');
-  });
+  const overlay = document.getElementById('sidebarOverlay');
+
+  if (toggleBtn && sidebar) {
+    toggleBtn.addEventListener('click', () => {
+      sidebar.classList.toggle('open');
+      if (overlay) overlay.classList.toggle('active', sidebar.classList.contains('open'));
+    });
+  }
+
+  if (overlay && sidebar) {
+    overlay.addEventListener('click', () => {
+      sidebar.classList.remove('open');
+      overlay.classList.remove('active');
+    });
+  }
 }
+
+// Controle de Ação Contextual do Botão Flutuante (+)
+function updateFabButton(view) {
+  const fab = document.getElementById('fabBtn');
+  if (!fab) return;
+
+  // Determina se deve exibir o FAB e qual o título
+  let title = '';
+  let show = true;
+
+  switch (view) {
+    case 'agenda':
+      title = 'Novo Agendamento';
+      show = true;
+      break;
+    case 'clientes':
+      title = 'Novo Cliente';
+      show = true;
+      break;
+    case 'profissionais':
+      title = 'Novo Profissional';
+      show = isManager;
+      break;
+    case 'servicos':
+      title = 'Novo Serviço';
+      show = isManager;
+      break;
+    case 'produtos':
+      title = 'Novo Produto';
+      show = isManager;
+      break;
+    case 'despesas':
+      title = 'Nova Despesa';
+      show = isManager;
+      break;
+    case 'comissões':
+      title = 'Lançar Comissão / Vale';
+      show = isManager;
+      break;
+    case 'aniversarios':
+    case 'configuracoes':
+    default:
+      show = false;
+      break;
+  }
+
+  fab.style.display = show ? 'grid' : 'none';
+  fab.title = title;
+}
+
+window.handleFabClick = function() {
+  switch (currentView) {
+    case 'agenda':
+      openNewAppointmentModal();
+      break;
+    case 'comissões':
+      if (isManager) openNewCommissionModal();
+      break;
+    case 'clientes':
+      openNewClientModal();
+      break;
+    case 'profissionais':
+      if (isManager) openNewProfessionalModal();
+      break;
+    case 'servicos':
+      if (isManager) openNewServiceModal();
+      break;
+    case 'produtos':
+      if (isManager) openNewProductModal();
+      break;
+    case 'despesas':
+      if (isManager) openNewExpenseModal();
+      break;
+    default:
+      break;
+  }
+};
 
 // Router simples das Views
 function renderView(view) {
+  currentView = view;
   const container = document.getElementById('viewContainer');
   const title = document.getElementById('currentViewTitle');
   const actions = document.getElementById('topBarActions');
   actions.innerHTML = '';
+
+  updateFabButton(view);
 
   switch (view) {
     case 'agenda':
@@ -183,6 +712,10 @@ function renderView(view) {
       title.innerText = 'Configurações do Salão';
       renderSettings(container, actions);
       break;
+    case 'superadmin':
+      title.innerText = 'Gestão Master — BellaSync SaaS';
+      renderSuperAdmin(container, actions);
+      break;
     default:
       container.innerHTML = `<div class="card-shell"><h3>Em desenvolvimento...</h3></div>`;
   }
@@ -192,10 +725,24 @@ function renderView(view) {
 let agendaPollingInterval = null;
 
 function renderAgenda(container, actions) {
+  const maxDays = state.settings.maxBookingDaysAhead || 30;
+  const sameDayText = state.settings.allowSameDayBooking !== false ? 'Hoje liberado' : 'A partir de amanhã';
+
   actions.innerHTML = `
-    <div style="display:flex; align-items:center; gap:10px;">
-      <input type="date" value="${selectedDate}" class="form-control" style="width: auto;" id="agendaDateInput">
-      <button class="btn-falcon btn-secondary" onclick="refreshAgendaData()" title="Atualizar dados">🔄 Atualizar</button>
+    <div class="agenda-actions-wrapper" style="display:flex; align-items:center; gap:8px;">
+      <input type="date" value="${selectedDate}" class="form-control agenda-date-picker" id="agendaDateInput" title="Selecionar Data da Agenda">
+      <button class="btn-falcon btn-secondary" onclick="openBlockTimeModal()" title="Bloquear horários ou fechar mais cedo">
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg>
+        <span>Bloquear Horário</span>
+      </button>
+      <button class="btn-falcon btn-secondary" onclick="openBookingRulesModal()" title="Configurar janela de dias futuros e regras de agendamento online">
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+        <span>Online: ${maxDays}d</span>
+      </button>
+      <button class="btn-falcon btn-secondary" onclick="refreshAgendaData()" title="Atualizar dados da grade">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+        <span>Atualizar</span>
+      </button>
     </div>
   `;
   document.getElementById('agendaDateInput').addEventListener('change', (e) => {
@@ -203,32 +750,66 @@ function renderAgenda(container, actions) {
     renderAgenda(container, actions);
   });
 
-  // Auto-refresh a cada 4 segundos para manter sincronia em tempo real
-  if (!agendaPollingInterval) {
-    agendaPollingInterval = setInterval(async () => {
-      if (currentView === 'agenda') {
-        const apps = await fetch('/api/appointments').then(r => r.json());
-        state.appointments = apps;
-        updateScheduleView();
-      }
-    }, 4000);
-  }
+
 
   // Filtro de profissionais
   let profsHtml = state.professionals.map(p => `
-    <div class="prof-badge-card ${p.id === selectedProfessionalId ? 'active' : ''}" onclick="selectProfessional('${p.id}')">
+    <div class="prof-badge-card ${p.id === selectedProfessionalId ? 'active' : ''}" data-prof-id="${p.id}" onclick="selectProfessional('${p.id}')">
       <img src="${p.avatar}" alt="${p.name}">
       <span>${p.name.split(' ')[0]}</span>
     </div>
   `).join('');
 
   container.innerHTML = `
-    <div class="profs-horizontal-bar">${profsHtml}</div>
-    <div class="schedule-table" id="scheduleTableWrapper"></div>
+    <div class="card-shell agenda-container-card">
+      <!-- Controles Mobile da Agenda (Data e Ações Rápidas de fácil toque) -->
+      <div class="agenda-mobile-toolbar">
+        <div class="agenda-mobile-date-row">
+          <input type="date" value="${selectedDate}" class="form-control" id="agendaDateInputMobile" title="Data da Agenda">
+          <button class="btn-falcon btn-secondary" onclick="refreshAgendaData()" title="Atualizar grade" style="height:42px; min-width:44px; padding:0 12px; border-radius:12px;">
+            <svg fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" viewBox="0 0 24 24"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+          </button>
+        </div>
+        <div class="agenda-mobile-btns-row">
+          <button class="btn-falcon btn-secondary" onclick="openBlockTimeModal()">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg>
+            <span>Bloquear</span>
+          </button>
+          <button class="btn-falcon btn-secondary" onclick="openBookingRulesModal()">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+            <span>Online: ${maxDays}d</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="profs-horizontal-bar" id="profsHorizontalBar">${profsHtml}</div>
+      <div class="schedule-table" id="scheduleTableWrapper"></div>
+    </div>
   `;
+
+  const mobileDateInput = document.getElementById('agendaDateInputMobile');
+  if (mobileDateInput) {
+    mobileDateInput.addEventListener('change', (e) => {
+      selectedDate = e.target.value;
+      renderAgenda(container, actions);
+    });
+  }
 
   updateScheduleView();
 }
+
+window.selectProfessional = function(profId) {
+  selectedProfessionalId = profId;
+  const cards = document.querySelectorAll('.prof-badge-card');
+  cards.forEach(card => {
+    if (card.dataset.profId === profId) {
+      card.classList.add('active');
+    } else {
+      card.classList.remove('active');
+    }
+  });
+  updateScheduleView();
+};
 
 function updateScheduleView() {
   const wrapper = document.getElementById('scheduleTableWrapper');
@@ -302,6 +883,20 @@ function updateScheduleView() {
                   <div class="app-price">
                     R$ ${Number(appStartingHere.price).toFixed(2)}
                   </div>
+                  ${appStartingHere.clientPhone ? `
+                    <button class="btn-remind-app" onclick="sendAppointmentReminder('${appStartingHere.id}', event)" title="Enviar lembrete via WhatsApp">
+                      <svg width="13" height="13" fill="currentColor" viewBox="0 0 24 24"><path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.312.045-.694.062-2.18-.553-1.614-.668-2.673-2.316-2.753-2.423-.081-.107-.655-.873-.655-1.664 0-.792.414-1.182.56-1.341.144-.16.315-.2.42-.2.106 0 .211.002.304.006.098.005.23-.037.36.275.132.318.45 1.096.488 1.176.04.08.067.174.013.28-.053.106-.08.172-.158.264-.078.093-.164.208-.234.28-.08.082-.164.172-.07.334.093.16.417.689.896 1.116.617.55 1.137.72 1.298.8.16.08.254.07.35-.04.095-.11.408-.475.517-.638.11-.164.218-.137.368-.081.15.054.954.45 1.118.532.164.082.273.123.313.192.04.068.04.399-.104.804z"/></svg>
+                      Lembrete
+                    </button>
+                  ` : ''}
+                  ${appStartingHere.status !== 'faltou' ? `
+                    <button class="btn-delete-app" style="background:#fef2f2; color:#b91c1c; border-color:#fecaca;" onclick="markAppointmentNoShow('${appStartingHere.id}', event)" title="Registrar que o cliente faltou (Gera histórico para taxa de 50% de remarcação)">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>
+                      Faltou
+                    </button>
+                  ` : `
+                    <span style="font-size:0.72rem; font-weight:bold; color:#b91c1c; background:#fee2e2; padding:3px 6px; border-radius:6px;">Faltou</span>
+                  `}
                   <button class="btn-delete-app" onclick="deleteAppointment('${appStartingHere.id}', event)" title="Excluir / Cancelar este agendamento">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18m-2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
                     Cancelar
@@ -337,9 +932,9 @@ window.refreshAgendaData = async function() {
 
 window.deleteAppointment = async function(appId, event) {
   if (event) event.stopPropagation();
-  if (!confirm("Tem certeza que deseja excluir / desmarcar este agendamento?")) {
-    return;
-  }
+  const confirmed = await asyncConfirm("Tem certeza que deseja excluir / desmarcar este agendamento?", "Excluir Agendamento", { isDanger: true });
+  if (!confirmed) return;
+  
   try {
     const res = await fetch(`/api/appointments/${appId}`, {
       method: 'DELETE',
@@ -349,30 +944,101 @@ window.deleteAppointment = async function(appId, event) {
     });
     if (!res.ok) {
       const err = await res.json();
-      alert("Erro ao excluir: " + (err.error || 'Falha na requisição'));
+      await asyncAlert("Erro ao excluir: " + (err.error || 'Falha na requisição'), "Erro", "error");
       return;
     }
     await loadInitialData();
     updateScheduleView();
   } catch (err) {
-    alert("Erro de conexão ao excluir agendamento.");
+    await asyncAlert("Erro de conexão ao excluir agendamento.", "Erro de Conexão", "error");
   }
 };
 
-window.selectProfessional = function(profId) {
-  selectedProfessionalId = profId;
-  updateScheduleView();
+window.markAppointmentNoShow = async function(appId, event) {
+  if (event) event.stopPropagation();
+  const app = state.appointments.find(a => a.id === appId);
+  const clientName = app ? app.clientName : 'este cliente';
+  
+  const confirmed = await asyncConfirm(`Confirmar que ${clientName} Frizou / Faltou ao agendamento?\n\nIsso registrará histórico de ausência no sistema. Em caso de remarcação, a taxa de garantia de 50% será aplicada automaticamente pelo cruzamento de dados.`, "Registrar Falta / Ausência", { isDanger: true });
+  if (!confirmed) return;
+
+  try {
+    const res = await fetch(`/api/appointments/${appId}/status`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-tenant-id': (window.currentUser && window.currentUser.tenantId) || 'tenant_metamorfose'
+      },
+      body: JSON.stringify({ status: 'faltou' })
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      await asyncAlert("Erro ao registrar falta: " + (err.error || 'Falha na requisição'), "Erro", "error");
+      return;
+    }
+
+    await asyncAlert(`Falta registrada com sucesso para ${clientName}.\nO cruzamento de dados já ativou a proteção de 50% para remarcações.`, "Falta Registrada", "success");
+    await loadInitialData();
+    updateScheduleView();
+  } catch (err) {
+    await asyncAlert("Erro de conexão ao registrar falta.", "Erro de Conexão", "error");
+  }
 };
+
+window.sendAppointmentReminder = async function(appId, event) {
+  if (event) event.stopPropagation();
+  const app = state.appointments.find(a => a.id === appId);
+  if (!app || !app.clientPhone) {
+    await asyncAlert("Este cliente não possui telefone/WhatsApp cadastrado.", "Sem WhatsApp", "warning");
+    return;
+  }
+
+  const cleanPhone = app.clientPhone.replace(/\D/g, '');
+  const salonName = state.settings.salonName || currentTenant?.name || 'Salão';
+  const [y, m, d] = (app.date || '').split('-');
+  const dateFormatted = (d && m && y) ? `${d}/${m}/${y}` : app.date;
+
+  const text = `Olá, ${app.clientName}! Tudo bem?\nPassando para confirmar seu horário agendado conosco na *${salonName}*:\n\n` +
+    `• *Serviço:* ${app.serviceName}\n` +
+    `• *Data:* ${dateFormatted}\n` +
+    `• *Horário:* ${app.startTime} às ${app.endTime}\n\n` +
+    `Qualquer imprevisto, por favor nos avise com antecedência. Te aguardamos!`;
+
+  const waUrl = `https://wa.me/55${cleanPhone}?text=${encodeURIComponent(text)}`;
+  window.open(waUrl, '_blank');
+};
+
 
 // 2. Render Comissões & Vales
 function renderCommissions(container, actions) {
-  const toPay = state.commissions.filter(c => c.status === 'a_pagar');
-  const paid = state.commissions.filter(c => c.status === 'paga');
+  actions.innerHTML = isManager ? `
+    <button class="btn-falcon btn-primary" onclick="openNewCommissionModal()">+ Lançar Comissão / Vale</button>
+  ` : '';
+
+  const toPay = (state.commissions || []).filter(c => c.status === 'a_pagar');
+  const paid = (state.commissions || []).filter(c => c.status === 'paga');
 
   container.innerHTML = `
-    <div class="tabs-header">
-      <button class="tab-btn active" id="tabToPay" onclick="switchCommissionTab('toPay')">Comissões a pagar (${toPay.length})</button>
-      <button class="tab-btn" id="tabPaid" onclick="switchCommissionTab('paid')">Comissões pagas (${paid.length})</button>
+    ${isManager ? `
+      <div class="mobile-add-banner" onclick="openNewCommissionModal()">
+        <div class="mobile-add-banner-content">
+          <div class="mobile-add-banner-icon">
+            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+          </div>
+          <div class="mobile-add-banner-text">
+            <strong>Lançar Comissão ou Vale</strong>
+            <span>Registrar comissão, vale ou adiantamento</span>
+          </div>
+        </div>
+        <div class="mobile-add-banner-arrow">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"></polyline></svg>
+        </div>
+      </div>
+    ` : ''}
+    <div class="tabs-header" style="margin-bottom: 16px;">
+      <button class="tab-btn active" id="tabToPay" onclick="switchCommissionTab('toPay')">A Pagar (${toPay.length})</button>
+      <button class="tab-btn" id="tabPaid" onclick="switchCommissionTab('paid')">Pagas (${paid.length})</button>
     </div>
     <div id="commissionsList" class="data-list">
       ${renderCommissionsList(toPay, true)}
@@ -381,26 +1047,63 @@ function renderCommissions(container, actions) {
 }
 
 function renderCommissionsList(list, canPay) {
-  if (list.length === 0) {
-    return `<div class="card-shell" style="text-align:center; color:var(--muted);">Nenhum registro encontrado.</div>`;
+  if (!list || list.length === 0) {
+    return `<div class="card-shell" style="text-align:center; color:var(--muted); padding:32px 16px;">Nenhum registro encontrado.</div>`;
   }
-  return list.map(c => `
-    <div class="data-item-card">
-      <div class="item-main-info">
-        <h4>${c.professionalName}</h4>
-        <p>${c.paymentDate ? 'Pago em ' + c.paymentDate : 'Aguardando liberação de repasse'}</p>
+  return list.map(c => {
+    const isVale = c.type === 'vale' || (c.amount < 0) || (c.description && c.description.toLowerCase().includes('vale'));
+    const amountAbs = Math.abs(c.amount || 0);
+    const badgeColor = isVale ? '#dc2626' : 'var(--green)';
+    const typeLabel = isVale ? 'Vale / Adiantamento' : 'Comissão';
+    const typeBadgeBg = isVale ? 'rgba(220,38,38,0.1)' : 'rgba(16,185,129,0.1)';
+    const typeBadgeColor = isVale ? '#dc2626' : '#059669';
+
+    return `
+      <div class="data-item-card" style="display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap;">
+        <div class="item-main-info" style="flex:1; min-width:200px;">
+          <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px; flex-wrap:wrap;">
+            <h4 style="margin:0;">${c.professionalName || 'Profissional'}</h4>
+            <span style="font-size:0.75rem; font-weight:600; padding:2px 8px; border-radius:999px; background:${typeBadgeBg}; color:${typeBadgeColor};">
+              ${typeLabel}
+            </span>
+          </div>
+          <p style="margin:0; font-size:0.85rem; color:var(--muted);">
+            ${c.description ? c.description + ' • ' : ''}
+            ${c.status === 'paga' ? (c.paymentDate ? 'Pago em ' + c.paymentDate : 'Pago') : (c.date ? 'Data: ' + c.date : 'Aguardando repasse')}
+          </p>
+        </div>
+
+        <div style="display:flex; align-items:center; gap:12px;">
+          <span class="item-badge-price" style="color:${badgeColor}; font-size:1.15rem; font-weight:700;">
+            ${isVale ? '- ' : ''}R$ ${amountAbs.toFixed(2)}
+          </span>
+
+          <div class="item-actions-group">
+            ${canPay ? `
+              <button class="btn-falcon btn-success" style="padding:6px 12px; font-size:0.8rem;" onclick="payCommission('${c.id}')" title="Marcar como paga">
+                Pagar
+              </button>
+            ` : ''}
+            ${isManager ? `
+              <button class="btn-card-action edit" onclick="openEditCommissionModal('${c.id}')" title="Editar Lançamento">
+                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                Editar
+              </button>
+              <button class="btn-card-action delete" onclick="deleteCommission('${c.id}')" title="Excluir Lançamento">
+                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                Excluir
+              </button>
+            ` : ''}
+          </div>
+        </div>
       </div>
-      <div style="display:flex; align-items:center; gap:16px;">
-        <span class="item-badge-price">R$ ${c.amount.toFixed(2)}</span>
-        ${canPay ? `<button class="btn-falcon btn-success" onclick="payCommission('${c.id}')">Pagar</button>` : ''}
-      </div>
-    </div>
-  `).join('');
+    `;
+  }).join('');
 }
 
 window.switchCommissionTab = function(type) {
-  const toPay = state.commissions.filter(c => c.status === 'a_pagar');
-  const paid = state.commissions.filter(c => c.status === 'paga');
+  const toPay = (state.commissions || []).filter(c => c.status === 'a_pagar');
+  const paid = (state.commissions || []).filter(c => c.status === 'paga');
   const listEl = document.getElementById('commissionsList');
 
   if (type === 'toPay') {
@@ -415,17 +1118,18 @@ window.switchCommissionTab = function(type) {
 };
 
 window.payCommission = async function(id) {
-  if (!confirm('Deseja confirmar o pagamento desta comissão?')) return;
-  await fetch(`/api/commissions/pay/${id}`, { method: 'POST' });
+  const confirmed = await asyncConfirm('Deseja confirmar o pagamento desta comissão?', 'Pagar Comissão');
+  if (!confirmed) return;
+  await tenantFetch(`/api/commissions/pay/${id}`, { method: 'POST' });
   await loadInitialData();
   renderView('comissões');
 };
 
 // 3. Render Profissionais
 function renderProfessionals(container, actions) {
-  actions.innerHTML = `
+  actions.innerHTML = isManager ? `
     <button class="btn-falcon btn-primary" onclick="openNewProfessionalModal()">+ Adicionar Profissional</button>
-  `;
+  ` : '';
 
   const profsHtml = state.professionals.map(p => `
     <div class="data-item-card">
@@ -436,40 +1140,99 @@ function renderProfessionals(container, actions) {
           <p>${p.role} • ${p.phone} • Acesso: <strong>${p.access}</strong></p>
         </div>
       </div>
-      <div>
-        <span class="btn-falcon ${p.showInBooking ? 'btn-success' : 'btn-secondary'}">
+      <div class="item-actions-group">
+        ${p.requireDeposit ? `
+          <span class="btn-falcon btn-primary" style="margin-right: 4px; font-size: 0.76rem; padding: 4px 8px;" title="Chave Pix: ${p.pixKey || 'Não informada'}">
+            Sinal ${p.depositPercent || 30}% (${p.pixBank || 'InfinitePay'})
+          </span>
+        ` : ''}
+        <span class="btn-falcon ${p.showInBooking ? 'btn-success' : 'btn-secondary'}" style="margin-right: 4px;">
           ${p.showInBooking ? 'Visível no Link' : 'Oculto'}
         </span>
+        ${isManager ? `
+          <button class="btn-card-action edit" onclick="openEditProfessionalModal('${p.id}')" title="Editar Profissional">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+            Editar
+          </button>
+          <button class="btn-card-action delete" onclick="deleteProfessional('${p.id}')" title="Excluir Profissional">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+            Excluir
+          </button>
+        ` : ''}
       </div>
     </div>
   `).join('');
 
-  container.innerHTML = `<div class="data-list">${profsHtml}</div>`;
+  container.innerHTML = `
+    ${isManager ? `
+      <div class="mobile-add-banner" onclick="openNewProfessionalModal()">
+        <div class="mobile-add-banner-content">
+          <div class="mobile-add-banner-icon">
+            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+          </div>
+          <div class="mobile-add-banner-text">
+            <strong>Adicionar Novo Profissional</strong>
+            <span>Cadastrar membro da equipe ou gestor</span>
+          </div>
+        </div>
+        <div class="mobile-add-banner-arrow">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"></polyline></svg>
+        </div>
+      </div>
+    ` : ''}
+    <div class="data-list">${profsHtml}</div>
+  `;
 }
 
 // 4. Render Clientes
 function renderClients(container, actions) {
   actions.innerHTML = `
+    <span style="font-size:0.84rem; font-weight:500; color:var(--muted); background:rgba(255,255,255,0.7); padding:6px 14px; border-radius:999px; border:1px solid rgba(0,0,0,0.06); height:38px; display:inline-flex; align-items:center; box-sizing:border-box;">
+      <strong style="color:var(--ink); margin-right:4px;">${state.clients.length}</strong> clientes
+    </span>
     <button class="btn-falcon btn-primary" onclick="openNewClientModal()">+ Adicionar Cliente</button>
   `;
 
   const clientsHtml = state.clients.map(c => `
     <div class="data-item-card">
       <div class="item-main-info">
-        <h4>${c.name}</h4>
+        <h4>
+          ${c.name}
+          ${c.hasNoShowHistory ? `<span style="font-size:0.72rem; font-weight:700; color:#b91c1c; background:#fee2e2; border:1px solid #fecaca; padding:2px 8px; border-radius:12px; margin-left:8px;">⚠️ Histórico de Falta (Taxa 50%)</span>` : ''}
+        </h4>
         <p>WhatsApp: ${c.phone} ${c.birthday ? '• Aniversário: ' + c.birthday : ''}</p>
+        ${c.notes ? `<p style="font-size:0.78rem; color:var(--muted); margin-top:2px;">Obs: ${c.notes}</p>` : ''}
       </div>
-      <div>
+      <div class="item-actions-group">
         <a href="https://wa.me/55${c.phone.replace(/\D/g, '')}" target="_blank" class="btn-falcon btn-secondary">
           WhatsApp
         </a>
+        <button class="btn-card-action edit" onclick="openEditClientModal('${c.id}')" title="Editar Cliente">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+          Editar
+        </button>
+        <button class="btn-card-action delete" onclick="deleteClient('${c.id}')" title="Excluir Cliente">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+          Excluir
+        </button>
       </div>
     </div>
   `).join('');
 
   container.innerHTML = `
-    <div class="card-shell" style="padding:12px 18px; margin-bottom:16px;">
-      <strong>${state.clients.length}</strong> clientes cadastrados
+    <div class="mobile-add-banner" onclick="openNewClientModal()">
+      <div class="mobile-add-banner-content">
+        <div class="mobile-add-banner-icon">
+          <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+        </div>
+        <div class="mobile-add-banner-text">
+          <strong>Cadastrar Novo Cliente</strong>
+          <span>${state.clients.length} clientes cadastrados na base</span>
+        </div>
+      </div>
+      <div class="mobile-add-banner-arrow">
+        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"></polyline></svg>
+      </div>
     </div>
     <div class="data-list">${clientsHtml}</div>
   `;
@@ -477,9 +1240,9 @@ function renderClients(container, actions) {
 
 // 5. Render Serviços
 function renderServices(container, actions) {
-  actions.innerHTML = `
+  actions.innerHTML = isManager ? `
     <button class="btn-falcon btn-primary" onclick="openNewServiceModal()">+ Adicionar Serviço</button>
-  `;
+  ` : '';
 
   const servsHtml = state.services.map(s => `
     <div class="data-item-card">
@@ -487,20 +1250,48 @@ function renderServices(container, actions) {
         <h4>${s.name}</h4>
         <p>Categoria: <strong>${s.category}</strong> • Duração: ${s.durationMinutes} min • Comissão: ${s.commissionPercent}%</p>
       </div>
-      <div>
-        <span class="item-badge-price">R$ ${s.price.toFixed(2)}</span>
+      <div class="item-actions-group">
+        <span class="item-badge-price" style="margin-right: 6px;">R$ ${s.price.toFixed(2)}</span>
+        ${isManager ? `
+          <button class="btn-card-action edit" onclick="openEditServiceModal('${s.id}')" title="Editar Serviço">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+            Editar
+          </button>
+          <button class="btn-card-action delete" onclick="deleteService('${s.id}')" title="Excluir Serviço">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+            Excluir
+          </button>
+        ` : ''}
       </div>
     </div>
   `).join('');
 
-  container.innerHTML = `<div class="data-list">${servsHtml}</div>`;
+  container.innerHTML = `
+    ${isManager ? `
+      <div class="mobile-add-banner" onclick="openNewServiceModal()">
+        <div class="mobile-add-banner-content">
+          <div class="mobile-add-banner-icon">
+            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+          </div>
+          <div class="mobile-add-banner-text">
+            <strong>Cadastrar Novo Serviço</strong>
+            <span>Configurar procedimentos, preços e duração</span>
+          </div>
+        </div>
+        <div class="mobile-add-banner-arrow">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"></polyline></svg>
+        </div>
+      </div>
+    ` : ''}
+    <div class="data-list">${servsHtml}</div>
+  `;
 }
 
 // 6. Render Produtos
 function renderProducts(container, actions) {
-  actions.innerHTML = `
+  actions.innerHTML = isManager ? `
     <button class="btn-falcon btn-primary" onclick="openNewProductModal()">+ Adicionar Produto</button>
-  `;
+  ` : '';
 
   const prodsHtml = state.products.map(p => `
     <div class="data-item-card">
@@ -508,20 +1299,48 @@ function renderProducts(container, actions) {
         <h4>${p.name}</h4>
         <p>${p.category} • Marca: ${p.brand || 'Geral'} • Estoque: <strong>${p.stock} un.</strong></p>
       </div>
-      <div>
-        <span class="item-badge-price">R$ ${p.price.toFixed(2)}</span>
+      <div class="item-actions-group">
+        <span class="item-badge-price" style="margin-right: 6px;">R$ ${p.price.toFixed(2)}</span>
+        ${isManager ? `
+          <button class="btn-card-action edit" onclick="openEditProductModal('${p.id}')" title="Editar Produto">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+            Editar
+          </button>
+          <button class="btn-card-action delete" onclick="deleteProduct('${p.id}')" title="Excluir Produto">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+            Excluir
+          </button>
+        ` : ''}
       </div>
     </div>
   `).join('');
 
-  container.innerHTML = `<div class="data-list">${prodsHtml}</div>`;
+  container.innerHTML = `
+    ${isManager ? `
+      <div class="mobile-add-banner" onclick="openNewProductModal()">
+        <div class="mobile-add-banner-content">
+          <div class="mobile-add-banner-icon">
+            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+          </div>
+          <div class="mobile-add-banner-text">
+            <strong>Adicionar Novo Produto</strong>
+            <span>Controlar itens do estoque e preços de venda</span>
+          </div>
+        </div>
+        <div class="mobile-add-banner-arrow">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"></polyline></svg>
+        </div>
+      </div>
+    ` : ''}
+    <div class="data-list">${prodsHtml}</div>
+  `;
 }
 
 // 7. Render Despesas
 function renderExpenses(container, actions) {
-  actions.innerHTML = `
+  actions.innerHTML = isManager ? `
     <button class="btn-falcon btn-primary" onclick="openNewExpenseModal()">+ Adicionar Despesa</button>
-  `;
+  ` : '';
 
   const total = state.expenses.reduce((acc, e) => acc + e.amount, 0);
   const paid = state.expenses.filter(e => e.status === 'pago').reduce((acc, e) => acc + e.amount, 0);
@@ -533,18 +1352,46 @@ function renderExpenses(container, actions) {
         <h4>${e.description}</h4>
         <p>${e.category} • Vencimento: ${e.dueDate} • Pagamento: ${e.paymentType}</p>
       </div>
-      <div style="text-align: right;">
-        <span class="item-badge-price" style="color: ${e.status === 'pago' ? 'var(--green)' : 'var(--red)'};">
-          R$ ${e.amount.toFixed(2)}
-        </span>
-        <div style="font-size: 0.75rem; text-transform: uppercase; font-weight: bold; color: ${e.status === 'pago' ? 'var(--green)' : 'var(--orange)'};">
-          ${e.status}
+      <div class="item-actions-group">
+        <div style="text-align: right; margin-right: 6px;">
+          <span class="item-badge-price" style="color: ${e.status === 'pago' ? 'var(--green)' : 'var(--red)'};">
+            R$ ${e.amount.toFixed(2)}
+          </span>
+          <div style="font-size: 0.75rem; text-transform: uppercase; font-weight: bold; color: ${e.status === 'pago' ? 'var(--green)' : 'var(--orange)'};">
+            ${e.status}
+          </div>
         </div>
+        ${isManager ? `
+          <button class="btn-card-action edit" onclick="openEditExpenseModal('${e.id}')" title="Editar Despesa">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+            Editar
+          </button>
+          <button class="btn-card-action delete" onclick="deleteExpense('${e.id}')" title="Excluir Despesa">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+            Excluir
+          </button>
+        ` : ''}
       </div>
     </div>
   `).join('');
 
   container.innerHTML = `
+    ${isManager ? `
+      <div class="mobile-add-banner" onclick="openNewExpenseModal()">
+        <div class="mobile-add-banner-content">
+          <div class="mobile-add-banner-icon">
+            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+          </div>
+          <div class="mobile-add-banner-text">
+            <strong>Adicionar Nova Despesa</strong>
+            <span>Registrar contas a pagar, boletos ou fixos</span>
+          </div>
+        </div>
+        <div class="mobile-add-banner-arrow">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"></polyline></svg>
+        </div>
+      </div>
+    ` : ''}
     <div class="metrics-grid">
       <div class="metric-card red">
         <div class="metric-label">Total Despesas</div>
@@ -588,7 +1435,10 @@ function renderBirthdays(container, actions) {
 
   container.innerHTML = `
     <div class="card-shell">
-      <h3>🎉 Aniversariantes de Setembro</h3>
+      <h3 style="display:flex; align-items:center; gap:8px;">
+        <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="color:var(--orange);"><rect x="3" y="8" width="18" height="12" rx="2"></rect><path d="M12 8v12"></path><path d="M19 12H5"></path><path d="M12 8a3 3 0 0 1 0-6c2.5 0 3 6 3 6"></path><path d="M12 8a3 3 0 0 0 0-6c-2.5 0-3 6-3 6"></path></svg>
+        Aniversariantes do Mês
+      </h3>
       <p style="color:var(--muted); font-size:0.9rem; margin-top:4px;">
         Aproveite para enviar um cupom especial ou mensagem de carinho pelo WhatsApp!
       </p>
@@ -599,6 +1449,40 @@ function renderBirthdays(container, actions) {
 
 // 9. Render Configurações
 function renderSettings(container, actions) {
+  if (!isManager) {
+    container.innerHTML = `
+      <div class="card-shell">
+        <h3 style="margin-bottom: 16px;">Dados do Salão</h3>
+        <div style="background: #fff3cd; color: #856404; padding: 12px 16px; border-radius: 8px; margin-bottom: 16px; font-size: 0.9rem; display: flex; align-items: center; gap: 8px;">
+          <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+          <span>Apenas <strong>gestores</strong> podem alterar as configurações do salão.</span>
+        </div>
+        <div class="form-group" style="margin-bottom: 14px;">
+          <label>Nome do Estabelecimento</label>
+          <input type="text" class="form-control" id="cfgName" value="${state.settings.salonName || ''}" disabled>
+        </div>
+        <div class="form-group" style="margin-bottom: 14px;">
+          <label>Telefone / WhatsApp</label>
+          <input type="text" class="form-control" id="cfgPhone" value="${state.settings.phone || ''}" disabled>
+        </div>
+        <div class="form-group" style="margin-bottom: 14px;">
+          <label>Endereço Completo</label>
+          <input type="text" class="form-control" id="cfgAddress" value="${state.settings.address || ''}" disabled>
+        </div>
+        <div class="form-group" style="margin-bottom: 14px;">
+          <label>Intervalo entre Agendamentos na Grade</label>
+          <select class="form-control" id="cfgInterval" disabled>
+            <option value="15" ${state.settings.intervalMinutes === 15 ? 'selected' : ''}>15 em 15 minutos</option>
+            <option value="30" ${state.settings.intervalMinutes === 30 ? 'selected' : ''}>30 em 30 minutos</option>
+            <option value="45" ${state.settings.intervalMinutes === 45 ? 'selected' : ''}>45 em 45 minutos</option>
+            <option value="60" ${state.settings.intervalMinutes === 60 ? 'selected' : ''}>1 em 1 hora</option>
+          </select>
+        </div>
+      </div>
+    `;
+    return;
+  }
+
   container.innerHTML = `
     <div class="card-shell">
       <h3 style="margin-bottom: 16px;">Dados do Salão</h3>
@@ -623,26 +1507,38 @@ function renderSettings(container, actions) {
           <option value="60" ${state.settings.intervalMinutes === 60 ? 'selected' : ''}>1 em 1 hora</option>
         </select>
       </div>
+
       <button class="btn-falcon btn-primary" onclick="saveSettings()">Salvar Configurações</button>
     </div>
   `;
 }
 
 window.saveSettings = async function() {
+  if (!isManager) {
+    asyncAlert('Apenas gestores têm permissão para alterar as configurações do salão.');
+    return;
+  }
+
   const updated = {
+    ...state.settings,
     salonName: document.getElementById('cfgName').value,
     phone: document.getElementById('cfgPhone').value,
     address: document.getElementById('cfgAddress').value,
     intervalMinutes: Number(document.getElementById('cfgInterval').value)
   };
-  await tenantFetch('/api/settings', {
+  const res = await tenantFetch('/api/settings', {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(updated)
   });
+  if (!res.ok) {
+    const err = await res.json();
+    asyncAlert(err.error || 'Erro ao salvar configurações.');
+    return;
+  }
   await loadInitialData();
   document.getElementById('salonHeaderName').innerText = updated.salonName;
-  alert('Configurações atualizadas com sucesso!');
+  asyncAlert('Configurações atualizadas com sucesso!');
 };
 
 // Modais Genéricos de Cadastro
@@ -709,7 +1605,7 @@ window.openNewAppointmentModal = function(defaultTime = "10:00") {
     const endTime = document.getElementById('modalAppEnd').value;
 
     if (!clientName) {
-      alert('Por favor informe o nome do cliente');
+      asyncAlert('Por favor informe o nome do cliente');
       return;
     }
 
@@ -732,7 +1628,7 @@ window.openNewAppointmentModal = function(defaultTime = "10:00") {
 
     if (!res.ok) {
       const err = await res.json();
-      alert(err.error || 'Erro ao agendar horário.');
+      asyncAlert(err.error || 'Erro ao agendar horário.');
       return;
     }
 
@@ -742,6 +1638,388 @@ window.openNewAppointmentModal = function(defaultTime = "10:00") {
   });
 
   setTimeout(updateModalEndTime, 50);
+};
+
+window.openBlockTimeModal = function(defaultStart = "12:00") {
+  const profOptions = state.professionals.map(p => `<option value="${p.id}" ${p.id === selectedProfessionalId ? 'selected' : ''}>${p.name} (${p.role})</option>`).join('');
+  const initialDate = selectedDate || new Date().toISOString().split('T')[0];
+
+  const html = `
+    <div style="display: flex; gap: 10px; margin-bottom: 12px;">
+      <div class="form-group" style="flex: 1.2;">
+        <label>Profissional</label>
+        <select class="form-control" id="mBlockProf" onchange="renderBlockModalTimeline()">${profOptions}</select>
+      </div>
+      <div class="form-group" style="flex: 1;">
+        <label>Data do Bloqueio</label>
+        <input type="date" class="form-control" id="mBlockDate" value="${initialDate}" onchange="renderBlockModalTimeline()">
+      </div>
+    </div>
+
+    <div class="form-group" style="margin-bottom: 12px;">
+      <label>O que você deseja fazer?</label>
+      <select class="form-control" id="mBlockType" onchange="handleBlockTypeChange(this.value)">
+        <option value="intervalo">Bloquear Intervalo de Horário (Almoço, Pausa, Compromisso)</option>
+        <option value="fechar_cedo">Fechar Mais Cedo (Bloquear até o encerramento do dia - 19:00)</option>
+        <option value="dia_todo">Folga / Dia Inteiro Indisponível (08:00 às 19:00)</option>
+      </select>
+    </div>
+
+    <div style="display:flex; gap:10px; margin-bottom:12px;" id="mBlockTimesWrapper">
+      <div class="form-group" style="flex:1;">
+        <label id="mBlockStartLabel">Começo do Intervalo (Início)</label>
+        <input type="time" class="form-control" id="mBlockStart" value="${defaultStart}" onchange="renderBlockModalTimeline()">
+      </div>
+      <div class="form-group" style="flex:1;">
+        <label id="mBlockEndLabel">Fim do Intervalo (Término)</label>
+        <input type="time" class="form-control" id="mBlockEnd" value="13:00" onchange="renderBlockModalTimeline()">
+      </div>
+    </div>
+
+    <!-- Linha do Tempo Visual dos Horários do Dia -->
+    <div class="block-modal-visual-timeline" id="blockModalTimelineBox">
+      <div style="display: flex; align-items: center; justify-content: space-between;">
+        <span style="font-size: 0.78rem; font-weight: 600; color: var(--muted); text-transform: uppercase;">Visão Geral da Grade do Dia</span>
+        <span style="font-size: 0.72rem; color: var(--muted);" id="blockTimelineHint">Clique no início e depois no fim</span>
+      </div>
+      <div class="timeline-slots-container" id="blockTimelineSlots"></div>
+      <div class="timeline-summary-preview" id="blockTimelineSummary">
+        <span>Horário Selecionado: <strong>--:-- até --:--</strong></span>
+      </div>
+    </div>
+
+    <div class="form-group" style="margin-bottom:12px;">
+      <label>Motivo / Observação (Opcional)</label>
+      <input type="text" class="form-control" id="mBlockNotes" placeholder="Ex: Almoço, Consulta médica, Saída mais cedo">
+    </div>
+  `;
+
+  openModal('Bloquear Horário / Fechar Mais Cedo', html, async () => {
+    const profId = document.getElementById('mBlockProf').value;
+    const targetDate = document.getElementById('mBlockDate').value;
+    const blockType = document.getElementById('mBlockType').value;
+    let startTime = document.getElementById('mBlockStart').value;
+    let endTime = document.getElementById('mBlockEnd').value;
+    const notes = document.getElementById('mBlockNotes').value.trim() || (blockType === 'fechar_cedo' ? 'Fechado mais cedo' : (blockType === 'dia_todo' ? 'Folga / Dia Indisponível' : 'Pausa / Indisponível'));
+
+    if (!targetDate) {
+      asyncAlert('Por favor informe a data do bloqueio.');
+      return;
+    }
+
+    if (blockType === 'fechar_cedo') {
+      endTime = '19:00';
+    } else if (blockType === 'dia_todo') {
+      startTime = '08:00';
+      endTime = '19:00';
+    }
+
+    if (!startTime || !endTime) {
+      asyncAlert('Por favor informe os horários de início e término.');
+      return;
+    }
+
+    if (startTime >= endTime) {
+      asyncAlert('O horário de término precisa ser posterior ao horário de início.');
+      return;
+    }
+
+    const res = await tenantFetch('/api/appointments', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        professionalId: profId,
+        clientName: 'INDISPONÍVEL',
+        clientPhone: '',
+        serviceId: 'indisponivel',
+        serviceName: notes,
+        price: 0,
+        date: targetDate,
+        startTime,
+        endTime,
+        notes,
+        status: 'indisponivel'
+      })
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      asyncAlert(err.error || 'Erro ao bloquear horário.');
+      return;
+    }
+
+    closeModal();
+    // Atualiza a data da agenda para a data bloqueada para o usuário ver de imediato
+    selectedDate = targetDate;
+    await loadInitialData();
+    renderView('agenda');
+  });
+
+  setTimeout(() => {
+    handleBlockTypeChange(document.getElementById('mBlockType').value);
+    renderBlockModalTimeline();
+  }, 60);
+};
+
+window.handleBlockTypeChange = function(type) {
+  const wrapper = document.getElementById('mBlockTimesWrapper');
+  const startInput = document.getElementById('mBlockStart');
+  const endInput = document.getElementById('mBlockEnd');
+  const startLabel = document.getElementById('mBlockStartLabel');
+  const endLabel = document.getElementById('mBlockEndLabel');
+  if (!wrapper || !startInput || !endInput) return;
+
+  if (type === 'fechar_cedo') {
+    wrapper.style.display = 'flex';
+    startLabel.innerText = 'Fechar a partir das (Começo):';
+    endLabel.innerText = 'Até o fim do expediente:';
+    endInput.value = '19:00';
+    endInput.disabled = true;
+    startInput.disabled = false;
+  } else if (type === 'dia_todo') {
+    wrapper.style.display = 'none';
+  } else {
+    wrapper.style.display = 'flex';
+    startLabel.innerText = 'Começo do Intervalo (Início):';
+    endLabel.innerText = 'Fim do Intervalo (Término):';
+    startInput.disabled = false;
+    endInput.disabled = false;
+  }
+  renderBlockModalTimeline();
+};
+
+let blockSelectionStep = 'start'; // 'start' ou 'end'
+
+window.renderBlockModalTimeline = function() {
+  const profId = document.getElementById('mBlockProf')?.value;
+  const targetDate = document.getElementById('mBlockDate')?.value;
+  const blockType = document.getElementById('mBlockType')?.value;
+  const startInput = document.getElementById('mBlockStart');
+  const endInput = document.getElementById('mBlockEnd');
+  const slotsContainer = document.getElementById('blockTimelineSlots');
+  const summaryEl = document.getElementById('blockTimelineSummary');
+  const hintEl = document.getElementById('blockTimelineHint');
+
+  if (!slotsContainer || !summaryEl) return;
+
+  const times = [
+    "08:00", "08:30", "09:00", "09:30", "10:00", "10:30",
+    "11:00", "11:30", "12:00", "12:30", "13:00", "13:30",
+    "14:00", "14:30", "15:00", "15:30", "16:00", "16:30",
+    "17:00", "17:30", "18:00", "18:30", "19:00"
+  ];
+
+  let currentStart = startInput?.value || "12:00";
+  let currentEnd = endInput?.value || "13:00";
+
+  if (blockType === 'fechar_cedo') {
+    currentEnd = "19:00";
+  } else if (blockType === 'dia_todo') {
+    currentStart = "08:00";
+    currentEnd = "19:00";
+  }
+
+  if (hintEl) {
+    if (blockType === 'intervalo') {
+      if (blockSelectionStep === 'start') {
+        hintEl.innerHTML = `<span style="color:var(--orange); font-weight:600;">① Clique no horário de INÍCIO da pausa</span>`;
+      } else {
+        hintEl.innerHTML = `<span style="color:#2563eb; font-weight:600;">② Agora clique no horário de TÉRMINO da pausa</span>`;
+      }
+    } else if (blockType === 'fechar_cedo') {
+      hintEl.innerHTML = `<span>Clique para definir a partir de quando fechar</span>`;
+    } else {
+      hintEl.innerHTML = `<span>Dia todo bloqueado (08:00 às 19:00)</span>`;
+    }
+  }
+
+  // Obter agendamentos desse profissional na data selecionada
+  const dayApps = state.appointments.filter(
+    a => a.professionalId === profId && a.date === targetDate && a.status !== 'cancelado'
+  );
+
+  let chipsHtml = '';
+  times.forEach(t => {
+    const isOccupied = dayApps.some(a => t >= a.startTime && t < a.endTime);
+    const isStart = (t === currentStart);
+    const isEnd = (t === currentEnd);
+    const isInRange = (t >= currentStart && t <= currentEnd);
+
+    let classes = ['timeline-slot-chip'];
+    let tooltip = `Clique para selecionar`;
+
+    if (isOccupied) {
+      classes.push('occupied');
+      tooltip = `Horário com atendimento na grade`;
+    } else if (isInRange) {
+      classes.push('in-block');
+      if (isStart) classes.push('block-start');
+      if (isEnd) classes.push('block-end');
+      if (t > currentStart && t < currentEnd) classes.push('block-middle');
+      tooltip = `Pausa / Bloqueio (${currentStart} até ${currentEnd})`;
+    }
+
+    chipsHtml += `<div class="${classes.join(' ')}" title="${tooltip}" onclick="quickSelectBlockSlot('${t}')">${t}</div>`;
+  });
+
+  slotsContainer.innerHTML = chipsHtml;
+  summaryEl.innerHTML = `
+    <span>Intervalo Selecionado: <strong style="font-size:0.9rem; color:var(--orange);">${currentStart} até ${currentEnd}</strong> (${targetDate})</span>
+    <span style="font-size:0.75rem; color:var(--muted);">${calculateHoursDiff(currentStart, currentEnd)} de pausa</span>
+  `;
+};
+
+function calculateHoursDiff(start, end) {
+  if (!start || !end) return '';
+  const [h1, m1] = start.split(':').map(Number);
+  const [h2, m2] = end.split(':').map(Number);
+  const totalMin = Math.max(0, (h2 * 60 + m2) - (h1 * 60 + m1));
+  const h = Math.floor(totalMin / 60);
+  const m = totalMin % 60;
+  if (h > 0 && m > 0) return `${h}h ${m}min`;
+  if (h > 0) return `${h} hora${h > 1 ? 's' : ''}`;
+  return `${m} min`;
+}
+
+window.quickSelectBlockSlot = function(time) {
+  const blockType = document.getElementById('mBlockType')?.value;
+  const startInput = document.getElementById('mBlockStart');
+  const endInput = document.getElementById('mBlockEnd');
+  if (!startInput) return;
+
+  if (blockType === 'fechar_cedo') {
+    startInput.value = time;
+    if (endInput) endInput.value = '19:00';
+    renderBlockModalTimeline();
+    return;
+  }
+
+  if (blockType === 'intervalo') {
+    if (blockSelectionStep === 'start') {
+      // 1º Clique: define o Início
+      startInput.value = time;
+      
+      // Se o horário final atual for anterior ou igual ao novo início, ajusta o término para 1h à frente
+      if (!endInput.value || endInput.value <= time) {
+        const [h, m] = time.split(':').map(Number);
+        const nextH = Math.min(19, h + 1);
+        endInput.value = `${String(nextH).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+      }
+      blockSelectionStep = 'end'; // Próximo clique definirá o fim
+    } else {
+      // 2º Clique: define o Fim
+      if (time > startInput.value) {
+        endInput.value = time;
+        blockSelectionStep = 'start'; // Concluiu o range, reinicia ciclo
+      } else if (time < startInput.value) {
+        // Se clicou num horário antes do início atual, assume como novo início
+        startInput.value = time;
+        blockSelectionStep = 'end';
+      } else {
+        // Clicou no mesmo horário: adiciona 30 min para término
+        const [h, m] = time.split(':').map(Number);
+        const totalMin = h * 60 + m + 30;
+        endInput.value = `${String(Math.floor(totalMin / 60)).padStart(2, '0')}:${String(totalMin % 60).padStart(2, '0')}`;
+        blockSelectionStep = 'start';
+      }
+    }
+  }
+
+  renderBlockModalTimeline();
+};
+
+window.openBookingRulesModal = function() {
+  const currentMaxDays = state.settings.maxBookingDaysAhead || 30;
+  const isCustom = ![3, 7, 15, 30].includes(Number(currentMaxDays));
+  const allowSameDay = state.settings.allowSameDayBooking !== false;
+
+  const html = `
+    <div style="margin-bottom: 16px;">
+      <p style="font-size: 0.88rem; color: var(--muted); margin-bottom: 14px;">
+        Controle as regras de disponibilidade e até quando os clientes conseguem agendar horários sozinhos no link online.
+      </p>
+
+      <div class="form-group" style="margin-bottom: 14px;">
+        <label>Janela de Dias Visíveis no Futuro</label>
+        <div style="display: flex; gap: 10px; align-items: center;">
+          <select class="form-control" id="mCfgMaxDaysPreset" onchange="handleBookingModalPresetChange(this.value)" style="flex: 1.2;">
+            <option value="3" ${currentMaxDays === 3 ? 'selected' : ''}>Apenas 3 dias adiante</option>
+            <option value="7" ${currentMaxDays === 7 ? 'selected' : ''}>7 dias adiante (1 semana)</option>
+            <option value="15" ${currentMaxDays === 15 ? 'selected' : ''}>15 dias adiante (2 semanas)</option>
+            <option value="30" ${(!currentMaxDays || currentMaxDays === 30) ? 'selected' : ''}>30 dias adiante (1 mês)</option>
+            <option value="custom" ${isCustom ? 'selected' : ''}>Personalizado (digitar dias)</option>
+          </select>
+          <div id="mCfgMaxDaysCustomWrapper" style="display: ${isCustom ? 'flex' : 'none'}; align-items: center; gap: 6px; flex: 1;">
+            <input type="number" min="1" max="365" class="form-control" id="mCfgMaxDaysCustom" value="${currentMaxDays}" placeholder="Qtd de dias">
+            <span style="font-size: 0.85rem; color: var(--muted); font-weight: 500;">dias</span>
+          </div>
+        </div>
+        <small style="color:var(--muted); font-size:0.78rem; display:block; margin-top:4px;">
+          Evita que clientes façam agendamentos para datas muito distantes.
+        </small>
+      </div>
+
+      <div class="form-group" style="margin-bottom: 14px;">
+        <label>Permitir Agendamento no Mesmo Dia?</label>
+        <select class="form-control" id="mCfgAllowSameDay">
+          <option value="true" ${allowSameDay ? 'selected' : ''}>Sim — Clientes podem marcar para o mesmo dia (se houver vaga livre)</option>
+          <option value="false" ${!allowSameDay ? 'selected' : ''}>Não — Clientes só podem marcar a partir do dia seguinte (Evita surpresas)</option>
+        </select>
+        <small style="color:var(--muted); font-size:0.78rem; display:block; margin-top:4px;">
+          Se desativado, o cliente não consegue marcar horários para a data de hoje, apenas para amanhã em diante.
+        </small>
+      </div>
+    </div>
+  `;
+
+  openModal('Regras de Agendamento Online', html, async () => {
+    if (!isManager) {
+      asyncAlert('Apenas gestores têm permissão para alterar as regras de agendamento.');
+      return;
+    }
+
+    const preset = document.getElementById('mCfgMaxDaysPreset').value;
+    let maxDays = 30;
+    if (preset === 'custom') {
+      maxDays = Number(document.getElementById('mCfgMaxDaysCustom').value) || 30;
+    } else {
+      maxDays = Number(preset) || 30;
+    }
+
+    const allowSameDayVal = document.getElementById('mCfgAllowSameDay').value === 'true';
+
+    const updated = {
+      ...state.settings,
+      maxBookingDaysAhead: maxDays,
+      allowSameDayBooking: allowSameDayVal
+    };
+
+    const res = await tenantFetch('/api/settings', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updated)
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      asyncAlert(err.error || 'Erro ao salvar regras.');
+      return;
+    }
+
+    state.settings = updated;
+    closeModal();
+    renderView('agenda');
+  });
+};
+
+window.handleBookingModalPresetChange = function(val) {
+  const customWrapper = document.getElementById('mCfgMaxDaysCustomWrapper');
+  if (!customWrapper) return;
+  if (val === 'custom') {
+    customWrapper.style.display = 'flex';
+  } else {
+    customWrapper.style.display = 'none';
+  }
 };
 
 window.updateModalEndTime = function() {
@@ -761,6 +2039,10 @@ window.updateModalEndTime = function() {
 };
 
 window.openNewServiceModal = function() {
+  if (!isManager) {
+    asyncAlert('Apenas gestores têm permissão para adicionar serviços.');
+    return;
+  }
   const html = `
     <div class="form-group">
       <label>Nome do Serviço</label>
@@ -792,7 +2074,7 @@ window.openNewServiceModal = function() {
     const commissionPercent = Number(document.getElementById('mServComm').value);
 
     if (!name || !price) {
-      alert('Nome e Preço são obrigatórios!');
+      asyncAlert('Nome e Preço são obrigatórios!');
       return;
     }
 
@@ -830,7 +2112,7 @@ window.openNewClientModal = function() {
     const birthday = document.getElementById('mCliBday').value;
 
     if (!name) {
-      alert('O nome do cliente é obrigatório!');
+      asyncAlert('O nome do cliente é obrigatório!');
       return;
     }
 
@@ -847,6 +2129,11 @@ window.openNewClientModal = function() {
 };
 
 window.openNewExpenseModal = function() {
+  if (!isManager) {
+    asyncAlert('Apenas gestores têm permissão para cadastrar despesas.');
+    return;
+  }
+  const today = new Date().toISOString().split('T')[0];
   const html = `
     <div class="form-group">
       <label>Descrição</label>
@@ -857,17 +2144,41 @@ window.openNewExpenseModal = function() {
       <input type="text" class="form-control" id="mExpCat" placeholder="Ex: Aluguel, Insumos, Energia">
     </div>
     <div class="form-group">
-      <label>Valor (R$)</label>
-      <input type="number" class="form-control" id="mExpAmount" placeholder="150.00" step="0.50">
+      <label>Valor Total (R$)</label>
+      <input type="number" class="form-control" id="mExpAmount" placeholder="150.00" step="0.50" oninput="updateExpenseInstallmentPreview()">
+    </div>
+    <div class="form-group">
+      <label>Primeiro Vencimento</label>
+      <input type="date" class="form-control" id="mExpDueDate" value="${today}">
     </div>
     <div class="form-group">
       <label>Forma de Pagamento</label>
-      <select class="form-control" id="mExpType">
+      <select class="form-control" id="mExpType" onchange="toggleExpenseInstallments()">
         <option value="Pix">Pix</option>
         <option value="Boleto">Boleto</option>
         <option value="Cartão">Cartão</option>
         <option value="Dinheiro">Dinheiro</option>
       </select>
+    </div>
+    <div class="form-group" id="mExpInstallmentsWrapper" style="display:none; background: #fff7ed; padding: 12px; border-radius: 10px; border: 1px solid #ffedd5;">
+      <label style="color: var(--orange); font-weight: 600;">Parcelamento</label>
+      <select class="form-control" id="mExpInstallments" onchange="updateExpenseInstallmentPreview()">
+        <option value="1">À vista (1x)</option>
+        <option value="2">2x</option>
+        <option value="3">3x</option>
+        <option value="4">4x</option>
+        <option value="5">5x</option>
+        <option value="6">6x</option>
+        <option value="7">7x</option>
+        <option value="8">8x</option>
+        <option value="9">9x</option>
+        <option value="10">10x</option>
+        <option value="11">11x</option>
+        <option value="12">12x</option>
+        <option value="18">18x</option>
+        <option value="24">24x</option>
+      </select>
+      <div id="mExpInstallmentSummary" style="margin-top: 8px; font-size: 0.82rem; color: #c2410c; font-weight: 500;"></div>
     </div>
   `;
 
@@ -875,17 +2186,21 @@ window.openNewExpenseModal = function() {
     const description = document.getElementById('mExpDesc').value;
     const category = document.getElementById('mExpCat').value;
     const amount = Number(document.getElementById('mExpAmount').value);
+    const dueDate = document.getElementById('mExpDueDate').value || today;
     const paymentType = document.getElementById('mExpType').value;
+    const installments = (paymentType === 'Cartão' || paymentType === 'Boleto')
+      ? (parseInt(document.getElementById('mExpInstallments').value, 10) || 1)
+      : 1;
 
     if (!description || !amount) {
-      alert('Descrição e Valor são obrigatórios!');
+      asyncAlert('Descrição e Valor são obrigatórios!');
       return;
     }
 
     await tenantFetch('/api/expenses', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ description, category, amount, paymentType, status: 'pendente' })
+      body: JSON.stringify({ description, category, amount, dueDate, paymentType, installments, status: 'pendente' })
     });
 
     closeModal();
@@ -894,7 +2209,39 @@ window.openNewExpenseModal = function() {
   });
 };
 
+window.toggleExpenseInstallments = function() {
+  const type = document.getElementById('mExpType')?.value;
+  const wrapper = document.getElementById('mExpInstallmentsWrapper');
+  if (!wrapper) return;
+  if (type === 'Cartão' || type === 'Boleto') {
+    wrapper.style.display = 'block';
+    updateExpenseInstallmentPreview();
+  } else {
+    wrapper.style.display = 'none';
+  }
+};
+
+window.updateExpenseInstallmentPreview = function() {
+  const amount = Number(document.getElementById('mExpAmount')?.value) || 0;
+  const select = document.getElementById('mExpInstallments');
+  const summary = document.getElementById('mExpInstallmentSummary');
+  if (!select || !summary) return;
+
+  const count = parseInt(select.value, 10) || 1;
+  if (count <= 1 || amount <= 0) {
+    summary.innerHTML = `Lançamento único no valor de <strong>R$ ${amount.toFixed(2)}</strong>`;
+    return;
+  }
+
+  const valPerInstallment = (amount / count).toFixed(2);
+  summary.innerHTML = `Serão gerados <strong>${count} lançamentos mensais</strong> de <strong>R$ ${valPerInstallment}</strong> cada.`;
+};
+
 window.openNewProfessionalModal = function() {
+  if (!isManager) {
+    asyncAlert('Apenas gestores têm permissão para adicionar profissionais.');
+    return;
+  }
   const html = `
     <div class="form-group">
       <label>Nome Completo</label>
@@ -909,12 +2256,16 @@ window.openNewProfessionalModal = function() {
       <input type="text" class="form-control" id="mProfPhone" placeholder="(67) 99999-9999">
     </div>
     <div class="form-group">
-      <label>Email de Acesso (Login)</label>
-      <input type="email" class="form-control" id="mProfEmail" placeholder="juliana@salao.com">
+      <label>Usuário de Acesso (Login)</label>
+      <input type="text" class="form-control" id="mProfUsername" placeholder="Ex: juliana">
     </div>
     <div class="form-group">
       <label>Senha de Acesso ao Sistema</label>
       <input type="password" class="form-control" id="mProfPass" placeholder="Senha do funcionário">
+    </div>
+    <div class="form-group">
+      <label>Email de Contato (Opcional)</label>
+      <input type="email" class="form-control" id="mProfEmail" placeholder="juliana@salao.com">
     </div>
     <div class="form-group">
       <label>Nível de Acesso</label>
@@ -931,20 +2282,78 @@ window.openNewProfessionalModal = function() {
       <input type="checkbox" id="mProfBooking" checked>
       <label for="mProfBooking" style="margin:0; font-size:0.88rem;">Exibir na página pública de agendamento online</label>
     </div>
+
+    <!-- Seção de Sinal de Adiantamento (InfinitePay / Pix) -->
+    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 14px; padding: 14px; margin-top: 14px;">
+      <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">
+        <input type="checkbox" id="mProfRequireDeposit" onchange="document.getElementById('mProfDepositFields').style.display = this.checked ? 'block' : 'none'">
+        <label for="mProfRequireDeposit" style="margin:0; font-weight:700; color:var(--ink); font-size:0.9rem; cursor:pointer;">
+          Exigir Sinal de Adiantamento para Agendar
+        </label>
+      </div>
+
+      <div id="mProfDepositFields" style="display: none;">
+        <p style="font-size:0.78rem; color:var(--muted); margin-bottom:10px; line-height:1.4;">
+          O cliente só garante o horário pagando uma entrada antecipada diretamente para o Pix da profissional (qualquer banco de sua preferência).
+        </p>
+
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:10px;">
+          <div class="form-group" style="margin:0;">
+            <label style="font-size:0.8rem;">Porcentagem do Sinal (%)</label>
+            <input type="number" class="form-control" id="mProfDepositPercent" value="30" min="5" max="100" placeholder="Ex: 30">
+          </div>
+          <div class="form-group" style="margin:0;">
+            <label style="font-size:0.8rem;">Banco / Instituição</label>
+            <input type="text" class="form-control" id="mProfPixBank" placeholder="Ex: Nubank, Inter, Itaú, InfinitePay, Caixa...">
+          </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns: 1fr 1.5fr; gap:10px; margin-bottom:10px;">
+          <div class="form-group" style="margin:0;">
+            <label style="font-size:0.8rem;">Tipo de Chave</label>
+            <select class="form-control" id="mProfPixType">
+              <option value="Chave Pix">Chave Pix</option>
+              <option value="Celular / WhatsApp">Celular / WhatsApp</option>
+              <option value="CPF">CPF</option>
+              <option value="CNPJ">CNPJ</option>
+              <option value="Email">Email</option>
+              <option value="Aleatória">Aleatória</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin:0;">
+            <label style="font-size:0.8rem;">Chave Pix de Recebimento</label>
+            <input type="text" class="form-control" id="mProfPixKey" placeholder="Ex: chave pix ou infiniteTag">
+          </div>
+        </div>
+
+        <div class="form-group" style="margin:0;">
+          <label style="font-size:0.8rem;">Nome do Titular da Conta (para conferência)</label>
+          <input type="text" class="form-control" id="mProfPixName" placeholder="Ex: Sarah Beatriz da Silva">
+        </div>
+      </div>
+    </div>
   `;
 
   openModal('Cadastrar Profissional & Criar Login', html, async () => {
     const name = document.getElementById('mProfName').value.trim();
     const role = document.getElementById('mProfRole').value.trim();
     const phone = document.getElementById('mProfPhone').value.trim();
+    const username = document.getElementById('mProfUsername').value.trim();
     const email = document.getElementById('mProfEmail').value.trim();
     const password = document.getElementById('mProfPass').value;
     const access = document.getElementById('mProfAccess').value;
     const commissionDefault = Number(document.getElementById('mProfComm').value);
     const showInBooking = document.getElementById('mProfBooking').checked;
 
+    const requireDeposit = document.getElementById('mProfRequireDeposit').checked;
+    const depositPercent = Number(document.getElementById('mProfDepositPercent').value) || 30;
+    const pixBank = document.getElementById('mProfPixBank').value.trim() || 'InfinitePay';
+    const pixKeyType = document.getElementById('mProfPixType').value;
+    const pixKey = document.getElementById('mProfPixKey').value.trim();
+    const pixName = document.getElementById('mProfPixName').value.trim() || name;
+
     if (!name) {
-      alert('Nome é obrigatório!');
+      asyncAlert('Nome é obrigatório!');
       return;
     }
 
@@ -955,11 +2364,18 @@ window.openNewProfessionalModal = function() {
         name,
         role,
         phone,
+        username,
         email,
         password,
         access,
         commissionDefault,
-        showInBooking
+        showInBooking,
+        requireDeposit,
+        depositPercent,
+        pixBank,
+        pixKeyType,
+        pixKey,
+        pixName
       })
     });
 
@@ -970,6 +2386,10 @@ window.openNewProfessionalModal = function() {
 };
 
 window.openNewProductModal = function() {
+  if (!isManager) {
+    asyncAlert('Apenas gestores têm permissão para adicionar produtos.');
+    return;
+  }
   const html = `
     <div class="form-group">
       <label>Nome do Produto</label>
@@ -996,7 +2416,7 @@ window.openNewProductModal = function() {
     const stock = Number(document.getElementById('mProdStock').value);
 
     if (!name || !price) {
-      alert('Nome e Preço são obrigatórios!');
+      asyncAlert('Nome e Preço são obrigatórios!');
       return;
     }
 
@@ -1010,4 +2430,1102 @@ window.openNewProductModal = function() {
     await loadInitialData();
     renderView('produtos');
   });
+};
+
+// -------------------------------------------------------------
+// FUNÇÕES DE EDIÇÃO E EXCLUSÃO (CRUD COMPLETO)
+// -------------------------------------------------------------
+
+// 1. Profissionais: Editar e Excluir
+window.openEditProfessionalModal = function(profId) {
+  if (!isManager) {
+    asyncAlert('Apenas gestores têm permissão para editar profissionais.');
+    return;
+  }
+  const prof = state.professionals.find(p => p.id === profId);
+  if (!prof) return asyncAlert('Profissional não encontrado.');
+
+  const html = `
+    <div class="form-group">
+      <label>Nome Completo</label>
+      <input type="text" class="form-control" id="mEditProfName" value="${prof.name || ''}">
+    </div>
+    <div class="form-group">
+      <label>Especialidade / Cargo</label>
+      <input type="text" class="form-control" id="mEditProfRole" value="${prof.role || ''}">
+    </div>
+    <div class="form-group">
+      <label>WhatsApp / Celular</label>
+      <input type="text" class="form-control" id="mEditProfPhone" value="${prof.phone || ''}">
+    </div>
+    <div class="form-group">
+      <label>Email de Contato</label>
+      <input type="email" class="form-control" id="mEditProfEmail" value="${prof.email || ''}">
+    </div>
+    <div class="form-group">
+      <label>Nova Senha de Acesso (deixe em branco para não alterar)</label>
+      <input type="password" class="form-control" id="mEditProfPass" placeholder="Preencha apenas se quiser alterar">
+    </div>
+    <div class="form-group">
+      <label>Nível de Acesso</label>
+      <select class="form-control" id="mEditProfAccess">
+        <option value="Profissional de Servicos" ${prof.access !== 'Gestor' ? 'selected' : ''}>Profissional de Serviços (Apenas sua agenda e comissões)</option>
+        <option value="Gestor" ${prof.access === 'Gestor' ? 'selected' : ''}>Gestor Geral (Acesso total)</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Comissão Padrão (%)</label>
+      <input type="number" class="form-control" id="mEditProfComm" value="${prof.commissionDefault || 50}">
+    </div>
+    <div class="form-group" style="display:flex; align-items:center; gap:8px; margin-top:8px;">
+      <input type="checkbox" id="mEditProfBooking" ${prof.showInBooking !== false ? 'checked' : ''}>
+      <label for="mEditProfBooking" style="margin:0; font-size:0.88rem;">Exibir na página pública de agendamento online</label>
+    </div>
+
+    <!-- Seção de Sinal de Adiantamento (InfinitePay / Pix) -->
+    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 14px; padding: 14px; margin-top: 14px;">
+      <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">
+        <input type="checkbox" id="mEditProfRequireDeposit" ${prof.requireDeposit ? 'checked' : ''} onchange="document.getElementById('mEditProfDepositFields').style.display = this.checked ? 'block' : 'none'">
+        <label for="mEditProfRequireDeposit" style="margin:0; font-weight:700; color:var(--ink); font-size:0.9rem; cursor:pointer;">
+          Exigir Sinal de Adiantamento para Agendar
+        </label>
+      </div>
+
+      <div id="mEditProfDepositFields" style="display: ${prof.requireDeposit ? 'block' : 'none'};">
+        <p style="font-size:0.78rem; color:var(--muted); margin-bottom:10px; line-height:1.4;">
+          O cliente só garante o horário pagando uma entrada antecipada diretamente para o Pix da profissional (qualquer banco de sua preferência).
+        </p>
+
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:10px;">
+          <div class="form-group" style="margin:0;">
+            <label style="font-size:0.8rem;">Porcentagem do Sinal (%)</label>
+            <input type="number" class="form-control" id="mEditProfDepositPercent" value="${prof.depositPercent || 30}" min="5" max="100" placeholder="Ex: 30">
+          </div>
+          <div class="form-group" style="margin:0;">
+            <label style="font-size:0.8rem;">Banco / Instituição</label>
+            <input type="text" class="form-control" id="mEditProfPixBank" value="${prof.pixBank || ''}" placeholder="Ex: Nubank, Inter, Itaú, InfinitePay, Caixa...">
+          </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns: 1fr 1.5fr; gap:10px; margin-bottom:10px;">
+          <div class="form-group" style="margin:0;">
+            <label style="font-size:0.8rem;">Tipo de Chave</label>
+            <select class="form-control" id="mEditProfPixType">
+              <option value="Chave Pix" ${prof.pixKeyType === 'Chave Pix' ? 'selected' : ''}>Chave Pix</option>
+              <option value="Celular / WhatsApp" ${prof.pixKeyType === 'Celular / WhatsApp' ? 'selected' : ''}>Celular / WhatsApp</option>
+              <option value="CPF" ${prof.pixKeyType === 'CPF' ? 'selected' : ''}>CPF</option>
+              <option value="CNPJ" ${prof.pixKeyType === 'CNPJ' ? 'selected' : ''}>CNPJ</option>
+              <option value="Email" ${prof.pixKeyType === 'Email' ? 'selected' : ''}>Email</option>
+              <option value="Aleatória" ${prof.pixKeyType === 'Aleatória' ? 'selected' : ''}>Aleatória</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin:0;">
+            <label style="font-size:0.8rem;">Chave Pix de Recebimento</label>
+            <input type="text" class="form-control" id="mEditProfPixKey" value="${prof.pixKey || ''}" placeholder="Ex: chave pix ou infiniteTag">
+          </div>
+        </div>
+
+        <div class="form-group" style="margin:0;">
+          <label style="font-size:0.8rem;">Nome do Titular da Conta (para conferência)</label>
+          <input type="text" class="form-control" id="mEditProfPixName" value="${prof.pixName || prof.name || ''}" placeholder="Ex: Sarah Beatriz da Silva">
+        </div>
+      </div>
+    </div>
+  `;
+
+  openModal('Editar Profissional', html, async () => {
+    const name = document.getElementById('mEditProfName').value.trim();
+    const role = document.getElementById('mEditProfRole').value.trim();
+    const phone = document.getElementById('mEditProfPhone').value.trim();
+    const email = document.getElementById('mEditProfEmail').value.trim();
+    const password = document.getElementById('mEditProfPass').value;
+    const access = document.getElementById('mEditProfAccess').value;
+    const commissionDefault = Number(document.getElementById('mEditProfComm').value);
+    const showInBooking = document.getElementById('mEditProfBooking').checked;
+
+    const requireDeposit = document.getElementById('mEditProfRequireDeposit').checked;
+    const depositPercent = Number(document.getElementById('mEditProfDepositPercent').value) || 30;
+    const pixBank = document.getElementById('mEditProfPixBank').value.trim() || 'InfinitePay';
+    const pixKeyType = document.getElementById('mEditProfPixType').value;
+    const pixKey = document.getElementById('mEditProfPixKey').value.trim();
+    const pixName = document.getElementById('mEditProfPixName').value.trim() || name;
+
+    if (!name) {
+      asyncAlert('O nome do profissional é obrigatório.');
+      return;
+    }
+
+    const payload = {
+      name,
+      role,
+      phone,
+      email,
+      access,
+      commissionDefault,
+      showInBooking,
+      requireDeposit,
+      depositPercent,
+      pixBank,
+      pixKeyType,
+      pixKey,
+      pixName
+    };
+    if (password) payload.password = password;
+
+    const res = await tenantFetch(`/api/professionals/${profId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      asyncAlert(err.error || 'Erro ao atualizar profissional.');
+      return;
+    }
+
+    closeModal();
+    await loadInitialData();
+    renderView('profissionais');
+  });
+};
+
+window.deleteProfessional = async function(profId) {
+  if (!isManager) {
+    await asyncAlert('Apenas gestores têm permissão para excluir profissionais.', 'Acesso Restrito', 'warning');
+    return;
+  }
+  const prof = state.professionals.find(p => p.id === profId);
+  const name = prof ? prof.name : 'este profissional';
+  const confirmed = await asyncConfirm(`Deseja realmente excluir ${name}? O acesso e histórico associado serão desvinculados.`, 'Excluir Profissional', { isDanger: true });
+  if (!confirmed) return;
+
+  const res = await tenantFetch(`/api/professionals/${profId}`, { method: 'DELETE' });
+  if (!res.ok) {
+    const err = await res.json();
+    await asyncAlert(err.error || 'Erro ao excluir profissional.', 'Erro', 'error');
+    return;
+  }
+
+  await loadInitialData();
+  renderView('profissionais');
+};
+
+// 2. Serviços: Editar e Excluir
+window.openEditServiceModal = function(serviceId) {
+  if (!isManager) {
+    asyncAlert('Apenas gestores têm permissão para editar serviços.');
+    return;
+  }
+  const serv = state.services.find(s => s.id === serviceId);
+  if (!serv) return asyncAlert('Serviço não encontrado.');
+
+  const html = `
+    <div class="form-group">
+      <label>Nome do Serviço</label>
+      <input type="text" class="form-control" id="mEditServName" value="${serv.name || ''}">
+    </div>
+    <div class="form-group">
+      <label>Categoria</label>
+      <input type="text" class="form-control" id="mEditServCat" value="${serv.category || ''}">
+    </div>
+    <div class="form-group">
+      <label>Preço (R$)</label>
+      <input type="number" class="form-control" id="mEditServPrice" value="${serv.price || 0}" step="0.50">
+    </div>
+    <div class="form-group">
+      <label>Duração Estimada (minutos)</label>
+      <input type="number" class="form-control" id="mEditServDuration" value="${serv.durationMinutes || 60}">
+    </div>
+    <div class="form-group">
+      <label>Comissão Padrão do Profissional (%)</label>
+      <input type="number" class="form-control" id="mEditServComm" value="${serv.commissionPercent || 50}">
+    </div>
+  `;
+
+  openModal('Editar Serviço', html, async () => {
+    const name = document.getElementById('mEditServName').value.trim();
+    const category = document.getElementById('mEditServCat').value.trim();
+    const price = Number(document.getElementById('mEditServPrice').value);
+    const durationMinutes = Number(document.getElementById('mEditServDuration').value);
+    const commissionPercent = Number(document.getElementById('mEditServComm').value);
+
+    if (!name || isNaN(price)) {
+      asyncAlert('Nome e Preço são obrigatórios.');
+      return;
+    }
+
+    const res = await tenantFetch(`/api/services/${serviceId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, category, price, durationMinutes, commissionPercent })
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      asyncAlert(err.error || 'Erro ao atualizar serviço.');
+      return;
+    }
+
+    closeModal();
+    await loadInitialData();
+    renderView('servicos');
+  });
+};
+
+window.deleteService = async function(serviceId) {
+  if (!isManager) {
+    await asyncAlert('Apenas gestores têm permissão para excluir serviços.', 'Acesso Restrito', 'warning');
+    return;
+  }
+  const serv = state.services.find(s => s.id === serviceId);
+  const name = serv ? serv.name : 'este serviço';
+  const confirmed = await asyncConfirm(`Deseja realmente excluir ${name}?`, 'Excluir Serviço', { isDanger: true });
+  if (!confirmed) return;
+
+  const res = await tenantFetch(`/api/services/${serviceId}`, { method: 'DELETE' });
+  if (!res.ok) {
+    const err = await res.json();
+    await asyncAlert(err.error || 'Erro ao excluir serviço.', 'Erro', 'error');
+    return;
+  }
+
+  await loadInitialData();
+  renderView('servicos');
+};
+
+// 3. Produtos: Editar e Excluir
+window.openEditProductModal = function(productId) {
+  if (!isManager) {
+    asyncAlert('Apenas gestores têm permissão para editar produtos.', 'Acesso Restrito', 'warning');
+    return;
+  }
+  const prod = state.products.find(p => p.id === productId);
+  if (!prod) return asyncAlert('Produto não encontrado.', 'Erro', 'error');
+
+  const html = `
+    <div class="form-group">
+      <label>Nome do Produto</label>
+      <input type="text" class="form-control" id="mEditProdName" value="${prod.name || ''}">
+    </div>
+    <div class="form-group">
+      <label>Categoria</label>
+      <input type="text" class="form-control" id="mEditProdCat" value="${prod.category || ''}">
+    </div>
+    <div class="form-group">
+      <label>Marca</label>
+      <input type="text" class="form-control" id="mEditProdBrand" value="${prod.brand || ''}">
+    </div>
+    <div class="form-group">
+      <label>Preço de Venda (R$)</label>
+      <input type="number" class="form-control" id="mEditProdPrice" value="${prod.price || 0}" step="0.50">
+    </div>
+    <div class="form-group">
+      <label>Quantidade em Estoque</label>
+      <input type="number" class="form-control" id="mEditProdStock" value="${prod.stock || 0}">
+    </div>
+  `;
+
+  openModal('Editar Produto', html, async () => {
+    const name = document.getElementById('mEditProdName').value.trim();
+    const category = document.getElementById('mEditProdCat').value.trim();
+    const brand = document.getElementById('mEditProdBrand').value.trim();
+    const price = Number(document.getElementById('mEditProdPrice').value);
+    const stock = Number(document.getElementById('mEditProdStock').value);
+
+    if (!name || isNaN(price)) {
+      await asyncAlert('Nome e Preço são obrigatórios.', 'Campos Obrigatórios', 'warning');
+      return;
+    }
+
+    const res = await tenantFetch(`/api/products/${productId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, category, brand, price, stock })
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      await asyncAlert(err.error || 'Erro ao atualizar produto.', 'Erro', 'error');
+      return;
+    }
+
+    closeModal();
+    await loadInitialData();
+    renderView('produtos');
+  });
+};
+
+window.deleteProduct = async function(productId) {
+  if (!isManager) {
+    await asyncAlert('Apenas gestores têm permissão para excluir produtos.', 'Acesso Restrito', 'warning');
+    return;
+  }
+  const prod = state.products.find(p => p.id === productId);
+  const name = prod ? prod.name : 'este produto';
+  const confirmed = await asyncConfirm(`Deseja realmente excluir ${name}?`, 'Excluir Produto', { isDanger: true });
+  if (!confirmed) return;
+
+  const res = await tenantFetch(`/api/products/${productId}`, { method: 'DELETE' });
+  if (!res.ok) {
+    const err = await res.json();
+    await asyncAlert(err.error || 'Erro ao excluir produto.', 'Erro', 'error');
+    return;
+  }
+
+  await loadInitialData();
+  renderView('produtos');
+};
+
+// 4. Clientes: Editar e Excluir
+window.openEditClientModal = function(clientId) {
+  const cli = state.clients.find(c => c.id === clientId);
+  if (!cli) return asyncAlert('Cliente não encontrado.', 'Erro', 'error');
+
+  const html = `
+    <div class="form-group">
+      <label>Nome Completo</label>
+      <input type="text" class="form-control" id="mEditCliName" value="${cli.name || ''}">
+    </div>
+    <div class="form-group">
+      <label>WhatsApp / Celular</label>
+      <input type="text" class="form-control" id="mEditCliPhone" value="${cli.phone || ''}">
+    </div>
+    <div class="form-group">
+      <label>Data de Nascimento</label>
+      <input type="date" class="form-control" id="mEditCliBday" value="${cli.birthday || ''}">
+    </div>
+    <div class="form-group">
+      <label>Observações</label>
+      <input type="text" class="form-control" id="mEditCliNotes" value="${cli.notes || ''}" placeholder="Preferências, alergias, etc.">
+    </div>
+  `;
+
+  openModal('Editar Cliente', html, async () => {
+    const name = document.getElementById('mEditCliName').value.trim();
+    const phone = document.getElementById('mEditCliPhone').value.trim();
+    const birthday = document.getElementById('mEditCliBday').value;
+    const notes = document.getElementById('mEditCliNotes').value.trim();
+
+    if (!name) {
+      await asyncAlert('O nome do cliente é obrigatório.', 'Campo Obrigatório', 'warning');
+      return;
+    }
+
+    const res = await tenantFetch(`/api/clients/${clientId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, phone, birthday, notes })
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      await asyncAlert(err.error || 'Erro ao atualizar cliente.', 'Erro', 'error');
+      return;
+    }
+
+    closeModal();
+    await loadInitialData();
+    renderView('clientes');
+  });
+};
+
+window.deleteClient = async function(clientId) {
+  const cli = state.clients.find(c => c.id === clientId);
+  const name = cli ? cli.name : 'este cliente';
+  const confirmed = await asyncConfirm(`Deseja realmente excluir o cadastro de ${name}?`, 'Excluir Cliente', { isDanger: true });
+  if (!confirmed) return;
+
+  const res = await tenantFetch(`/api/clients/${clientId}`, { method: 'DELETE' });
+  if (!res.ok) {
+    const err = await res.json();
+    await asyncAlert(err.error || 'Erro ao excluir cliente.', 'Erro', 'error');
+    return;
+  }
+
+  await loadInitialData();
+  renderView('clientes');
+};
+
+// 5. Despesas: Editar e Excluir
+window.openEditExpenseModal = function(expenseId) {
+  if (!isManager) {
+    asyncAlert('Apenas gestores têm permissão para editar despesas.');
+    return;
+  }
+  const exp = state.expenses.find(e => e.id === expenseId);
+  if (!exp) return asyncAlert('Despesa não encontrada.');
+
+  const html = `
+    <div class="form-group">
+      <label>Descrição</label>
+      <input type="text" class="form-control" id="mEditExpDesc" value="${exp.description || ''}">
+    </div>
+    <div class="form-group">
+      <label>Categoria</label>
+      <input type="text" class="form-control" id="mEditExpCat" value="${exp.category || ''}">
+    </div>
+    <div class="form-group">
+      <label>Valor (R$)</label>
+      <input type="number" class="form-control" id="mEditExpAmount" value="${exp.amount || 0}" step="0.50">
+    </div>
+    <div class="form-group">
+      <label>Data de Vencimento</label>
+      <input type="date" class="form-control" id="mEditExpDate" value="${exp.dueDate || ''}">
+    </div>
+    <div class="form-group">
+      <label>Forma de Pagamento</label>
+      <select class="form-control" id="mEditExpType">
+        <option value="Pix" ${exp.paymentType === 'Pix' ? 'selected' : ''}>Pix</option>
+        <option value="Boleto" ${exp.paymentType === 'Boleto' ? 'selected' : ''}>Boleto</option>
+        <option value="Cartão" ${exp.paymentType === 'Cartão' ? 'selected' : ''}>Cartão</option>
+        <option value="Dinheiro" ${exp.paymentType === 'Dinheiro' ? 'selected' : ''}>Dinheiro</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Status</label>
+      <select class="form-control" id="mEditExpStatus">
+        <option value="pendente" ${exp.status === 'pendente' ? 'selected' : ''}>Pendente</option>
+        <option value="pago" ${exp.status === 'pago' ? 'selected' : ''}>Pago</option>
+      </select>
+    </div>
+  `;
+
+  openModal('Editar Despesa', html, async () => {
+    const description = document.getElementById('mEditExpDesc').value.trim();
+    const category = document.getElementById('mEditExpCat').value.trim();
+    const amount = Number(document.getElementById('mEditExpAmount').value);
+    const dueDate = document.getElementById('mEditExpDate').value;
+    const paymentType = document.getElementById('mEditExpType').value;
+    const status = document.getElementById('mEditExpStatus').value;
+
+    if (!description || isNaN(amount)) {
+      asyncAlert('Descrição e Valor são obrigatórios.');
+      return;
+    }
+
+    const res = await tenantFetch(`/api/expenses/${expenseId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ description, category, amount, dueDate, paymentType, status })
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      asyncAlert(err.error || 'Erro ao atualizar despesa.');
+      return;
+    }
+
+    closeModal();
+    await loadInitialData();
+    renderView('despesas');
+  });
+};
+
+window.deleteExpense = async function(expenseId) {
+  if (!isManager) {
+    await asyncAlert('Apenas gestores têm permissão para excluir despesas.', 'Acesso Restrito', 'warning');
+    return;
+  }
+  const exp = state.expenses.find(e => e.id === expenseId);
+  const desc = exp ? exp.description : 'esta despesa';
+  const confirmed = await asyncConfirm(`Deseja realmente excluir "${desc}"?`, 'Excluir Despesa', { isDanger: true });
+  if (!confirmed) return;
+
+  const res = await tenantFetch(`/api/expenses/${expenseId}`, { method: 'DELETE' });
+  if (!res.ok) {
+    const err = await res.json();
+    await asyncAlert(err.error || 'Erro ao excluir despesa.', 'Erro', 'error');
+    return;
+  }
+
+  await loadInitialData();
+  renderView('despesas');
+};
+
+// 6. Comissões & Vales: Adicionar, Editar e Excluir
+window.openNewCommissionModal = function() {
+  if (!isManager) {
+    asyncAlert('Apenas gestores têm permissão para lançar comissões ou vales.');
+    return;
+  }
+
+  const profOptions = (state.professionals || []).map(p => `
+    <option value="${p.id}">${p.name} (${p.role || 'Profissional'})</option>
+  `).join('');
+
+  const today = new Date().toISOString().split('T')[0];
+
+  const html = `
+    <div class="form-group">
+      <label>Profissional</label>
+      <select class="form-control" id="mCommProf">
+        ${profOptions || '<option value="">Nenhum profissional cadastrado</option>'}
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Tipo de Lançamento</label>
+      <select class="form-control" id="mCommType" onchange="document.getElementById('mCommDesc').placeholder = this.value === 'vale' ? 'Ex: Adiantamento de salário / Vale transporte' : 'Ex: Comissão sobre Mechas / Bônus Meta'">
+        <option value="comissao">Comissão (Acréscimo a pagar)</option>
+        <option value="vale">Vale / Adiantamento (Desconto ou saque antecipado)</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Valor (R$)</label>
+      <input type="number" class="form-control" id="mCommAmount" placeholder="Ex: 150.00" step="0.50" min="0">
+    </div>
+    <div class="form-group">
+      <label>Descrição / Referência</label>
+      <input type="text" class="form-control" id="mCommDesc" placeholder="Ex: Comissão sobre Mechas / Bônus Meta">
+    </div>
+    <div class="form-group">
+      <label>Data de Registro</label>
+      <input type="date" class="form-control" id="mCommDate" value="${today}">
+    </div>
+    <div class="form-group">
+      <label>Status</label>
+      <select class="form-control" id="mCommStatus">
+        <option value="a_pagar">A Pagar (Pendente de liberação)</option>
+        <option value="paga">Já Paga (Quitada)</option>
+      </select>
+    </div>
+  `;
+
+  openModal('Lançar Comissão / Vale', html, async () => {
+    const professionalId = document.getElementById('mCommProf').value;
+    const type = document.getElementById('mCommType').value;
+    const amount = Number(document.getElementById('mCommAmount').value);
+    const description = document.getElementById('mCommDesc').value.trim();
+    const date = document.getElementById('mCommDate').value;
+    const status = document.getElementById('mCommStatus').value;
+
+    if (!professionalId) {
+      asyncAlert('Selecione um profissional.');
+      return;
+    }
+    if (isNaN(amount) || amount <= 0) {
+      asyncAlert('Informe um valor válido maior que zero.');
+      return;
+    }
+
+    const prof = (state.professionals || []).find(p => p.id === professionalId);
+
+    const res = await tenantFetch('/api/commissions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        professionalId,
+        professionalName: prof ? prof.name : 'Profissional',
+        type,
+        amount,
+        description: description || (type === 'vale' ? 'Adiantamento / Vale' : 'Comissão Avulsa'),
+        date,
+        status,
+        paymentDate: status === 'paga' ? date : null
+      })
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      asyncAlert(err.error || 'Erro ao lançar comissão/vale.');
+      return;
+    }
+
+    closeModal();
+    await loadInitialData();
+    renderView('comissões');
+  });
+};
+
+window.openEditCommissionModal = function(commId) {
+  if (!isManager) {
+    asyncAlert('Apenas gestores têm permissão para editar comissões ou vales.');
+    return;
+  }
+
+  const comm = (state.commissions || []).find(c => c.id === commId);
+  if (!comm) return asyncAlert('Lançamento não encontrado.');
+
+  const profOptions = (state.professionals || []).map(p => `
+    <option value="${p.id}" ${p.id === comm.professionalId ? 'selected' : ''}>${p.name} (${p.role || 'Profissional'})</option>
+  `).join('');
+
+  const currentType = comm.type || (comm.description && comm.description.toLowerCase().includes('vale') ? 'vale' : 'comissao');
+  const amountVal = Math.abs(comm.amount || 0);
+
+  const html = `
+    <div class="form-group">
+      <label>Profissional</label>
+      <select class="form-control" id="mEditCommProf">
+        ${profOptions}
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Tipo de Lançamento</label>
+      <select class="form-control" id="mEditCommType">
+        <option value="comissao" ${currentType === 'comissao' ? 'selected' : ''}>Comissão (Acréscimo a pagar)</option>
+        <option value="vale" ${currentType === 'vale' ? 'selected' : ''}>Vale / Adiantamento (Desconto ou saque antecipado)</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Valor (R$)</label>
+      <input type="number" class="form-control" id="mEditCommAmount" value="${amountVal}" step="0.50" min="0">
+    </div>
+    <div class="form-group">
+      <label>Descrição / Referência</label>
+      <input type="text" class="form-control" id="mEditCommDesc" value="${comm.description || ''}">
+    </div>
+    <div class="form-group">
+      <label>Data de Registro</label>
+      <input type="date" class="form-control" id="mEditCommDate" value="${comm.date || comm.paymentDate || ''}">
+    </div>
+    <div class="form-group">
+      <label>Status</label>
+      <select class="form-control" id="mEditCommStatus">
+        <option value="a_pagar" ${comm.status === 'a_pagar' ? 'selected' : ''}>A Pagar (Pendente)</option>
+        <option value="paga" ${comm.status === 'paga' ? 'selected' : ''}>Paga (Quitada)</option>
+      </select>
+    </div>
+  `;
+
+  openModal('Editar Comissão / Vale', html, async () => {
+    const professionalId = document.getElementById('mEditCommProf').value;
+    const type = document.getElementById('mEditCommType').value;
+    const amount = Number(document.getElementById('mEditCommAmount').value);
+    const description = document.getElementById('mEditCommDesc').value.trim();
+    const date = document.getElementById('mEditCommDate').value;
+    const status = document.getElementById('mEditCommStatus').value;
+
+    if (!professionalId) {
+      asyncAlert('Selecione um profissional.');
+      return;
+    }
+    if (isNaN(amount) || amount <= 0) {
+      asyncAlert('Informe um valor válido.');
+      return;
+    }
+
+    const prof = (state.professionals || []).find(p => p.id === professionalId);
+
+    const res = await tenantFetch(`/api/commissions/${commId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        professionalId,
+        professionalName: prof ? prof.name : comm.professionalName,
+        type,
+        amount,
+        description,
+        date,
+        status,
+        paymentDate: status === 'paga' ? (comm.paymentDate || date || new Date().toISOString().split('T')[0]) : null
+      })
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      asyncAlert(err.error || 'Erro ao atualizar comissão/vale.');
+      return;
+    }
+
+    closeModal();
+    await loadInitialData();
+    renderView('comissões');
+  });
+};
+
+window.deleteCommission = async function(commId) {
+  if (!isManager) {
+    await asyncAlert('Apenas gestores têm permissão para excluir comissões ou vales.', 'Acesso Restrito', 'warning');
+    return;
+  }
+
+  const comm = (state.commissions || []).find(c => c.id === commId);
+  const name = comm ? `${comm.professionalName} (R$ ${Math.abs(comm.amount || 0).toFixed(2)})` : 'este lançamento';
+
+  const confirmed = await asyncConfirm(`Deseja realmente excluir ${name}?`, 'Excluir Lançamento', { isDanger: true });
+  if (!confirmed) return;
+
+  const res = await tenantFetch(`/api/commissions/${commId}`, { method: 'DELETE' });
+  if (!res.ok) {
+    const err = await res.json();
+    await asyncAlert(err.error || 'Erro ao excluir lançamento.', 'Erro', 'error');
+    return;
+  }
+
+  await loadInitialData();
+  renderView('comissões');
+};
+
+// -------------------------------------------------------------
+// SISTEMA DE ASSINATURA, REGUAS DE AVISOS E MERCADO PAGO
+// -------------------------------------------------------------
+
+let currentSubscriptionData = null;
+let currentPixPaymentId = null;
+
+async function checkSubscriptionStatus() {
+  // Superadmin e usuários vitalícios não têm restrição
+  try {
+    const res = await tenantFetch('/api/subscription/status');
+    if (!res.ok) return;
+    const data = await res.json();
+    currentSubscriptionData = data;
+
+    const bannerContainer = document.getElementById('subscriptionBannerContainer');
+    if (!bannerContainer) return;
+
+    // Se for vitalício, esvazia qualquer banner e garante desbloqueio
+    if (data.isLifetime) {
+      bannerContainer.innerHTML = '';
+      const payModal = document.getElementById('subscriptionPayModal');
+      if (payModal) payModal.classList.remove('open');
+      return;
+    }
+
+    // Régua de avisos nos 3 dias, 2 dias ou no dia do vencimento
+    if (data.isBlocked) {
+      bannerContainer.innerHTML = `
+        <div style="background: #fee2e2; color: #b91c1c; padding: 12px 20px; border-bottom: 1px solid #fca5a5; display: flex; align-items: center; justify-content: space-between; font-weight: 500;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+            <span>${data.message}</span>
+          </div>
+          <button class="btn-falcon btn-primary" onclick="openSubscriptionPayModal(true)" style="padding: 6px 14px; font-size: 0.85rem;">Pagar Assinatura</button>
+        </div>
+      `;
+      // Bloqueia com overlay obrigatório
+      openSubscriptionPayModal(false);
+    } else if (data.warningLevel === 'today') {
+      bannerContainer.innerHTML = `
+        <div style="background: #fef2f2; color: #dc2626; padding: 10px 20px; border-bottom: 1px solid #fecaca; display: flex; align-items: center; justify-content: space-between; font-weight: 500;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+            <span><strong>Aviso Urgente:</strong> Sua mensalidade vence hoje! Renove para não perder o acesso.</span>
+          </div>
+          <button class="btn-falcon btn-primary" onclick="openSubscriptionPayModal(true)" style="padding: 5px 12px; font-size: 0.82rem;">Renovar Agora (Pix)</button>
+        </div>
+      `;
+    } else if (data.warningLevel === 'two_days') {
+      bannerContainer.innerHTML = `
+        <div style="background: #fff7ed; color: #c2410c; padding: 10px 20px; border-bottom: 1px solid #fed7aa; display: flex; align-items: center; justify-content: space-between; font-weight: 500;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+            <span>Sua assinatura BellaSync vence em <strong>2 dias</strong>.</span>
+          </div>
+          <button class="btn-falcon btn-primary" onclick="openSubscriptionPayModal(true)" style="padding: 5px 12px; font-size: 0.82rem;">Antecipar Pagamento</button>
+        </div>
+      `;
+    } else if (data.warningLevel === 'three_days') {
+      bannerContainer.innerHTML = `
+        <div style="background: #fefce8; color: #854d0e; padding: 10px 20px; border-bottom: 1px solid #fef08a; display: flex; align-items: center; justify-content: space-between; font-weight: 500;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+            <span>Lembrete: Sua assinatura BellaSync vence em <strong>3 dias</strong>.</span>
+          </div>
+          <button class="btn-falcon btn-secondary" onclick="openSubscriptionPayModal(true)" style="padding: 5px 12px; font-size: 0.82rem;">Ver Fatura</button>
+        </div>
+      `;
+    } else {
+      bannerContainer.innerHTML = '';
+    }
+  } catch (err) {
+    console.error('Erro ao verificar assinatura:', err);
+  }
+}
+
+let currentSubMode = 'card';
+
+window.switchSubPaymentTab = function(mode) {
+  currentSubMode = mode;
+  const tabCard = document.getElementById('subTabCardBtn');
+  const tabPix = document.getElementById('subTabPixBtn');
+  const cardBox = document.getElementById('subCardBox');
+  const pixBox = document.getElementById('subPixBox');
+
+  if (mode === 'card') {
+    tabCard.style.background = '#fff';
+    tabCard.style.color = '#0f172a';
+    tabCard.style.boxShadow = '0 2px 6px rgba(0,0,0,0.06)';
+    tabPix.style.background = 'transparent';
+    tabPix.style.color = '#64748b';
+    tabPix.style.boxShadow = 'none';
+    cardBox.style.display = 'block';
+    pixBox.style.display = 'none';
+  } else {
+    tabPix.style.background = '#fff';
+    tabPix.style.color = '#0f172a';
+    tabPix.style.boxShadow = '0 2px 6px rgba(0,0,0,0.06)';
+    tabCard.style.background = 'transparent';
+    tabCard.style.color = '#64748b';
+    tabCard.style.boxShadow = 'none';
+    cardBox.style.display = 'none';
+    pixBox.style.display = 'block';
+
+    // Se ainda não gerou Pix nessa sessão, gera agora
+    if (!currentPixPaymentId) {
+      loadPixPayment();
+    }
+  }
+};
+
+async function loadCardSubscription() {
+  const btn = document.getElementById('btnSubscribeCard');
+  try {
+    const res = await tenantFetch('/api/subscription/create-card-plan', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    const data = await res.json();
+    if (res.ok && data.initPoint) {
+      btn.href = data.initPoint;
+      const amountEl = document.getElementById('subCardAmountDisplay');
+      if (amountEl) {
+        amountEl.innerHTML = `R$ ${Number(data.amount).toFixed(2)} <span style="font-size:0.85rem; font-weight:normal; color:var(--muted);">/ mês</span>`;
+      }
+    }
+  } catch (e) {
+    console.error('Erro ao carregar plano de cartão:', e);
+  }
+}
+
+async function loadPixPayment() {
+  const loadingBox = document.getElementById('subLoadingBox');
+  const pixBox = document.getElementById('subPixBox');
+  const loadingText = document.getElementById('subLoadingText');
+  if (loadingText) loadingText.innerText = 'Gerando Pix com Mercado Pago...';
+  loadingBox.style.display = 'block';
+
+  try {
+    const res = await tenantFetch('/api/subscription/create-pix', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: currentUser?.name || 'Gestor do Salão',
+        email: currentUser?.email || 'contato@bellasync.online'
+      })
+    });
+    const data = await res.json();
+    loadingBox.style.display = 'none';
+
+    if (!res.ok) {
+      asyncAlert(data.error || 'Erro ao gerar Pix.');
+      return;
+    }
+
+    currentPixPaymentId = data.paymentId;
+    document.getElementById('subQrCodeImg').src = `data:image/png;base64,${data.qrCodeBase64}`;
+    document.getElementById('subPixCopyCode').value = data.qrCode;
+    document.getElementById('subPixAmount').innerText = `R$ ${Number(data.amount).toFixed(2)}`;
+    if (currentSubMode === 'pix') {
+      pixBox.style.display = 'block';
+    }
+  } catch (err) {
+    loadingBox.style.display = 'none';
+    asyncAlert('Erro de conexão ao gerar Pix.');
+  }
+}
+
+window.openSubscriptionPayModal = async function(canClose = true) {
+  // Se for vitalício, nunca abre modal de pagamento nem dispara cobrança
+  if (currentSubscriptionData && currentSubscriptionData.isLifetime) {
+    console.log('[Subscription] Salão com acesso vitalício. Bloqueio de cobrança ativo.');
+    return;
+  }
+
+  const modal = document.getElementById('subscriptionPayModal');
+  const closeBtn = document.getElementById('btnCloseSubModal');
+  const closeCardBtn = document.getElementById('btnCloseSubModalCard');
+  const closeXBtn = document.getElementById('btnSubModalCloseX');
+
+  if (!modal) return;
+  modal.classList.add('open');
+
+  if (closeBtn) closeBtn.style.display = canClose ? 'inline-block' : 'none';
+  if (closeCardBtn) closeCardBtn.style.display = canClose ? 'inline-block' : 'none';
+  if (closeXBtn) closeXBtn.style.display = canClose ? 'flex' : 'none';
+
+  // Inicia na aba de Cartão (Recorrente)
+  switchSubPaymentTab('card');
+
+  // Carrega o link do cartão e pré-carrega o Pix em segundo plano
+  loadCardSubscription();
+  loadPixPayment();
+};
+
+window.closeSubModal = function() {
+  const modal = document.getElementById('subscriptionPayModal');
+  if (modal) modal.classList.remove('open');
+};
+
+window.copyPixCode = function() {
+  const input = document.getElementById('subPixCopyCode');
+  if (!input) return;
+  input.select();
+  navigator.clipboard.writeText(input.value);
+  asyncAlert('Código Pix Copia e Cola copiado com sucesso!');
+};
+
+window.verifySubscriptionPayment = async function() {
+  if (!currentPixPaymentId) {
+    asyncAlert('Nenhum pagamento Pix ativo para consultar.');
+    return;
+  }
+  const btn = document.getElementById('btnCheckSubPayment');
+  btn.innerText = 'Consultando...';
+  btn.disabled = true;
+
+  try {
+    const res = await tenantFetch(`/api/subscription/check-payment/${currentPixPaymentId}`);
+    const data = await res.json();
+    btn.disabled = false;
+    btn.innerText = 'Já realizei o pagamento';
+
+    if (data.status === 'approved') {
+      asyncAlert('Pagamento aprovado com sucesso! Sua assinatura foi renovada.');
+      closeSubModal();
+      await checkSubscriptionStatus();
+      renderView('agenda');
+    } else {
+      asyncAlert('O pagamento ainda está sendo processado pelo Mercado Pago. Aguarde alguns segundos e tente novamente.');
+    }
+  } catch (err) {
+    btn.disabled = false;
+    btn.innerText = 'Já realizei o pagamento';
+    asyncAlert('Erro ao consultar status no Mercado Pago.');
+  }
+};
+
+// -------------------------------------------------------------
+// PAINEL DE SUPERADMIN (KARUADMIN)
+// -------------------------------------------------------------
+
+async function renderSuperAdmin(container, actions) {
+  if (!isSuperAdmin) {
+    container.innerHTML = `<div class="card-shell"><h3>Acesso restrito ao Super Administrador da plataforma.</h3></div>`;
+    return;
+  }
+
+  container.innerHTML = `<div class="card-shell" style="text-align:center;">Carregando dados da plataforma...</div>`;
+
+  try {
+    const res = await tenantFetch('/api/superadmin/tenants');
+    const data = await res.json();
+
+    const tenants = data.tenants || [];
+    const settings = data.platformSettings || { defaultMonthlyPrice: 49.90 };
+
+    let rowsHtml = tenants.map(t => {
+      const sub = t.subscription || {};
+      const isLife = sub.isLifetime;
+      const expFormatted = sub.expiresAt ? new Date(sub.expiresAt).toLocaleDateString('pt-BR') : '-';
+      const statusBadge = isLife
+        ? '<span class="btn-falcon btn-success" style="font-size:0.75rem; padding:4px 8px;">Vitalício (Ilimitado)</span>'
+        : (sub.status === 'active'
+            ? `<span class="btn-falcon btn-primary" style="font-size:0.75rem; padding:4px 8px;">Ativo até ${expFormatted}</span>`
+            : `<span class="btn-falcon btn-danger" style="font-size:0.75rem; padding:4px 8px;">Inadimplente / Vencido</span>`);
+
+      return `
+        <div class="data-item-card" style="display:flex; justify-content:space-between; align-items:center; gap:16px;">
+          <div class="item-main-info">
+            <h4 style="font-size:1.05rem;">${t.name} <small style="color:var(--muted); font-size:0.8rem;">(${t.slug})</small></h4>
+            <p>WhatsApp: ${t.phone || 'Sem telefone'} • Cadastrado em: ${t.createdAt || '-'}</p>
+            <div style="margin-top:6px;">Status: ${statusBadge} • Mensalidade: <strong>R$ ${(Number(sub.monthlyPrice) || settings.defaultMonthlyPrice).toFixed(2)}</strong></div>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:8px; min-width:200px; text-align:right;">
+            <button class="btn-falcon ${isLife ? 'btn-secondary' : 'btn-success'}" onclick="toggleTenantLifetime('${t.id}', ${!isLife})" style="font-size:0.8rem;">
+              ${isLife ? 'Remover Vitalício' : 'Tornar Vitalício'}
+            </button>
+            <div style="display:flex; gap:6px; justify-content:flex-end;">
+              <button class="btn-falcon btn-primary" onclick="addDaysToTenant('${t.id}', 30)" style="font-size:0.78rem; padding:4px 8px;" title="Adicionar 30 dias">
+                +30 dias
+              </button>
+              <button class="btn-falcon btn-secondary" onclick="editTenantPrice('${t.id}', ${sub.monthlyPrice || settings.defaultMonthlyPrice})" style="font-size:0.78rem; padding:4px 8px;" title="Alterar valor">
+                Alterar R$
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    container.innerHTML = `
+      <div class="card-shell" style="margin-bottom:20px;">
+        <h3 style="margin-bottom: 8px;">Visão Geral da BellaSync SaaS</h3>
+        <p style="color:var(--muted); font-size:0.9rem; margin-bottom:16px;">
+          Painel exclusivo do desenvolvedor / dono da plataforma para gerenciar salões e assinaturas.
+        </p>
+        <div class="metrics-grid">
+          <div class="metric-card green">
+            <div class="metric-label">Total de Salões</div>
+            <div class="metric-value">${tenants.length}</div>
+          </div>
+          <div class="metric-card orange">
+            <div class="metric-label">Valor Padrão da Assinatura</div>
+            <div class="metric-value" style="display:flex; align-items:center; gap:8px;">
+              R$ ${Number(settings.defaultMonthlyPrice).toFixed(2)}
+              <button class="btn-falcon btn-secondary" onclick="updateDefaultPrice(${settings.defaultMonthlyPrice})" style="font-size:0.75rem; padding:2px 8px;">Editar</button>
+            </div>
+          </div>
+          <div class="metric-card red">
+            <div class="metric-label">Mercado Pago</div>
+            <div class="metric-value" style="font-size:0.95rem; color:#16a34a; font-weight:600;">Conectado</div>
+          </div>
+        </div>
+      </div>
+
+      <h3 style="margin-bottom: 12px;">Salões Cadastrados</h3>
+      <div class="data-list">${rowsHtml}</div>
+    `;
+  } catch (err) {
+    container.innerHTML = `<div class="card-shell" style="color:var(--red);">Erro ao carregar dados do Super Administrador.</div>`;
+  }
+}
+
+window.toggleTenantLifetime = async function(tenantId, isLifetime) {
+  const msg = isLifetime
+    ? 'Deseja tornar este salão VITALÍCIO perpétuo? Ele nunca será cobrado nem verá avisos de mensalidade.'
+    : 'Deseja remover o plano vitalício deste salão? Ele voltará a ser cobrado por mês.';
+  const confirmed = await asyncConfirm(msg, 'Plano Vitalício');
+  if (!confirmed) return;
+
+  await tenantFetch(`/api/superadmin/tenants/${tenantId}/subscription`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ isLifetime })
+  });
+  renderSuperAdmin(document.getElementById('viewContainer'));
+};
+
+window.addDaysToTenant = async function(tenantId, days) {
+  const confirmed = await asyncConfirm(`Deseja adicionar +${days} dias na assinatura deste salão?`, 'Adicionar Dias');
+  if (!confirmed) return;
+  await tenantFetch(`/api/superadmin/tenants/${tenantId}/subscription`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ addDays: days, status: 'active' })
+  });
+  renderSuperAdmin(document.getElementById('viewContainer'));
+};
+
+window.editTenantPrice = async function(tenantId, currentPrice) {
+  const newPrice = prompt('Informe o novo valor da mensalidade para este salão (R$):', currentPrice);
+  if (!newPrice || isNaN(newPrice)) return;
+  await tenantFetch(`/api/superadmin/tenants/${tenantId}/subscription`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ monthlyPrice: Number(newPrice) })
+  });
+  renderSuperAdmin(document.getElementById('viewContainer'));
+};
+
+window.updateDefaultPrice = async function(currentPrice) {
+  const newPrice = prompt('Informe o valor padrão da assinatura mensal para novos salões (R$):', currentPrice);
+  if (!newPrice || isNaN(newPrice)) return;
+  await tenantFetch('/api/superadmin/platform-settings', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ defaultMonthlyPrice: Number(newPrice) })
+  });
+  renderSuperAdmin(document.getElementById('viewContainer'));
 };

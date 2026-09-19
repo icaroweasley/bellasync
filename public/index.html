@@ -4,18 +4,35 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="color-scheme" content="light">
-  <title>Metamorfose Hair — CRM & Gestão do Salão</title>
-  <link rel="stylesheet" href="/css/crm.css">
+  <title>BellaSync — Gestão Inteligente para Salões</title>
+  <link rel="icon" type="image/png" href="/images/logo.png?v=2">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#ff6900">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/crm.css?v=20260918_v109">
 </head>
 <body>
+  <!-- Animated Colorful Gradient Orbs with Blur Background -->
+  <div class="animated-bg" aria-hidden="true">
+    <div class="gradient-orb orb-1"></div>
+    <div class="gradient-orb orb-2"></div>
+    <div class="gradient-orb orb-3"></div>
+    <div class="gradient-orb orb-4"></div>
+    <div class="gradient-orb orb-5"></div>
+  </div>
+
   <div class="app-container">
     <!-- Sidebar -->
     <aside class="sidebar" id="sidebar">
       <div class="sidebar-header">
-        <div class="salon-avatar">MH</div>
+        <img src="/images/logo.png?v=3" alt="BellaSync" style="width: 48px; height: auto; object-fit: contain; filter: drop-shadow(0 4px 10px rgba(255, 105, 0, 0.25));">
         <div class="salon-info">
-          <h1 id="salonHeaderName">Metamorfose Hair</h1>
-          <p>Sistema de Gestão & CRM</p>
+          <h1 id="salonHeaderName">BellaSync</h1>
+          <p>Gestão & Agendamento</p>
         </div>
       </div>
 
@@ -56,6 +73,10 @@
           <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
           Configurações
         </button>
+        <button class="nav-item" id="navItemSuperAdmin" data-view="superadmin" style="display:none; color: #ff6900;">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg>
+          Gestão Master (SaaS)
+        </button>
       </nav>
 
       <div class="sidebar-footer">
@@ -78,8 +99,14 @@
       </div>
     </aside>
 
+    <!-- Overlay do menu mobile para fechar ao clicar fora -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
     <!-- Main View -->
     <main class="main-content">
+      <!-- Banner de Assinatura (Avisos de 3 dias, 2 dias, dia do vencimento) -->
+      <div id="subscriptionBannerContainer"></div>
+
       <header class="top-bar">
         <div class="top-bar-title">
           <button class="menu-toggle-btn" id="menuToggle">
@@ -89,6 +116,22 @@
         </div>
         <div class="top-bar-actions" id="topBarActions">
           <!-- Ações dinâmicas de acordo com a aba -->
+        </div>
+        <div class="notif-wrapper" style="position:relative;">
+          <button class="btn-notif-toggle" id="notifToggleBtn" onclick="handleNotificationBellClick()" title="Notificações">
+            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+            <span class="notif-badge" id="notifBadge" style="display:none;"></span>
+          </button>
+          <!-- Dropdown das Últimas Notificações -->
+          <div class="notif-dropdown" id="notifDropdown" style="display:none;">
+            <div class="notif-dropdown-header">
+              <h4>Notificações Recentes</h4>
+              <button onclick="requestPushPermissionManually()" class="notif-perm-link" id="notifPermBtn">Configurar Push</button>
+            </div>
+            <div class="notif-dropdown-list" id="notifDropdownList">
+              <div class="notif-empty">Nenhuma notificação recente.</div>
+            </div>
+          </div>
         </div>
       </header>
 
@@ -120,6 +163,136 @@
     </div>
   </div>
 
-  <script src="/js/app.js"></script>
+  <!-- Modal de Bloqueio por Inadimplência / Pagamento BellaSync -->
+  <div class="modal-backdrop" id="subscriptionPayModal" style="z-index: 9999; backdrop-filter: blur(14px); background: rgba(0,0,0,0.7); overflow-y: auto; padding: 16px; box-sizing: border-box;">
+    <div class="modal-dialog" style="max-width: 440px; text-align: center; border-radius: 20px; padding: 18px 22px; position: relative; max-height: calc(100vh - 32px); overflow-y: auto; margin: auto;">
+      <!-- Botão fechar (X) no topo direito -->
+      <button id="btnSubModalCloseX" onclick="closeSubModal()" title="Fechar janela" style="position: absolute; top: 12px; right: 14px; background: rgba(0,0,0,0.06); border: none; border-radius: 50%; width: 30px; height: 30px; display: none; align-items: center; justify-content: center; cursor: pointer; color: var(--muted); transition: all 0.2s;">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+      </button>
+
+      <div style="display: flex; justify-content: center; margin-bottom: 6px;">
+        <img src="/images/logo.png?v=4" alt="BellaSync" style="width: 90px; height: auto; object-fit: contain; filter: drop-shadow(0 4px 10px rgba(255, 105, 0, 0.22));">
+      </div>
+      <h2 style="font-size: 1.2rem; margin-bottom: 4px; color: var(--ink); line-height: 1.2;">Assinatura BellaSync</h2>
+      <p id="subModalDesc" style="font-size: 0.8rem; color: var(--muted); margin-bottom: 12px;">
+        Escolha como prefere manter sua assinatura ativa:
+      </p>
+
+      <!-- Abas de Pagamento: Cartão Recorrente vs Pix Avulso -->
+      <div style="display: flex; gap: 6px; background: #f1f5f9; padding: 4px; border-radius: 12px; margin-bottom: 12px;">
+        <button type="button" id="subTabCardBtn" onclick="switchSubPaymentTab('card')" style="flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 8px; border: none; border-radius: 8px; font-size: 0.82rem; font-weight: 600; cursor: pointer; background: #fff; color: #0f172a; box-shadow: 0 2px 5px rgba(0,0,0,0.05); transition: all 0.2s;">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"></rect><line x1="2" y1="10" x2="22" y2="10"></line></svg>
+          Cartão (Recorrente)
+        </button>
+        <button type="button" id="subTabPixBtn" onclick="switchSubPaymentTab('pix')" style="flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 8px; border: none; border-radius: 8px; font-size: 0.82rem; font-weight: 600; cursor: pointer; background: transparent; color: #64748b; transition: all 0.2s;">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path></svg>
+          Pix (Mensal)
+        </button>
+      </div>
+
+      <div id="subLoadingBox" style="display: none; padding: 18px;">
+        <p style="color: var(--muted); font-size: 0.88rem;" id="subLoadingText">Carregando opções com Mercado Pago...</p>
+      </div>
+
+      <!-- Seção 1: Cartão de Crédito Automático -->
+      <div id="subCardBox" style="display: block;">
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 14px; padding: 14px 16px; text-align: left; margin-bottom: 10px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+            <span style="font-weight:700; color:var(--ink); font-size:0.95rem;">Assinatura Automática</span>
+            <span style="background:#dcfce7; color:#15803d; font-size:0.72rem; font-weight:700; padding:2px 7px; border-radius:6px;">Recomendado</span>
+          </div>
+          <p style="font-size:0.78rem; color:var(--muted); line-height:1.35; margin-bottom:10px;">
+            Cadastre seu cartão uma única vez. O valor é debitado todo mês e seu salão nunca sofre interrupção.
+          </p>
+          <div style="font-size:1.3rem; font-weight:800; color:var(--ink); margin-bottom:12px;" id="subCardAmountDisplay">
+            R$ 49,90 <span style="font-size:0.8rem; font-weight:normal; color:var(--muted);">/ mês</span>
+          </div>
+          <a id="btnSubscribeCard" href="#" target="_blank" style="display:flex; align-items:center; justify-content:center; gap:6px; width:100%; padding:11px 14px; background:linear-gradient(135deg, #ff7a18 0%, #ff5200 100%); color:#fff; font-size:0.88rem; font-weight:600; text-decoration:none; border-radius:10px; box-shadow:0 4px 14px rgba(255,105,0,0.3); transition:all 0.2s; box-sizing:border-box;">
+            <span>Cadastrar Cartão no Mercado Pago</span>
+            <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+          </a>
+        </div>
+        <p style="font-size:0.72rem; color:#94a3b8; display:flex; align-items:center; justify-content:center; gap:5px; margin: 0 0 10px 0;">
+          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+          Processamento seguro e criptografado via Mercado Pago. Cancele quando quiser.
+        </p>
+
+        <!-- Botões de Ação Inferiores (Fechar / Sair da Conta) -->
+        <div style="display:flex; flex-direction:column; gap:6px;">
+          <button class="btn-falcon btn-secondary" id="btnCloseSubModalCard" onclick="closeSubModal()" style="display:none; width:100%; padding: 9px; font-size: 0.85rem;">
+            Continuar no Sistema
+          </button>
+          <button type="button" onclick="logout()" style="display:flex; align-items:center; justify-content:center; gap:6px; background:transparent; border:none; color:#dc2626; font-size:0.82rem; font-weight:600; cursor:pointer; padding:6px; border-radius:8px; transition:background 0.2s;" onmouseover="this.style.background='rgba(220,38,38,0.06)'" onmouseout="this.style.background='transparent'">
+            <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+            <span>Deslogar / Sair da conta</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Seção 2: Pix Avulso -->
+      <div id="subPixBox" style="display: none;">
+        <div style="background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 14px; padding: 12px; margin-bottom: 12px;">
+          <div style="font-size: 0.78rem; color: #64748b; margin-bottom: 6px;">Escaneie o QR Code no app do seu banco:</div>
+          <img id="subQrCodeImg" src="" alt="QR Code Pix" style="width: 140px; height: 140px; margin: 0 auto; display: block; border-radius: 10px; background:#fff; padding:4px; border:1px solid #e2e8f0;">
+          <div style="margin-top: 8px; font-weight: 700; font-size: 1.15rem; color: #16a34a;" id="subPixAmount">
+            R$ 49,90
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 12px;">
+          <label style="font-size: 0.75rem; text-align: left; display: block; margin-bottom: 3px; color: var(--muted);">Ou copie o código Pix abaixo:</label>
+          <div style="display: flex; gap: 6px;">
+            <input type="text" id="subPixCopyCode" readonly style="font-size: 0.75rem; padding: 8px 10px; border-radius: 8px; border: 1px solid #cbd5e1; background: #fff; flex: 1;">
+            <button class="btn-falcon btn-primary" onclick="copyPixCode()" style="padding: 0 12px; font-size: 0.8rem;">Copiar</button>
+          </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 6px; margin-top: 10px;">
+          <div style="display: flex; gap: 8px; justify-content: center;">
+            <button class="btn-falcon btn-success" id="btnCheckSubPayment" onclick="verifySubscriptionPayment()" style="flex:1; padding: 9px; font-size: 0.85rem;">
+              Já realizei o pagamento
+            </button>
+            <button class="btn-falcon btn-secondary" id="btnCloseSubModal" onclick="closeSubModal()" style="display:none; padding: 9px; font-size: 0.85rem;">
+              Fechar
+            </button>
+          </div>
+          <button type="button" onclick="logout()" style="display:flex; align-items:center; justify-content:center; gap:6px; background:transparent; border:none; color:#dc2626; font-size:0.82rem; font-weight:600; cursor:pointer; padding:6px; border-radius:8px; transition:background 0.2s;" onmouseover="this.style.background='rgba(220,38,38,0.06)'" onmouseout="this.style.background='transparent'">
+            <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+            <span>Deslogar / Sair da conta</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de Confirmação Customizado (Substitui confirm nativo) -->
+  <div class="modal-backdrop" id="customConfirmModal" style="z-index: 10000;">
+    <div class="modal-dialog" style="max-width: 420px; text-align: center; border-radius: 20px; padding: 24px 20px;">
+      <div id="customConfirmIcon" style="width: 56px; height: 56px; border-radius: 50%; background: rgba(255, 105, 0, 0.12); color: #ff6900; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px auto;">
+        <svg width="28" height="28" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+      </div>
+      <h3 id="customConfirmTitle" style="font-size: 1.15rem; font-weight: 700; color: var(--ink); margin-bottom: 8px;">Confirmação</h3>
+      <p id="customConfirmMessage" style="font-size: 0.88rem; color: var(--muted); line-height: 1.45; margin-bottom: 22px; white-space: pre-line;"></p>
+      <div style="display: flex; gap: 10px; justify-content: center;">
+        <button class="btn-falcon btn-secondary" id="customConfirmCancelBtn" style="flex: 1; padding: 10px; font-weight: 600;">Cancelar</button>
+        <button class="btn-falcon btn-primary" id="customConfirmOkBtn" style="flex: 1; padding: 10px; font-weight: 600;">Confirmar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de Alerta Customizado (Substitui alert nativo) -->
+  <div class="modal-backdrop" id="customAlertModal" style="z-index: 10001;">
+    <div class="modal-dialog" style="max-width: 400px; text-align: center; border-radius: 20px; padding: 24px 20px;">
+      <div id="customAlertIcon" style="width: 54px; height: 54px; border-radius: 50%; background: rgba(255, 105, 0, 0.12); color: #ff6900; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px auto;">
+        <svg width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+      </div>
+      <h3 id="customAlertTitle" style="font-size: 1.12rem; font-weight: 700; color: var(--ink); margin-bottom: 8px;">Aviso</h3>
+      <p id="customAlertMessage" style="font-size: 0.88rem; color: var(--muted); line-height: 1.45; margin-bottom: 20px; white-space: pre-line;"></p>
+      <button class="btn-falcon btn-primary" id="customAlertOkBtn" style="width: 100%; padding: 10px; font-weight: 600;">Entendi</button>
+    </div>
+  </div>
+
+  <script src="/js/app.js?v=20260918_v109"></script>
 </body>
 </html>

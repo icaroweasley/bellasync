@@ -3,26 +3,35 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>Login & Acesso — Salon Soft CRM</title>
+  <title>Login & Acesso — BellaSync Gestão</title>
+  <link rel="icon" type="image/png" href="/images/logo.png?v=2">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/crm.css">
   <style>
     body {
-      background: var(--page);
+      background: #eef2ee;
       display: flex;
       align-items: center;
       justify-content: center;
       min-height: 100vh;
       padding: 24px 16px;
-      font-family: var(--font-stack);
+      font-family: var(--font-stack, "Poppins", sans-serif);
+      position: relative;
     }
     .auth-card {
-      background: var(--surface);
-      border: 1px solid var(--border-peach);
-      border-radius: 20px;
-      padding: 36px 32px;
+      position: relative;
+      z-index: 1;
+      background: rgba(255, 255, 255, 0.72);
+      backdrop-filter: blur(24px) saturate(1.25);
+      -webkit-backdrop-filter: blur(24px) saturate(1.25);
+      border: 1px solid rgba(255, 255, 255, 0.5);
+      border-radius: 28px;
+      padding: 44px 38px;
       width: 100%;
       max-width: 440px;
-      box-shadow: var(--shadow-card);
+      box-shadow: 0 24px 60px -20px rgba(0, 0, 0, 0.28), 0 4px 16px rgba(0, 0, 0, 0.04);
     }
     .auth-header {
       text-align: center;
@@ -32,31 +41,33 @@
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      width: 54px;
-      height: 54px;
-      background: #fff3eb;
-      color: var(--orange);
+      width: 52px;
+      height: 52px;
+      background: #141414;
+      color: #ffffff;
       border-radius: 16px;
-      font-weight: 800;
-      font-size: 1.3rem;
-      margin-bottom: 12px;
-      border: 1px solid var(--border-peach);
+      font-weight: 700;
+      font-size: 1.25rem;
+      margin-bottom: 14px;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+      border: 1px solid rgba(255, 255, 255, 0.2);
     }
     .auth-header h1 {
-      font-size: 1.4rem;
+      font-size: 1.45rem;
       font-weight: 700;
       color: var(--ink);
+      letter-spacing: -0.02em;
     }
     .auth-header p {
       font-size: 0.88rem;
       color: var(--muted);
-      margin-top: 4px;
+      margin-top: 6px;
     }
     .auth-tabs {
       display: flex;
-      background: var(--panel);
+      background: rgba(0, 0, 0, 0.05);
       padding: 4px;
-      border-radius: 12px;
+      border-radius: 14px;
       margin-bottom: 24px;
       gap: 4px;
     }
@@ -65,17 +76,18 @@
       padding: 10px;
       border: none;
       background: transparent;
-      border-radius: 8px;
-      font-weight: 600;
+      border-radius: 10px;
+      font-weight: 500;
       font-size: 0.88rem;
       color: var(--muted);
       cursor: pointer;
-      transition: all 0.2s;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
     }
     .auth-tab-btn.active {
-      background: var(--surface);
-      color: var(--orange);
-      box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+      background: #ffffff;
+      color: #111111;
+      font-weight: 600;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
     }
     .auth-form-group {
       margin-bottom: 16px;
@@ -89,35 +101,42 @@
     }
     .auth-form-group input {
       width: 100%;
-      padding: 12px 14px;
-      border: 1px solid var(--border-peach);
-      border-radius: 10px;
+      padding: 12px 16px;
+      border: 1px solid rgba(0, 0, 0, 0.1);
+      border-radius: 12px;
       font-size: 0.95rem;
-      background: #fff;
+      font-family: inherit;
+      background: rgba(255, 255, 255, 0.75);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
       box-sizing: border-box;
       outline: none;
-      transition: border-color 0.2s;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
     }
     .auth-form-group input:focus {
-      border-color: var(--orange);
+      background: #ffffff;
+      border-color: #141414;
+      box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.08);
     }
     .btn-auth-submit {
       width: 100%;
       padding: 13px;
-      background: linear-gradient(100deg, #ff9b5b 0%, #ff8840 38%, #ff6b05 100%);
+      background: #141414;
       color: #fff;
-      border: none;
+      border: 1px solid rgba(255, 255, 255, 0.2);
       border-radius: 999px;
       font-size: 0.95rem;
-      font-weight: 700;
+      font-weight: 600;
       cursor: pointer;
-      box-shadow: 0 4px 12px rgba(255, 105, 0, 0.35);
-      transition: all 0.2s;
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
       margin-top: 10px;
+      font-family: inherit;
     }
     .btn-auth-submit:hover {
-      filter: brightness(1.06);
+      background: #000000;
       transform: translateY(-1px);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
     }
     .auth-footer-help {
       margin-top: 22px;
@@ -125,7 +144,7 @@
       font-size: 0.8rem;
       color: var(--muted);
       line-height: 1.4;
-      border-top: 1px dashed var(--border-peach);
+      border-top: 1px dashed rgba(0, 0, 0, 0.1);
       padding-top: 16px;
     }
     .auth-footer-help strong {
@@ -134,12 +153,19 @@
   </style>
 </head>
 <body>
+  <!-- Animated Colorful Gradient Orbs with Blur Background -->
+  <div class="animated-bg" aria-hidden="true">
+    <div class="gradient-orb orb-1"></div>
+    <div class="gradient-orb orb-2"></div>
+    <div class="gradient-orb orb-3"></div>
+    <div class="gradient-orb orb-4"></div>
+    <div class="gradient-orb orb-5"></div>
+  </div>
 
   <div class="auth-card">
     <div class="auth-header">
-      <div class="logo-badge">MH</div>
-      <h1 id="authMainTitle">Salon Soft Gestão</h1>
-      <p id="authSubtitle">Acesso ao Painel do Salão & Profissionais</p>
+      <img src="/images/logo.png?v=4" alt="BellaSync Logo" style="width: 175px; height: auto; object-fit: contain; margin-bottom: 6px; filter: drop-shadow(0 6px 16px rgba(255, 105, 0, 0.18));">
+      <p id="authSubtitle" style="margin-top: 4px;">Sistema de Gestão & Agendamento para Salões</p>
     </div>
 
     <div class="auth-tabs">
@@ -150,12 +176,12 @@
     <!-- Form de Login -->
     <form id="loginForm" onsubmit="handleLogin(event)">
       <div class="auth-form-group">
-        <label>Email do Salão ou Profissional</label>
-        <input type="email" id="loginEmail" placeholder="admin@metamorfose.com" required>
+        <label>Usuário de Acesso</label>
+        <input type="text" id="loginUsername" placeholder="Digite seu usuário" autocomplete="username" required>
       </div>
       <div class="auth-form-group">
-        <label>Senha de Acesso</label>
-        <input type="password" id="loginPassword" placeholder="••••••••" required>
+        <label>Senha</label>
+        <input type="password" id="loginPassword" placeholder="••••••••" autocomplete="current-password" required>
       </div>
       <button type="submit" class="btn-auth-submit" id="btnLoginSubmit">Entrar no Sistema</button>
     </form>
@@ -183,22 +209,19 @@
         <input type="text" id="regAdminName" placeholder="Seu nome completo" required>
       </div>
       <div class="auth-form-group">
-        <label>Email de Acesso (Login)</label>
-        <input type="email" id="regAdminEmail" placeholder="gestor@seusalao.com" required>
+        <label>Usuário de Acesso (Login)</label>
+        <input type="text" id="regAdminUser" placeholder="Ex: gestor ou seu_nome" required>
+      </div>
+      <div class="auth-form-group">
+        <label>Email de Contato</label>
+        <input type="email" id="regAdminEmail" placeholder="contato@seusalao.com">
       </div>
       <div class="auth-form-group">
         <label>Criar Senha</label>
-        <input type="password" id="regAdminPassword" placeholder="Mínimo 4 caracteres" required>
+        <input type="password" id="regAdminPassword" placeholder="Mínimo 3 caracteres" required>
       </div>
       <button type="submit" class="btn-auth-submit" id="btnRegisterSubmit">Criar Conta do Salão</button>
     </form>
-
-    <div class="auth-footer-help">
-      <span>Contas de demonstração pré-configuradas:</span><br>
-      <strong>admin@metamorfose.com</strong> / Senha: <strong>123</strong> (Gestor)<br>
-      <strong>sarah@metamorfose.com</strong> / Senha: <strong>123</strong> (Trancista)<br>
-      <strong>ana@metamorfose.com</strong> / Senha: <strong>123</strong> (Hairstylist)
-    </div>
   </div>
 
   <script>
@@ -223,9 +246,61 @@
       }
     }
 
+    window.asyncAlert = function(message, title = 'Aviso', type = 'info') {
+      return new Promise((resolve) => {
+        const modal = document.getElementById('customAlertModal');
+        if (!modal) {
+          window.alert(message);
+          resolve();
+          return;
+        }
+        const titleEl = document.getElementById('customAlertTitle');
+        const msgEl = document.getElementById('customAlertMessage');
+        const okBtn = document.getElementById('customAlertOkBtn');
+        const iconEl = document.getElementById('customAlertIcon');
+
+        if (titleEl) titleEl.innerText = title;
+        if (msgEl) msgEl.innerText = message;
+
+        if (type === 'error' || type === 'danger') {
+          if (iconEl) {
+            iconEl.style.background = 'rgba(211, 47, 47, 0.12)';
+            iconEl.style.color = '#d32f2f';
+            iconEl.innerHTML = `<svg width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>`;
+          }
+        } else if (type === 'success') {
+          if (iconEl) {
+            iconEl.style.background = 'rgba(26, 102, 54, 0.14)';
+            iconEl.style.color = '#1a6636';
+            iconEl.innerHTML = `<svg width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>`;
+          }
+        } else {
+          if (iconEl) {
+            iconEl.style.background = 'rgba(255, 105, 0, 0.12)';
+            iconEl.style.color = '#ff6900';
+            iconEl.innerHTML = `<svg width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>`;
+          }
+        }
+
+        modal.classList.add('active');
+
+        function onOk() {
+          modal.classList.remove('active');
+          okBtn.removeEventListener('click', onOk);
+          resolve();
+        }
+
+        okBtn.addEventListener('click', onOk);
+      });
+    };
+
+    window.alert = function(msg) {
+      window.asyncAlert(msg, 'Aviso', 'info');
+    };
+
     async function handleLogin(e) {
       e.preventDefault();
-      const email = document.getElementById('loginEmail').value.trim();
+      const username = document.getElementById('loginUsername').value.trim();
       const password = document.getElementById('loginPassword').value;
       const btn = document.getElementById('btnLoginSubmit');
 
@@ -236,12 +311,12 @@
         const res = await fetch('/api/auth/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password })
+          body: JSON.stringify({ username, password })
         });
 
         const data = await res.json();
         if (!res.ok) {
-          alert(data.error || 'Erro ao realizar login.');
+          await asyncAlert(data.error || 'Erro ao realizar login.', 'Erro de Acesso', 'error');
           btn.disabled = false;
           btn.innerText = 'Entrar no Sistema';
           return;
@@ -256,7 +331,7 @@
         window.location.href = '/';
       } catch (err) {
         console.error(err);
-        alert('Erro de comunicação com o servidor.');
+        await asyncAlert('Erro de comunicação com o servidor.', 'Erro de Conexão', 'error');
         btn.disabled = false;
         btn.innerText = 'Entrar no Sistema';
       }
@@ -269,6 +344,7 @@
       const phone = document.getElementById('regSalonPhone').value.trim();
       const address = document.getElementById('regSalonAddress').value.trim();
       const adminName = document.getElementById('regAdminName').value.trim();
+      const username = document.getElementById('regAdminUser').value.trim();
       const adminEmail = document.getElementById('regAdminEmail').value.trim();
       const adminPassword = document.getElementById('regAdminPassword').value;
       const btn = document.getElementById('btnRegisterSubmit');
@@ -286,14 +362,15 @@
             phone,
             address,
             adminName,
-            adminEmail,
+            username,
+            adminEmail: adminEmail || `${username}@salao.local`,
             adminPassword
           })
         });
 
         const data = await res.json();
         if (!res.ok) {
-          alert(data.error || 'Erro ao cadastrar salão.');
+          await asyncAlert(data.error || 'Erro ao cadastrar salão.', 'Erro', 'error');
           btn.disabled = false;
           btn.innerText = 'Criar Conta do Salão';
           return;
@@ -303,7 +380,7 @@
         const loginRes = await fetch('/api/auth/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: adminEmail, password: adminPassword })
+          body: JSON.stringify({ username, password: adminPassword })
         });
         const loginData = await loginRes.json();
 
@@ -311,11 +388,11 @@
         localStorage.setItem('salon_user', JSON.stringify(loginData.user));
         localStorage.setItem('salon_tenant', JSON.stringify(loginData.tenant));
 
-        alert(`Salão ${salonName} cadastrado com sucesso! Redirecionando para o seu novo painel.`);
+        await asyncAlert(`Salão ${salonName} cadastrado com sucesso! Redirecionando para o seu novo painel.`, 'Sucesso', 'success');
         window.location.href = '/';
       } catch (err) {
         console.error(err);
-        alert('Erro de comunicação com o servidor.');
+        await asyncAlert('Erro de comunicação com o servidor.', 'Erro de Conexão', 'error');
         btn.disabled = false;
         btn.innerText = 'Criar Conta do Salão';
       }
@@ -325,6 +402,66 @@
     if (localStorage.getItem('salon_user')) {
       window.location.href = '/';
     }
+
+    window.asyncAlert = function(message, title = 'Aviso', type = 'info') {
+      return new Promise((resolve) => {
+        const modal = document.getElementById('customAlertModal');
+        if (!modal) {
+          window.alert(message);
+          resolve();
+          return;
+        }
+        const titleEl = document.getElementById('customAlertTitle');
+        const msgEl = document.getElementById('customAlertMessage');
+        const okBtn = document.getElementById('customAlertOkBtn');
+        const iconEl = document.getElementById('customAlertIcon');
+
+        if (titleEl) titleEl.innerText = title;
+        if (msgEl) msgEl.innerText = message;
+
+        if (type === 'error' || type === 'danger') {
+          if (iconEl) {
+            iconEl.style.background = 'rgba(211, 47, 47, 0.12)';
+            iconEl.style.color = '#d32f2f';
+            iconEl.innerHTML = `<svg width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>`;
+          }
+        } else if (type === 'success') {
+          if (iconEl) {
+            iconEl.style.background = 'rgba(26, 102, 54, 0.14)';
+            iconEl.style.color = '#1a6636';
+            iconEl.innerHTML = `<svg width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>`;
+          }
+        } else {
+          if (iconEl) {
+            iconEl.style.background = 'rgba(255, 105, 0, 0.12)';
+            iconEl.style.color = '#ff6900';
+            iconEl.innerHTML = `<svg width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>`;
+          }
+        }
+
+        modal.classList.add('active');
+
+        function onOk() {
+          modal.classList.remove('active');
+          okBtn.removeEventListener('click', onOk);
+          resolve();
+        }
+
+        okBtn.addEventListener('click', onOk);
+      });
+    };
   </script>
+
+  <!-- Modal de Alerta Customizado (Substitui alert nativo) -->
+  <div class="modal-backdrop" id="customAlertModal" style="z-index: 10001;">
+    <div class="modal-dialog" style="max-width: 400px; text-align: center; border-radius: 20px; padding: 24px 20px;">
+      <div id="customAlertIcon" style="width: 54px; height: 54px; border-radius: 50%; background: rgba(255, 105, 0, 0.12); color: #ff6900; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px auto;">
+        <svg width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+      </div>
+      <h3 id="customAlertTitle" style="font-size: 1.12rem; font-weight: 700; color: var(--ink); margin-bottom: 8px;">Aviso</h3>
+      <p id="customAlertMessage" style="font-size: 0.88rem; color: var(--muted); line-height: 1.45; margin-bottom: 20px; white-space: pre-line;"></p>
+      <button class="btn-falcon btn-primary" id="customAlertOkBtn" style="width: 100%; padding: 10px; font-weight: 600;">Entendi</button>
+    </div>
+  </div>
 </body>
 </html>

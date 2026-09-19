@@ -7,6 +7,12 @@ const __dirname = path.dirname(__filename);
 const DB_FILE = path.join(__dirname, 'database.json');
 
 const initialData = {
+  platformSettings: {
+    name: "BellaSync",
+    defaultMonthlyPrice: 49.90,
+    mpPublicKey: "APP_USR-7d79674f-eedd-4802-8d7d-56b2199e3163",
+    mpAccessToken: "APP_USR-416005814942310-091716-e0c6ab2c6991cd4497a54154940227b8-3698639606"
+  },
   tenants: [
     {
       id: "tenant_metamorfose",
@@ -15,6 +21,12 @@ const initialData = {
       phone: "(67) 98424-8821",
       address: "R. Hugo Pereira do Vale, 791 - Mata do Jacinto, Campo Grande - MS",
       createdAt: "2026-09-01",
+      subscription: {
+        status: "active",
+        isLifetime: true,
+        monthlyPrice: 49.90,
+        expiresAt: "2099-12-31T23:59:59.000Z"
+      },
       settings: {
         intervalMinutes: 30,
         showPricesOnline: true,
@@ -25,28 +37,31 @@ const initialData = {
   ],
   users: [
     {
-      id: "user_admin_metamorfose",
+      id: "user_superadmin_karu",
       tenantId: "tenant_metamorfose",
-      professionalId: "prof_5",
-      name: "Icaro (Gestor Geral)",
-      email: "admin@metamorfose.com",
-      password: "123",
-      role: "admin"
+      professionalId: null,
+      name: "Administrador Master",
+      username: "karuadmin",
+      email: "karuadmin@bellasync.online",
+      password: "C3lvl@rz1nh0.",
+      role: "superadmin"
     },
     {
       id: "user_sarah",
       tenantId: "tenant_metamorfose",
       professionalId: "prof_1",
       name: "Sarah Beatriz",
+      username: "sarah",
       email: "sarah@metamorfose.com",
       password: "123",
-      role: "professional"
+      role: "admin"
     },
     {
       id: "user_ana",
       tenantId: "tenant_metamorfose",
       professionalId: "prof_2",
       name: "Ana Alice",
+      username: "ana",
       email: "ana@metamorfose.com",
       password: "123",
       role: "professional"
@@ -378,11 +393,65 @@ const initialData = {
 };
 
 function sanitizeDb(data) {
+  if (!data.platformSettings) {
+    data.platformSettings = initialData.platformSettings;
+  }
   if (!data.tenants || !Array.isArray(data.tenants) || data.tenants.length === 0) {
     data.tenants = initialData.tenants;
+  } else {
+    for (const t of data.tenants) {
+      if (!t.subscription) {
+        // Se for o tenant inicial metamorfose, é vitalício (amiga)
+        if (t.id === 'tenant_metamorfose') {
+          t.subscription = {
+            status: "active",
+            isLifetime: true,
+            monthlyPrice: 49.90,
+            expiresAt: "2099-12-31T23:59:59.000Z"
+          };
+        } else {
+          // Outros salões recebem 30 dias de ciclo a partir de agora
+          const exp = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+          t.subscription = {
+            status: "active",
+            isLifetime: false,
+            monthlyPrice: data.platformSettings?.defaultMonthlyPrice || 49.90,
+            expiresAt: exp
+          };
+        }
+      }
+    }
   }
+
   if (!data.users || !Array.isArray(data.users) || data.users.length === 0) {
     data.users = initialData.users;
+  } else {
+    for (const u of data.users) {
+      if (!u.username) {
+        if (u.email && u.email.includes('@')) {
+          u.username = u.email.split('@')[0].toLowerCase();
+        } else {
+          u.username = (u.name || 'user').toLowerCase().replace(/\s+/g, '');
+        }
+      }
+    }
+    // Garante que karuadmin exista como superadmin
+    let karu = data.users.find(u => u.username === 'karuadmin' || u.email === 'karuadmin@bellasync.online');
+    if (!karu) {
+      data.users.push({
+        id: "user_superadmin_karu",
+        tenantId: data.tenants[0].id,
+        professionalId: null,
+        name: "Administrador Master",
+        username: "karuadmin",
+        email: "karuadmin@bellasync.online",
+        password: "C3lvl@rz1nh0.",
+        role: "superadmin"
+      });
+    } else {
+      karu.password = "C3lvl@rz1nh0.";
+      karu.role = "superadmin";
+    }
   }
   const defaultTenantId = data.tenants[0].id;
 

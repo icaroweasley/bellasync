@@ -4,79 +4,98 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Agendamento Online — Metamorfose Hair</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/crm.css">
   <style>
     body {
-      background: #faf7f5;
+      background: #eef2ee;
       display: block;
       padding-bottom: 40px;
+      font-family: var(--font-stack, "Poppins", sans-serif);
+      position: relative;
     }
     .booking-wrapper {
-      max-width: 540px;
+      max-width: 580px;
       margin: 0 auto;
-      padding: 20px 16px;
+      padding: 24px 16px;
+      position: relative;
+      z-index: 1;
     }
     .booking-header {
       text-align: center;
-      padding: 26px 20px;
-      background: var(--surface);
-      border-radius: 20px;
-      border: 1px solid var(--border-peach);
-      box-shadow: var(--shadow-card);
-      margin-bottom: 20px;
+      padding: 32px 26px;
+      background: rgba(255, 255, 255, 0.75);
+      backdrop-filter: blur(24px) saturate(1.25);
+      -webkit-backdrop-filter: blur(24px) saturate(1.25);
+      border-radius: 28px;
+      border: 1px solid rgba(255, 255, 255, 0.5);
+      box-shadow: 0 20px 48px -20px rgba(0, 0, 0, 0.22), 0 4px 16px rgba(0, 0, 0, 0.04);
+      margin-bottom: 22px;
     }
     .booking-header h1 {
-      font-size: 1.35rem;
-      font-weight: var(--weight-bold);
+      font-size: 1.45rem;
+      font-weight: 700;
       color: var(--ink);
+      letter-spacing: -0.02em;
     }
     .booking-header p {
       font-size: 0.9rem;
       color: var(--muted);
-      margin-top: 4px;
+      margin-top: 6px;
     }
     .accordion-category {
-      background: var(--surface);
-      border: 1px solid var(--border-peach);
-      border-radius: 14px;
-      margin-bottom: 12px;
+      background: rgba(255, 255, 255, 0.72);
+      backdrop-filter: blur(20px) saturate(1.2);
+      -webkit-backdrop-filter: blur(20px) saturate(1.2);
+      border: 1px solid rgba(255, 255, 255, 0.45);
+      border-radius: 20px;
+      margin-bottom: 14px;
       overflow: hidden;
-      box-shadow: 0 2px 6px rgba(44, 35, 29, 0.04);
+      box-shadow: 0 8px 24px -10px rgba(0, 0, 0, 0.12);
     }
     .category-header {
-      padding: 16px 20px;
+      padding: 18px 24px;
       display: flex;
       align-items: center;
       justify-content: space-between;
       cursor: pointer;
-      font-weight: var(--weight-semibold);
-      background: var(--surface);
-      transition: background 0.2s;
+      font-weight: 600;
+      background: transparent;
+      transition: background 0.2s cubic-bezier(0.16, 1, 0.3, 1);
     }
     .category-header:hover {
-      background: var(--panel);
+      background: rgba(255, 255, 255, 0.4);
     }
     .category-body {
-      padding: 0 16px 16px;
+      padding: 0 18px 18px;
       display: none;
       flex-direction: column;
-      gap: 10px;
+      gap: 12px;
     }
     .category-body.open {
       display: flex;
     }
     .service-book-card {
-      padding: 14px 16px;
-      background: var(--panel);
-      border-radius: 12px;
-      border: 1px solid rgb(255 233 218 / 60%);
+      padding: 16px 20px;
+      background: rgba(255, 255, 255, 0.65);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-radius: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.5);
       display: flex;
       justify-content: space-between;
       align-items: center;
+      transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), background 0.2s;
+    }
+    .service-book-card:hover {
+      background: rgba(255, 255, 255, 0.88);
+      transform: translateY(-1px);
     }
     .service-book-info h4 {
-      font-size: 0.98rem;
-      font-weight: var(--weight-semibold);
+      font-size: 1rem;
+      font-weight: 600;
       color: var(--ink);
     }
     .service-book-info span {
@@ -90,20 +109,29 @@
       display: flex;
       flex-direction: column;
       align-items: flex-end;
-      gap: 6px;
+      gap: 8px;
     }
     .duration-badge {
       display: inline-block;
-      background: var(--orange-soft);
-      color: var(--orange);
-      padding: 3px 8px;
-      border-radius: 6px;
+      background: rgba(0, 0, 0, 0.05);
+      color: var(--ink);
+      padding: 4px 10px;
+      border-radius: 999px;
       font-size: 0.75rem;
-      font-weight: var(--weight-bold);
+      font-weight: 600;
     }
   </style>
 </head>
 <body>
+  <!-- Animated Colorful Gradient Orbs with Blur Background -->
+  <div class="animated-bg" aria-hidden="true">
+    <div class="gradient-orb orb-1"></div>
+    <div class="gradient-orb orb-2"></div>
+    <div class="gradient-orb orb-3"></div>
+    <div class="gradient-orb orb-4"></div>
+    <div class="gradient-orb orb-5"></div>
+  </div>
+
   <div class="booking-wrapper">
     <div class="booking-header">
       <div style="display:inline-block;">
@@ -121,24 +149,24 @@
 
   <!-- Modal Interativo de Agendamento com Grade de Disponibilidade -->
   <div class="modal-backdrop" id="bookingModal">
-    <div class="modal-dialog" style="max-width: 540px;">
-      <div class="modal-header">
+    <div class="modal-dialog" style="max-width: 520px; max-height: calc(100vh - 36px); display: flex; flex-direction: column;">
+      <div class="modal-header" style="padding: 16px 20px;">
         <div>
-          <h3 id="bModalTitle">Reservar Horário</h3>
-          <span id="bModalDuration" class="duration-badge" style="margin-top:4px;">Duração: 60 min</span>
+          <h3 id="bModalTitle" style="font-size: 1.15rem;">Reservar Horário</h3>
+          <span id="bModalDuration" class="duration-badge" style="margin-top:2px;">Duração: 60 min</span>
         </div>
         <button onclick="closeBookingModal()" style="background:none;border:none;font-size:1.5rem;cursor:pointer;color:var(--muted);">&times;</button>
       </div>
-      <div class="modal-body">
+      <div class="modal-body" style="padding: 16px 20px; flex: 1; overflow-y: auto; gap: 12px;">
         <input type="hidden" id="bookServId">
         
-        <div class="form-group">
-          <label>1. Escolha o Profissional</label>
-          <select class="form-control" id="bookProfSelect" onchange="fetchAvailableSlots()"></select>
+        <div class="form-group" style="margin-bottom:0;">
+          <label style="font-size: 0.85rem;">1. Escolha o Profissional</label>
+          <select class="form-control" id="bookProfSelect" onchange="fetchAvailableSlots(); updateDepositNotice();"></select>
         </div>
 
-        <div class="form-group">
-          <label>2. Data Desejada</label>
+        <div class="form-group" style="margin-bottom:0;">
+          <label style="font-size: 0.85rem;">2. Data Desejada</label>
           <input type="date" class="form-control" id="bookDate" onchange="fetchAvailableSlots()">
         </div>
 
@@ -157,14 +185,86 @@
           </div>
         </div>
 
+        <!-- Caixa de Garantia de Reserva / Adiantamento de Horário com Política Oficial -->
+        <div id="depositNoticeBox" style="display: none; background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 16px; padding: 16px; margin-bottom: 14px; box-shadow: 0 4px 16px -4px rgba(0,0,0,0.06);">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; padding-bottom:10px; border-bottom: 1px solid #f1f5f9;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <div style="width:28px; height:28px; border-radius:8px; background:rgba(255,105,0,0.1); color:var(--orange); display:grid; place-items:center;">
+                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+              </div>
+              <div>
+                <span style="font-weight:700; color:var(--ink); font-size:0.92rem;">Política de Agendamento</span>
+                <span style="font-size:0.75rem; color:var(--muted); display:block;">Garantia de vaga e bloqueio de horário</span>
+              </div>
+            </div>
+            <span id="depositPercentBadge" style="background:#0f172a; color:#fff; font-size:0.72rem; font-weight:700; padding:3px 9px; border-radius:20px; letter-spacing:0.02em;">
+              30% Entrada
+            </span>
+          </div>
+
+          <!-- Alerta de Remarcação / Reincidência de Falta Detectada via Cruzamento de Dados -->
+          <div id="depositPenaltyAlert" style="display:none; background:#fef2f2; border:1px solid #fecaca; border-radius:10px; padding:10px 12px; margin-bottom:12px; font-size:0.78rem; color:#991b1b; line-height:1.4;">
+            <strong>Aviso de Reagendamento:</strong> Identificamos uma remarcação anterior associada ao seu cadastro. Conforme nossa Política de Agendamento, a taxa de garantia para este novo horário é de <strong>50%</strong>.
+          </div>
+
+          <!-- Regras da Política de Agendamento -->
+          <div style="background:#f8fafc; border-radius:12px; padding:12px 14px; margin-bottom:12px; border:1px solid #e2e8f0; font-size:0.78rem; color:#334155; line-height:1.5;">
+            <div style="margin-bottom:6px; display:flex; gap:6px;">
+              <span style="color:var(--orange); font-weight:bold;">•</span>
+              <div><strong>Garantia de vaga:</strong> A reserva é confirmada mediante adiantamento de <strong id="depositPolicyPct">30%</strong> do valor do serviço, que é abatido do total.</div>
+            </div>
+            <div style="margin-bottom:6px; display:flex; gap:6px;">
+              <span style="color:var(--orange); font-weight:bold;">•</span>
+              <div><strong>Cancelamentos, atrasos (acima de 15 min) ou ausência:</strong> O valor do adiantamento não será reembolsado.</div>
+            </div>
+            <div style="display:flex; gap:6px;">
+              <span style="color:var(--orange); font-weight:bold;">•</span>
+              <div><strong>Reagendamento:</strong> Não há devolução do sinal pago e será cobrada uma nova taxa de <strong>50%</strong> do valor do serviço para remarcar.</div>
+            </div>
+          </div>
+
+          <!-- Resumo Financeiro da Reserva -->
+          <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; background:#f8fafc; border-radius:12px; padding:10px 14px; margin-bottom:12px; border:1px solid #e2e8f0;">
+            <div>
+              <span style="font-size:0.72rem; font-weight:600; text-transform:uppercase; letter-spacing:0.04em; color:#64748b; display:block;" id="depositLabelNow">Adiantamento (Agora)</span>
+              <span style="font-size:1.25rem; font-weight:800; color:#15803d; line-height:1.2;" id="depositAmountDisplay">R$ 0,00</span>
+            </div>
+            <div style="border-left:1px solid #e2e8f0; padding-left:10px;">
+              <span style="font-size:0.72rem; font-weight:600; text-transform:uppercase; letter-spacing:0.04em; color:#64748b; display:block;">Restante no Salão</span>
+              <span style="font-size:1.05rem; font-weight:700; color:#334155; line-height:1.2;" id="depositRemainingDisplay">R$ 0,00</span>
+            </div>
+          </div>
+
+          <!-- Dados do Pix para Transferência -->
+          <div style="background:#ffffff; border-radius:12px; padding:12px; border:1.5px dashed #cbd5e1;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+              <span style="font-size:0.78rem; font-weight:700; color:#0f172a; display:flex; align-items:center; gap:5px;">
+                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"></rect><line x1="2" y1="10" x2="22" y2="10"></line></svg>
+                <span id="depositBankDisplay">Transferência Pix</span>
+              </span>
+              <span style="font-size:0.72rem; font-weight:500; color:#64748b;" id="depositTitularDisplay">Favorecido: Profissional</span>
+            </div>
+            <div style="display:flex; gap:8px; align-items:center;">
+              <input type="text" id="depositPixKeyInput" readonly style="font-size:0.82rem; font-family:monospace; padding:8px 12px; border-radius:10px; border:1px solid #cbd5e1; background:#f8fafc; flex:1; font-weight:700; color:#0f172a; letter-spacing:0.03em;">
+              <button type="button" class="btn-falcon btn-primary" onclick="copyDepositPixKey()" style="padding:8px 14px; font-size:0.8rem; font-weight:600; display:inline-flex; align-items:center; gap:6px; white-space:nowrap;">
+                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                Copiar Chave
+              </button>
+            </div>
+            <small style="display:block; margin-top:6px; font-size:0.72rem; color:#94a3b8; text-align:center;">
+              Ao continuar, você concorda com a Política de Agendamento acima.
+            </small>
+          </div>
+        </div>
+
         <div style="border-top: 1px solid var(--border-peach); padding-top: 14px;">
           <div class="form-group" style="margin-bottom:12px;">
             <label>4. Seu Nome Completo</label>
-            <input type="text" class="form-control" id="bookClientName" placeholder="Ex: Lucas Ferreira">
+            <input type="text" class="form-control" id="bookClientName" placeholder="Ex: Lucas Ferreira" oninput="checkClientPenaltyDebounced()">
           </div>
           <div class="form-group">
             <label>5. Seu WhatsApp</label>
-            <input type="text" class="form-control" id="bookClientPhone" placeholder="(67) 99999-9999">
+            <input type="text" class="form-control" id="bookClientPhone" placeholder="(67) 99999-9999" oninput="checkClientPenaltyDebounced()">
           </div>
         </div>
       </div>
@@ -209,6 +309,23 @@
         }
         if (data.tenant.phone) document.getElementById('bSalonPhone').innerText = data.tenant.phone;
 
+        // Aplicar regras de agendamento definidas pelo salão
+        const allowSameDay = settings.allowSameDayBooking !== false;
+        const maxDays = Number(settings.maxBookingDaysAhead) || 30;
+
+        const baseMinDate = new Date();
+        if (!allowSameDay) {
+          baseMinDate.setDate(baseMinDate.getDate() + 1); // Força começar a partir de amanhã
+        }
+        const minStr = baseMinDate.toISOString().split('T')[0];
+        dateInput.min = minStr;
+        dateInput.value = minStr;
+
+        const maxDate = new Date();
+        maxDate.setDate(maxDate.getDate() + maxDays);
+        const maxStr = maxDate.toISOString().split('T')[0];
+        dateInput.max = maxStr;
+
         renderAccordion();
       } catch (err) {
         console.warn("Carregando via fallback padrão...");
@@ -222,6 +339,19 @@
         settings = setRes;
         if (settings.salonName) document.getElementById('bSalonName').innerText = settings.salonName;
         if (settings.phone) document.getElementById('bSalonPhone').innerText = settings.phone;
+
+        const allowSameDay = settings.allowSameDayBooking !== false;
+        const maxDays = Number(settings.maxBookingDaysAhead) || 30;
+        const baseMinDate = new Date();
+        if (!allowSameDay) baseMinDate.setDate(baseMinDate.getDate() + 1);
+        const minStr = baseMinDate.toISOString().split('T')[0];
+        dateInput.min = minStr;
+        dateInput.value = minStr;
+
+        const maxDate = new Date();
+        maxDate.setDate(maxDate.getDate() + maxDays);
+        dateInput.max = maxDate.toISOString().split('T')[0];
+
         renderAccordion();
       }
     });
@@ -236,7 +366,10 @@
           <div class="service-book-card">
             <div class="service-book-info">
               <h4>${s.name}</h4>
-              <span>🕒 Duração: <strong>${s.durationMinutes} min</strong></span>
+              <span style="display:inline-flex; align-items:center; gap:4px;">
+                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                Duração: <strong>${s.durationMinutes} min</strong>
+              </span>
               ${s.observation ? `<small style="color:#999; font-size:0.75rem;">${s.observation}</small>` : ''}
             </div>
             <div class="service-book-cta">
@@ -282,6 +415,7 @@
       profSelect.innerHTML = professionals.map(p => `<option value="${p.id}">${p.name} (${p.role})</option>`).join('');
 
       document.getElementById('bookingModal').classList.add('open');
+      updateDepositNotice();
       fetchAvailableSlots();
     }
 
@@ -312,7 +446,9 @@
         if (availableSlots.length === 0) {
           container.innerHTML = `
             <div style="padding:28px 20px; text-align:center; color:var(--muted);">
-              <div style="font-size:1.6rem; margin-bottom:6px;">📅</div>
+              <div style="margin-bottom:8px; color:var(--muted);">
+                <svg width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+              </div>
               <strong style="color:var(--ink); font-size:0.95rem;">Não há mais horários disponíveis para este dia.</strong>
               <div style="font-size:0.82rem; margin-top:4px;">Por favor selecione outra data acima ou outro profissional.</div>
             </div>
@@ -340,14 +476,122 @@
       selectedSlot = { time, endTime };
 
       document.getElementById('selectedSlotNotice').innerHTML = `
-        ✓ Horário escolhido: <strong>${time} às ${endTime}</strong> (${selectedService.durationMinutes} min)
+        <span style="display:inline-flex; align-items:center; gap:6px; color:#15803d; font-weight:600;">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"></polyline></svg>
+          Horário escolhido: <strong>${time} às ${endTime}</strong> (${selectedService.durationMinutes} min)
+        </span>
       `;
       document.getElementById('btnConfirmBooking').disabled = false;
     }
 
+    let clientPenaltyActive = false;
+    let clientPenaltyPct = 50;
+    let penaltyDebounceTimer = null;
+
+    function checkClientPenaltyDebounced() {
+      clearTimeout(penaltyDebounceTimer);
+      penaltyDebounceTimer = setTimeout(checkClientPenalty, 500);
+    }
+
+    async function checkClientPenalty() {
+      const name = (document.getElementById('bookClientName') ? document.getElementById('bookClientName').value : '').trim();
+      const phone = (document.getElementById('bookClientPhone') ? document.getElementById('bookClientPhone').value : '').trim();
+
+      if (!name && !phone) {
+        clientPenaltyActive = false;
+        const alertEl = document.getElementById('depositPenaltyAlert');
+        if (alertEl) alertEl.style.display = 'none';
+        updateDepositNotice();
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/appointments/check-policy?name=${encodeURIComponent(name)}&phone=${encodeURIComponent(phone)}`, {
+          headers: { 'x-tenant-id': currentTenantId }
+        });
+        const data = await res.json();
+
+        const alertEl = document.getElementById('depositPenaltyAlert');
+        if (data.penalty) {
+          clientPenaltyActive = true;
+          clientPenaltyPct = data.percent || 50;
+          if (alertEl) {
+            alertEl.style.display = 'block';
+            alertEl.innerHTML = `<strong>Aviso de Reagendamento Identificado:</strong> Identificamos um histórico de ausência ou remarcação associado ao seu cadastro (cruzamento por dados de identificação). Conforme a Política de Agendamento, a taxa de garantia para este novo horário é de <strong>${clientPenaltyPct}%</strong>.`;
+          }
+        } else {
+          clientPenaltyActive = false;
+          if (alertEl) alertEl.style.display = 'none';
+        }
+        updateDepositNotice();
+      } catch (e) {
+        console.error("Erro ao verificar política:", e);
+      }
+    }
+
+    function updateDepositNotice() {
+      const profId = document.getElementById('bookProfSelect').value;
+      const prof = professionals.find(p => p.id === profId);
+      const box = document.getElementById('depositNoticeBox');
+      const confirmBtn = document.getElementById('btnConfirmBooking');
+
+      if (!prof || !prof.requireDeposit || !selectedService) {
+        box.style.display = 'none';
+        if (confirmBtn) confirmBtn.innerText = 'Confirmar Agendamento';
+        return;
+      }
+
+      box.style.display = 'block';
+      
+      // Se detectado cruzamento com falta/remarcação anterior, aplica a taxa de 50%
+      const basePct = Number(prof.depositPercent) || 30;
+      const pct = clientPenaltyActive ? clientPenaltyPct : basePct;
+
+      const total = Number(selectedService.price) || 0;
+      const depositVal = (total * pct) / 100;
+      const remainVal = Math.max(0, total - depositVal);
+
+      const formatBRL = (val) => val.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+      const badgeEl = document.getElementById('depositPercentBadge');
+      if (badgeEl) {
+        badgeEl.innerText = `${pct}% ${clientPenaltyActive ? 'Taxa Remarcação' : 'Entrada'}`;
+        badgeEl.style.background = clientPenaltyActive ? '#dc2626' : '#0f172a';
+      }
+
+      const policyPctEl = document.getElementById('depositPolicyPct');
+      if (policyPctEl) policyPctEl.innerText = `${basePct}%`;
+
+      const labelNowEl = document.getElementById('depositLabelNow');
+      if (labelNowEl) {
+        labelNowEl.innerText = clientPenaltyActive ? 'Taxa Remarcação (Agora)' : 'Adiantamento (Agora)';
+      }
+
+      document.getElementById('depositAmountDisplay').innerText = formatBRL(depositVal);
+      document.getElementById('depositRemainingDisplay').innerText = formatBRL(remainVal);
+      
+      const bankName = (prof.pixBank && prof.pixBank.trim()) ? prof.pixBank.trim() : 'Pix';
+      const keyType = (prof.pixKeyType && prof.pixKeyType.trim()) ? prof.pixKeyType.trim() : 'Chave Pix';
+      document.getElementById('depositBankDisplay').innerText = `${bankName} • ${keyType}`;
+      document.getElementById('depositTitularDisplay').innerText = `Favorecido(a): ${prof.pixName || prof.name}`;
+      document.getElementById('depositPixKeyInput').value = prof.pixKey || 'Chave não cadastrada';
+
+      if (confirmBtn) {
+        confirmBtn.innerText = `Garantir Horário (${formatBRL(depositVal)})`;
+      }
+    }
+
+    async function copyDepositPixKey() {
+      const input = document.getElementById('depositPixKeyInput');
+      if (!input || !input.value) return;
+      input.select();
+      navigator.clipboard.writeText(input.value);
+      await asyncAlert(`Chave Pix copiada com sucesso!\n\n${input.value}`, 'Pix Copiado', 'success');
+    }
+
     async function confirmOnlineBooking() {
       if (!selectedSlot) {
-        alert('Por favor selecione um horário disponível na tabela.');
+        await asyncAlert('Por favor selecione um horário disponível na tabela.', 'Horário não selecionado', 'warning');
         return;
       }
 
@@ -357,7 +601,7 @@
       const date = document.getElementById('bookDate').value;
 
       if (!name || !phone) {
-        alert('Por favor preencha seu nome completo e WhatsApp para confirmação.');
+        await asyncAlert('Por favor preencha seu nome completo e WhatsApp para confirmação.', 'Dados Incompletos', 'warning');
         return;
       }
 
@@ -365,6 +609,20 @@
       const btn = document.getElementById('btnConfirmBooking');
       btn.disabled = true;
       btn.innerText = 'Agendando...';
+
+      let depositNotes = '';
+      let hasDeposit = false;
+      let depositAmount = 0;
+
+      if (prof && prof.requireDeposit && selectedService) {
+        hasDeposit = true;
+        const pct = clientPenaltyActive ? clientPenaltyPct : (Number(prof.depositPercent) || 30);
+        const total = Number(selectedService.price) || 0;
+        depositAmount = (total * pct) / 100;
+        const remainVal = Math.max(0, total - depositAmount);
+        const tipoSinal = clientPenaltyActive ? 'Taxa Reagendamento (Reincidência)' : 'Sinal de Adiantamento';
+        depositNotes = ` | ${tipoSinal} ${pct}%: R$ ${depositAmount.toFixed(2)} (${prof.pixBank || 'InfinitePay'}) - Restante no salão: R$ ${remainVal.toFixed(2)}`;
+      }
 
       try {
         const response = await fetch('/api/appointments', {
@@ -384,13 +642,13 @@
             startTime: selectedSlot.time,
             endTime: selectedSlot.endTime,
             status: 'agendado',
-            notes: `Agendamento Online (${selectedService.durationMinutes} min)`
+            notes: `Agendamento Online (${selectedService.durationMinutes} min)${depositNotes}`
           })
         });
 
         if (!response.ok) {
           const errData = await response.json();
-          alert(errData.error || 'Erro ao realizar agendamento.');
+          await asyncAlert(errData.error || 'Erro ao realizar agendamento.', 'Erro', 'error');
           btn.disabled = false;
           btn.innerText = 'Confirmar Agendamento';
           fetchAvailableSlots();
@@ -398,15 +656,145 @@
         }
 
         closeBookingModal();
-        alert(`🎉 Agendamento confirmado com sucesso!\n\nCliente: ${name}\nProfissional: ${prof.name}\nServiço: ${selectedService.name} (${selectedService.durationMinutes} min)\nData: ${date} das ${selectedSlot.time} às ${selectedSlot.endTime}`);
+
+        // Se houver exigência de sinal, convida o cliente a enviar o comprovante no WhatsApp da profissional
+        if (hasDeposit && prof.phone) {
+          const cleanProfPhone = prof.phone.replace(/\D/g, '');
+          const [y, m, d] = date.split('-');
+          const dateBr = `${d}/${m}/${y}`;
+          const msg = `Olá, ${prof.name}! Sou ${name}.\nAcabei de realizar um agendamento online:\n\n` +
+            `• *Serviço:* ${selectedService.name}\n` +
+            `• *Data:* ${dateBr} às ${selectedSlot.time}\n` +
+            `• *Sinal de Adiantamento:* R$ ${depositAmount.toFixed(2)} via ${prof.pixBank || 'InfinitePay'}\n\n` +
+            `Segue em anexo o comprovante do Pix para validação do meu horário!`;
+
+          const waUrl = `https://wa.me/55${cleanProfPhone}?text=${encodeURIComponent(msg)}`;
+          
+          const openWa = await asyncConfirm(
+            `Agendamento realizado com sucesso!\n\nFoi gerada uma solicitação de sinal de R$ ${depositAmount.toFixed(2)} (${prof.pixBank || 'InfinitePay'}).\n\nDeseja abrir o WhatsApp de ${prof.name} agora para enviar o comprovante?`,
+            'Enviar Comprovante por WhatsApp'
+          );
+          if (openWa) {
+            window.open(waUrl, '_blank');
+          }
+        } else {
+          await asyncAlert(`Agendamento confirmado com sucesso!\n\nCliente: ${name}\nProfissional: ${prof.name}\nServiço: ${selectedService.name} (${selectedService.durationMinutes} min)\nData: ${date} das ${selectedSlot.time} às ${selectedSlot.endTime}`, 'Agendado com Sucesso', 'success');
+        }
       } catch (err) {
         console.error(err);
-        alert('Ocorreu um erro ao comunicar com o servidor.');
+        await asyncAlert('Ocorreu um erro ao comunicar com o servidor.', 'Erro de Conexão', 'error');
       } finally {
         btn.disabled = false;
         btn.innerText = 'Confirmar Agendamento';
       }
     }
+
+    window.asyncConfirm = function(message, title = 'Confirmação', options = {}) {
+      return new Promise((resolve) => {
+        const modal = document.getElementById('customConfirmModal');
+        if (!modal) {
+          resolve(window.confirm(message));
+          return;
+        }
+        const titleEl = document.getElementById('customConfirmTitle');
+        const msgEl = document.getElementById('customConfirmMessage');
+        const okBtn = document.getElementById('customConfirmOkBtn');
+        const cancelBtn = document.getElementById('customConfirmCancelBtn');
+
+        if (titleEl) titleEl.innerText = title;
+        if (msgEl) msgEl.innerText = message;
+
+        modal.classList.add('active');
+
+        function cleanup(result) {
+          modal.classList.remove('active');
+          okBtn.removeEventListener('click', onOk);
+          cancelBtn.removeEventListener('click', onCancel);
+          resolve(result);
+        }
+
+        function onOk() { cleanup(true); }
+        function onCancel() { cleanup(false); }
+
+        okBtn.addEventListener('click', onOk);
+        cancelBtn.addEventListener('click', onCancel);
+      });
+    };
+
+    window.asyncAlert = function(message, title = 'Aviso', type = 'info') {
+      return new Promise((resolve) => {
+        const modal = document.getElementById('customAlertModal');
+        if (!modal) {
+          window.alert(message);
+          resolve();
+          return;
+        }
+        const titleEl = document.getElementById('customAlertTitle');
+        const msgEl = document.getElementById('customAlertMessage');
+        const okBtn = document.getElementById('customAlertOkBtn');
+        const iconEl = document.getElementById('customAlertIcon');
+
+        if (titleEl) titleEl.innerText = title;
+        if (msgEl) msgEl.innerText = message;
+
+        if (type === 'error' || type === 'danger') {
+          if (iconEl) {
+            iconEl.style.background = 'rgba(211, 47, 47, 0.12)';
+            iconEl.style.color = '#d32f2f';
+            iconEl.innerHTML = `<svg width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>`;
+          }
+        } else if (type === 'success') {
+          if (iconEl) {
+            iconEl.style.background = 'rgba(26, 102, 54, 0.14)';
+            iconEl.style.color = '#1a6636';
+            iconEl.innerHTML = `<svg width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>`;
+          }
+        } else {
+          if (iconEl) {
+            iconEl.style.background = 'rgba(255, 105, 0, 0.12)';
+            iconEl.style.color = '#ff6900';
+            iconEl.innerHTML = `<svg width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>`;
+          }
+        }
+
+        modal.classList.add('active');
+
+        function onOk() {
+          modal.classList.remove('active');
+          okBtn.removeEventListener('click', onOk);
+          resolve();
+        }
+
+        okBtn.addEventListener('click', onOk);
+      });
+    };
   </script>
+
+  <!-- Modal de Confirmação Customizado (Substitui confirm nativo) -->
+  <div class="modal-backdrop" id="customConfirmModal" style="z-index: 10000;">
+    <div class="modal-dialog" style="max-width: 420px; text-align: center; border-radius: 20px; padding: 24px 20px;">
+      <div id="customConfirmIcon" style="width: 56px; height: 56px; border-radius: 50%; background: rgba(255, 105, 0, 0.12); color: #ff6900; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px auto;">
+        <svg width="28" height="28" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+      </div>
+      <h3 id="customConfirmTitle" style="font-size: 1.15rem; font-weight: 700; color: var(--ink); margin-bottom: 8px;">Confirmação</h3>
+      <p id="customConfirmMessage" style="font-size: 0.88rem; color: var(--muted); line-height: 1.45; margin-bottom: 22px; white-space: pre-line;"></p>
+      <div style="display: flex; gap: 10px; justify-content: center;">
+        <button class="btn-falcon btn-secondary" id="customConfirmCancelBtn" style="flex: 1; padding: 10px; font-weight: 600;">Cancelar</button>
+        <button class="btn-falcon btn-primary" id="customConfirmOkBtn" style="flex: 1; padding: 10px; font-weight: 600;">Confirmar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de Alerta Customizado (Substitui alert nativo) -->
+  <div class="modal-backdrop" id="customAlertModal" style="z-index: 10001;">
+    <div class="modal-dialog" style="max-width: 400px; text-align: center; border-radius: 20px; padding: 24px 20px;">
+      <div id="customAlertIcon" style="width: 54px; height: 54px; border-radius: 50%; background: rgba(255, 105, 0, 0.12); color: #ff6900; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px auto;">
+        <svg width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+      </div>
+      <h3 id="customAlertTitle" style="font-size: 1.12rem; font-weight: 700; color: var(--ink); margin-bottom: 8px;">Aviso</h3>
+      <p id="customAlertMessage" style="font-size: 0.88rem; color: var(--muted); line-height: 1.45; margin-bottom: 20px; white-space: pre-line;"></p>
+      <button class="btn-falcon btn-primary" id="customAlertOkBtn" style="width: 100%; padding: 10px; font-weight: 600;">Entendi</button>
+    </div>
+  </div>
 </body>
 </html>

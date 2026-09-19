@@ -19,7 +19,8 @@
       "avatar": "https://api.dicebear.com/7.x/bottts/svg?seed=Sarah",
       "showInBooking": true,
       "commissionDefault": 50,
-      "active": true
+      "active": true,
+      "tenantId": "tenant_metamorfose"
     },
     {
       "id": "prof_2",
@@ -30,7 +31,8 @@
       "avatar": "https://api.dicebear.com/7.x/bottts/svg?seed=Ana",
       "showInBooking": true,
       "commissionDefault": 50,
-      "active": true
+      "active": true,
+      "tenantId": "tenant_metamorfose"
     },
     {
       "id": "prof_3",
@@ -41,7 +43,8 @@
       "avatar": "https://api.dicebear.com/7.x/bottts/svg?seed=Ilda",
       "showInBooking": true,
       "commissionDefault": 50,
-      "active": true
+      "active": true,
+      "tenantId": "tenant_metamorfose"
     },
     {
       "id": "prof_4",
@@ -52,17 +55,103 @@
       "avatar": "https://api.dicebear.com/7.x/bottts/svg?seed=Priscila",
       "showInBooking": true,
       "commissionDefault": 40,
+      "active": true,
+      "tenantId": "tenant_metamorfose"
+    },
+    {
+      "id": "prof_1789592719723",
+      "tenantId": "tenant_metamorfose",
+      "name": "teste",
+      "role": "cu",
+      "phone": "67 9565655232",
+      "email": "teste@gmail.com",
+      "access": "Profissional de Servicos",
+      "avatar": "https://api.dicebear.com/7.x/bottts/svg?seed=teste",
+      "showInBooking": true,
+      "commissionDefault": 50,
+      "active": true,
+      "requireDeposit": true,
+      "depositPercent": 30,
+      "pixBank": "mercadopago",
+      "pixKey": "04984485175",
+      "pixKeyType": "CPF",
+      "pixName": "Icaro OSley Brandão Antunes"
+    },
+    {
+      "id": "prof_1789677571830",
+      "tenantId": "tenant_1789677571830",
+      "name": "aaodiadoi",
+      "role": "Gestor Geral",
+      "phone": "679999999999",
+      "email": "teste1@gmail.com",
+      "access": "Gestor",
+      "avatar": "https://api.dicebear.com/7.x/bottts/svg?seed=aaodiadoi",
+      "showInBooking": false,
+      "commissionDefault": 0,
       "active": true
     },
     {
-      "id": "prof_5",
-      "name": "Icaro",
+      "id": "prof_1789680501132",
+      "tenantId": "tenant_1789680501132",
+      "name": "Ana Alice",
       "role": "Gestor Geral",
-      "phone": "(67) 8134-8704",
+      "phone": "67991629269",
+      "email": "anaalicehair1995@gmail.com",
       "access": "Gestor",
-      "avatar": "https://api.dicebear.com/7.x/bottts/svg?seed=Icaro",
+      "avatar": "https://api.dicebear.com/7.x/bottts/svg?seed=Ana%20Alice",
       "showInBooking": false,
       "commissionDefault": 0,
+      "active": true
+    },
+    {
+      "id": "prof_1789681174085",
+      "tenantId": "tenant_1789680501132",
+      "name": "Ana Alice Garcia da Silva",
+      "role": "cabeleireira, barbearia",
+      "phone": "67991629269",
+      "email": "anaalicehair1995@gmail.com",
+      "access": "Profissional de Servicos",
+      "avatar": "https://api.dicebear.com/7.x/bottts/svg?seed=Ana%20Alice%20Garcia%20da%20Silva",
+      "showInBooking": true,
+      "commissionDefault": 50,
+      "active": true
+    },
+    {
+      "id": "prof_1789742257705",
+      "tenantId": "tenant_1789680501132",
+      "name": "Sara Beatriz Trancista",
+      "role": "Trancista Especialista",
+      "phone": "(67) 98424-8821",
+      "email": "",
+      "access": "Profissional de Servicos",
+      "avatar": "https://api.dicebear.com/7.x/bottts/svg?seed=Sara%20Beatriz%20Trancista",
+      "showInBooking": true,
+      "commissionDefault": 50,
+      "requireDeposit": true,
+      "depositPercent": 30,
+      "pixBank": "InfinitePay",
+      "pixKey": "67984248821",
+      "pixKeyType": "Celular / WhatsApp",
+      "pixName": "Sara Beatriz da Silva",
+      "active": true
+    },
+    {
+      "id": "prof_1789765684917",
+      "tenantId": "tenant_1789677571830",
+      "name": "sadklmfaklfmklm",
+      "role": "lf,alçsd,asçl,",
+      "phone": ",amflamlfkam",
+      "email": "dadadadads",
+      "access": "Profissional de Servicos",
+      "avatar": "https://api.dicebear.com/7.x/bottts/svg?seed=sadklmfaklfmklm",
+      "showInBooking": true,
+      "commissionDefault": 50,
+      "requireDeposit": false,
+      "depositPercent": 30,
+      "pixBank": "InfinitePay",
+      "pixKey": "",
+      "pixKeyType": "Chave Pix",
+      "pixName": "sadklmfaklfmklm",
       "active": true
     }
   ],
@@ -75,7 +164,8 @@
       "durationMinutes": 180,
       "observation": "Comissao padrao e materiais inclusos",
       "commissionPercent": 50,
-      "assistantCommissionPercent": 10
+      "assistantCommissionPercent": 10,
+      "tenantId": "tenant_metamorfose"
     },
     {
       "id": "serv_2",
@@ -85,7 +175,8 @@
       "durationMinutes": 60,
       "observation": "Toalha quente e massagem facial",
       "commissionPercent": 50,
-      "assistantCommissionPercent": 0
+      "assistantCommissionPercent": 0,
+      "tenantId": "tenant_metamorfose"
     },
     {
       "id": "serv_3",
@@ -95,7 +186,8 @@
       "durationMinutes": 120,
       "observation": "Tinta por conta do salao",
       "commissionPercent": 50,
-      "assistantCommissionPercent": 10
+      "assistantCommissionPercent": 10,
+      "tenantId": "tenant_metamorfose"
     },
     {
       "id": "serv_4",
@@ -105,7 +197,8 @@
       "durationMinutes": 60,
       "observation": "Acabamento na lamina",
       "commissionPercent": 60,
-      "assistantCommissionPercent": 0
+      "assistantCommissionPercent": 0,
+      "tenantId": "tenant_metamorfose"
     },
     {
       "id": "serv_5",
@@ -115,7 +208,8 @@
       "durationMinutes": 90,
       "observation": "Lavagem e finalizacao",
       "commissionPercent": 50,
-      "assistantCommissionPercent": 0
+      "assistantCommissionPercent": 0,
+      "tenantId": "tenant_metamorfose"
     },
     {
       "id": "serv_6",
@@ -125,7 +219,8 @@
       "durationMinutes": 240,
       "observation": "Design exclusivo",
       "commissionPercent": 55,
-      "assistantCommissionPercent": 15
+      "assistantCommissionPercent": 15,
+      "tenantId": "tenant_metamorfose"
     },
     {
       "id": "serv_7",
@@ -134,6 +229,29 @@
       "price": 60,
       "durationMinutes": 60,
       "observation": "Hidratacao express inclusa",
+      "commissionPercent": 50,
+      "assistantCommissionPercent": 0,
+      "tenantId": "tenant_metamorfose"
+    },
+    {
+      "id": "serv_1789680980695",
+      "tenantId": "tenant_1789680501132",
+      "name": "corte tesoura curto ",
+      "category": "cortes",
+      "price": 70,
+      "durationMinutes": 60,
+      "observation": "",
+      "commissionPercent": 50,
+      "assistantCommissionPercent": 0
+    },
+    {
+      "id": "serv_1789742262337",
+      "tenantId": "tenant_1789680501132",
+      "name": "Trança Nagô Completa",
+      "category": "Tranças",
+      "price": 150,
+      "durationMinutes": 120,
+      "observation": "",
       "commissionPercent": 50,
       "assistantCommissionPercent": 0
     }
@@ -146,7 +264,8 @@
       "birthday": "1994-09-22",
       "status": "ativo",
       "balance": 0,
-      "notes": "Cliente vip"
+      "notes": "Cliente vip",
+      "tenantId": "tenant_metamorfose"
     },
     {
       "id": "cli_2",
@@ -155,7 +274,8 @@
       "birthday": "1998-11-15",
       "status": "ativo",
       "balance": 50,
-      "notes": "Prefere Sarah para trancas"
+      "notes": "Prefere Sarah para trancas",
+      "tenantId": "tenant_metamorfose"
     },
     {
       "id": "cli_3",
@@ -164,7 +284,8 @@
       "birthday": "2000-09-18",
       "status": "ativo",
       "balance": -30,
-      "notes": "Agendamento semanal"
+      "notes": "Agendamento semanal",
+      "tenantId": "tenant_metamorfose"
     },
     {
       "id": "cli_4",
@@ -173,12 +294,43 @@
       "birthday": "1985-04-10",
       "status": "ativo",
       "balance": 0,
-      "notes": "Corte de barba e cabelo"
+      "notes": "Corte de barba e cabelo",
+      "tenantId": "tenant_metamorfose"
     },
     {
       "id": "cli_1789499327250",
       "name": "oie",
       "phone": "67999999999",
+      "birthday": "",
+      "status": "ativo",
+      "balance": 0,
+      "notes": "Cadastrado via Agendamento Online",
+      "tenantId": "tenant_metamorfose"
+    },
+    {
+      "id": "cli_1789592735836",
+      "tenantId": "tenant_metamorfose",
+      "name": "teste",
+      "phone": "67",
+      "birthday": "1997-10-03",
+      "status": "ativo",
+      "balance": 0,
+      "notes": ""
+    },
+    {
+      "id": "cli_1789593272502",
+      "tenantId": "tenant_metamorfose",
+      "phone": "",
+      "birthday": "",
+      "status": "ativo",
+      "balance": 0,
+      "notes": ""
+    },
+    {
+      "id": "cli_1789681325994",
+      "tenantId": "tenant_1789680501132",
+      "name": "luna",
+      "phone": "67984248821",
       "birthday": "",
       "status": "ativo",
       "balance": 0,
@@ -199,7 +351,8 @@
       "endTime": "09:30",
       "price": 150,
       "status": "indisponivel",
-      "notes": "Horario reservado para montagem"
+      "notes": "Horario reservado para montagem",
+      "tenantId": "tenant_metamorfose"
     },
     {
       "id": "app_2",
@@ -214,7 +367,8 @@
       "endTime": "11:00",
       "price": 50,
       "status": "agendado",
-      "notes": "Degrade navalhado"
+      "notes": "Degrade navalhado",
+      "tenantId": "tenant_metamorfose"
     },
     {
       "id": "app_1789499327249",
@@ -229,7 +383,56 @@
       "endTime": "18:30",
       "price": 120,
       "status": "agendado",
-      "notes": "Agendamento Online (180 min)"
+      "notes": "Agendamento Online (180 min)",
+      "tenantId": "tenant_metamorfose"
+    },
+    {
+      "id": "app_1789681325994",
+      "tenantId": "tenant_1789680501132",
+      "professionalId": "prof_1789681174085",
+      "clientId": null,
+      "clientName": "luna",
+      "clientPhone": "67984248821",
+      "serviceId": "serv_1789680980695",
+      "serviceName": "corte tesoura curto ",
+      "date": "2026-09-18",
+      "startTime": "18:00",
+      "endTime": "19:00",
+      "price": 70,
+      "status": "agendado",
+      "notes": "Agendamento Online (60 min)"
+    },
+    {
+      "id": "app_1789684792052",
+      "tenantId": "tenant_metamorfose",
+      "professionalId": "prof_3",
+      "clientId": null,
+      "clientName": "ddsa",
+      "clientPhone": "fsdsd",
+      "serviceId": "serv_1",
+      "serviceName": "Alisamento / Progressiva Formol",
+      "date": "2026-09-17",
+      "startTime": "08:00",
+      "endTime": "11:00",
+      "price": 120,
+      "status": "agendado",
+      "notes": ""
+    },
+    {
+      "id": "app_1789777000607",
+      "tenantId": "tenant_metamorfose",
+      "professionalId": "prof_1",
+      "clientId": null,
+      "clientName": "oie",
+      "clientPhone": "67999999999",
+      "serviceId": "serv_2",
+      "serviceName": "Barba Terapia e Alinhamento",
+      "date": "2026-09-19",
+      "startTime": "14:30",
+      "endTime": "15:30",
+      "price": 40,
+      "status": "agendado",
+      "notes": "Agendamento Online (60 min)"
     }
   ],
   "products": [
@@ -242,7 +445,8 @@
       "canSell": true,
       "price": 25,
       "commissionPercent": 10,
-      "stock": 15
+      "stock": 15,
+      "tenantId": "tenant_metamorfose"
     },
     {
       "id": "prod_2",
@@ -253,7 +457,8 @@
       "canSell": true,
       "price": 25,
       "commissionPercent": 10,
-      "stock": 22
+      "stock": 22,
+      "tenantId": "tenant_metamorfose"
     },
     {
       "id": "prod_3",
@@ -264,7 +469,8 @@
       "canSell": true,
       "price": 0.5,
       "commissionPercent": 0,
-      "stock": 100
+      "stock": 100,
+      "tenantId": "tenant_metamorfose"
     }
   ],
   "expenses": [
@@ -276,7 +482,8 @@
       "amount": 266.67,
       "dueDate": "2026-09-08",
       "status": "pendente",
-      "monthYear": "2026-09"
+      "monthYear": "2026-09",
+      "tenantId": "tenant_metamorfose"
     },
     {
       "id": "exp_2",
@@ -286,7 +493,8 @@
       "amount": 1800,
       "dueDate": "2026-09-10",
       "status": "pago",
-      "monthYear": "2026-09"
+      "monthYear": "2026-09",
+      "tenantId": "tenant_metamorfose"
     }
   ],
   "commissions": [
@@ -296,7 +504,8 @@
       "professionalName": "Ana Alice",
       "amount": 3660,
       "status": "paga",
-      "paymentDate": "2026-04-28"
+      "paymentDate": "2026-04-28",
+      "tenantId": "tenant_metamorfose"
     },
     {
       "id": "com_2",
@@ -304,15 +513,213 @@
       "professionalName": "Sarah Beatriz",
       "amount": 1305,
       "status": "paga",
-      "paymentDate": "2026-04-28"
+      "paymentDate": "2026-04-28",
+      "tenantId": "tenant_metamorfose"
     },
     {
       "id": "com_3",
       "professionalId": "prof_2",
       "professionalName": "Ana Alice",
       "amount": 355,
+      "status": "paga",
+      "paymentDate": "2026-09-16",
+      "tenantId": "tenant_metamorfose"
+    },
+    {
+      "id": "com_1789765987564",
+      "tenantId": "tenant_metamorfose",
+      "professionalId": "prof_1",
+      "professionalName": "Sarah Beatriz",
+      "type": "vale",
+      "description": "Vale Adiantamento Semanal",
+      "amount": 120,
       "status": "a_pagar",
+      "date": "2026-09-18",
+      "paymentDate": null
+    },
+    {
+      "id": "com_1789765989620",
+      "tenantId": "tenant_metamorfose",
+      "professionalId": "prof_1",
+      "professionalName": "Sarah Beatriz",
+      "type": "comissao",
+      "description": "Comissão Especial de Morena Iluminada",
+      "amount": 250,
+      "status": "a_pagar",
+      "date": "2026-09-18",
       "paymentDate": null
     }
-  ]
+  ],
+  "tenants": [
+    {
+      "id": "tenant_metamorfose",
+      "name": "Admin",
+      "slug": "metamorfose_hair",
+      "phone": "(67) 98424-8821",
+      "address": "R. Hugo Pereira do Vale, 791 - Mata do Jacinto, Campo Grande - MS",
+      "createdAt": "2026-09-01",
+      "settings": {
+        "intervalMinutes": 30,
+        "showPricesOnline": true,
+        "groupByCategory": true,
+        "theme": "falcon",
+        "salonName": "Admin",
+        "phone": "",
+        "address": "",
+        "slug": "metamorfose_hair",
+        "maxBookingDaysAhead": 3,
+        "allowSameDayBooking": true
+      },
+      "subscription": {
+        "status": "active",
+        "isLifetime": true,
+        "monthlyPrice": 49.9,
+        "expiresAt": "2099-12-31T23:59:59.000Z"
+      }
+    },
+    {
+      "id": "tenant_1789677571830",
+      "name": "teste1",
+      "slug": "test1",
+      "phone": "679999999999",
+      "address": "ruroaur",
+      "createdAt": "2026-09-17",
+      "subscription": {
+        "status": "active",
+        "isLifetime": true,
+        "monthlyPrice": 49.9,
+        "expiresAt": "2099-12-31T23:59:59.000Z",
+        "createdAt": "2026-09-17T20:59:28.497Z"
+      },
+      "settings": {
+        "intervalMinutes": 30,
+        "showPricesOnline": true,
+        "groupByCategory": true,
+        "theme": "falcon"
+      }
+    },
+    {
+      "id": "tenant_1789680501132",
+      "name": "metamorfose hair",
+      "slug": "metamorfosehair_",
+      "phone": "67991629269",
+      "address": "Rua Hugo Pereira Do Vale",
+      "createdAt": "2026-09-17",
+      "subscription": {
+        "status": "active",
+        "isLifetime": true,
+        "monthlyPrice": 49.9,
+        "expiresAt": "2099-12-31T23:59:59.000Z",
+        "createdAt": "2026-09-17T21:28:21.132Z"
+      },
+      "settings": {
+        "intervalMinutes": 30,
+        "showPricesOnline": true,
+        "groupByCategory": true,
+        "theme": "falcon",
+        "salonName": "metamorfose hair",
+        "phone": "67991629269",
+        "address": "Rua Hugo Pereira Do Vale"
+      }
+    }
+  ],
+  "users": [
+    {
+      "id": "user_sarah",
+      "tenantId": "tenant_metamorfose",
+      "professionalId": "prof_1",
+      "name": "Sarah Beatriz",
+      "username": "sarah",
+      "email": "sarah@metamorfose.com",
+      "password": "123",
+      "role": "professional"
+    },
+    {
+      "id": "user_ana",
+      "tenantId": "tenant_metamorfose",
+      "professionalId": "prof_2",
+      "name": "Ana Alice",
+      "username": "ana",
+      "email": "ana@metamorfose.com",
+      "password": "123",
+      "role": "professional"
+    },
+    {
+      "id": "user_1789592719723",
+      "tenantId": "tenant_metamorfose",
+      "professionalId": "prof_1789592719723",
+      "name": "teste",
+      "username": "teste",
+      "email": "teste@gmail.com",
+      "password": "teste",
+      "role": "professional"
+    },
+    {
+      "id": "user_superadmin_karu",
+      "tenantId": "tenant_metamorfose",
+      "professionalId": null,
+      "name": "Administrador Master",
+      "username": "karuadmin",
+      "email": "karuadmin@bellasync.online",
+      "password": "C3lvl@rz1nh0.",
+      "role": "superadmin"
+    },
+    {
+      "id": "user_1789677571830",
+      "tenantId": "tenant_1789677571830",
+      "professionalId": "prof_1789677571830",
+      "name": "aaodiadoi",
+      "username": "teste1",
+      "email": "teste1@gmail.com",
+      "password": "teste1",
+      "role": "admin"
+    },
+    {
+      "id": "user_1789680501132",
+      "tenantId": "tenant_1789680501132",
+      "professionalId": "prof_1789680501132",
+      "name": "Ana Alice",
+      "username": "anaalice",
+      "email": "anaalicehair1995@gmail.com",
+      "password": "244284",
+      "role": "admin"
+    },
+    {
+      "id": "user_1789681174085",
+      "tenantId": "tenant_1789680501132",
+      "professionalId": "prof_1789681174085",
+      "name": "Ana Alice Garcia da Silva",
+      "username": "ana alice",
+      "email": "anaalicehair1995@gmail.com",
+      "password": "244284",
+      "role": "professional"
+    },
+    {
+      "id": "user_1789742257705",
+      "tenantId": "tenant_1789680501132",
+      "professionalId": "prof_1789742257705",
+      "name": "Sara Beatriz Trancista",
+      "username": "sarabeatriz",
+      "email": "sarabeatriz@salao.local",
+      "password": "123456",
+      "role": "professional"
+    },
+    {
+      "id": "user_1789765684917",
+      "tenantId": "tenant_1789677571830",
+      "professionalId": "prof_1789765684917",
+      "name": "sadklmfaklfmklm",
+      "username": "teste2",
+      "email": "dadadadads",
+      "password": "teste1",
+      "role": "professional"
+    }
+  ],
+  "platformSettings": {
+    "defaultMonthlyPrice": 49.9,
+    "mpPublicKey": "APP_USR-baa7343d-cf55-4497-ae41-95676142017c",
+    "mpAccessToken": "APP_USR-2421970436910549-091716-359d84090e765c0d470918c51284631a-68786026",
+    "mpClientId": "2421970436910549",
+    "mpClientSecret": "73B6mgQsOUGy6IA3m1LieHFkWFCp10UP"
+  }
 }

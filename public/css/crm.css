@@ -1,27 +1,39 @@
 :root {
   --aspect: 1.5204255;
-  --page: #f0f0f0;
-  --surface: #ffffff;
-  --panel: #fffaf6;
-  --ink: #282828;
-  --muted: #777777;
+  --page: #eef2ee;
+  --surface: rgba(255, 255, 255, 0.72);
+  --panel: rgba(255, 255, 255, 0.55);
+  --card: rgba(248, 248, 246, 0.82);
+  --card-hover: rgba(255, 255, 255, 0.92);
+  --glass: rgba(255, 255, 255, 0.70);
+  --glass-strong: rgba(255, 255, 255, 0.88);
+  --ink: #111111;
+  --muted: #4e4e4e;
+  --border-subtle: rgba(255, 255, 255, 0.45);
+  --border-dark-subtle: rgba(0, 0, 0, 0.08);
+  --border-peach: rgba(0, 0, 0, 0.07);
+
   --orange: #ff6900;
-  --orange-soft: #ffdfca;
-  --green: #4d8c35;
-  --green-soft: #e2f5dc;
+  --orange-soft: rgba(255, 105, 0, 0.12);
+  --green: #1a6636;
+  --green-soft: rgba(46, 133, 64, 0.14);
   --red: #d32f2f;
-  --red-soft: #fde8e8;
-  --border-peach: rgb(255 233 218 / 96%);
-  
+  --red-soft: rgba(211, 47, 47, 0.12);
+
+  --font-stack: "Poppins", -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --blur: blur(22px) saturate(1.25);
+  --blur-sm: blur(14px) saturate(1.15);
+
   --weight-regular: 400;
-  --weight-body: 475;
+  --weight-body: 400;
   --weight-medium: 500;
   --weight-semibold: 600;
   --weight-display: 600;
   --weight-bold: 700;
 
-  --shadow-warm: 0 4px 16px rgba(44, 35, 29, 0.08), 0 1px 3px rgba(44, 35, 29, 0.04);
-  --shadow-card: 0 8px 24px rgba(44, 35, 29, 0.09), 0 2px 6px rgba(44, 35, 29, 0.03);
+  --shadow-warm: 0 4px 20px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.02);
+  --shadow-card: 0 18px 44px -20px rgba(0, 0, 0, 0.22), 0 4px 16px rgba(0, 0, 0, 0.04);
 }
 
 * {
@@ -34,13 +46,112 @@
 body {
   background-color: var(--page);
   color: var(--ink);
-  font-family: "Segoe UI Variable", "Segoe UI", -apple-system, BlinkMacSystemFont, Arial, sans-serif;
+  font-family: var(--font-stack);
   font-weight: var(--weight-regular);
   -webkit-font-smoothing: antialiased;
   text-rendering: geometricPrecision;
   min-height: 100vh;
   display: flex;
   overflow-x: hidden;
+  position: relative;
+}
+
+/* Background Colorido Claro com Bolhas em Movimento e Blur (Animated Gradient Orbs) */
+.animated-bg {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  background: #f4f6f8; /* Fundo base bem claro e limpo */
+}
+
+/* Bolhas de cores orgânicas vibrantes e alegres */
+.gradient-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(90px);
+  opacity: 0.65;
+  mix-blend-mode: multiply;
+  will-change: transform;
+}
+
+.gradient-orb.orb-1 {
+  width: 620px;
+  height: 620px;
+  background: radial-gradient(circle, #ff6b8b 0%, #ff8e53 50%, transparent 75%);
+  top: -120px;
+  left: -100px;
+  animation: floatOrb1 18s ease-in-out infinite alternate;
+}
+
+.gradient-orb.orb-2 {
+  width: 700px;
+  height: 700px;
+  background: radial-gradient(circle, #a855f7 0%, #6366f1 50%, transparent 75%);
+  bottom: -150px;
+  right: -120px;
+  animation: floatOrb2 22s ease-in-out infinite alternate;
+}
+
+.gradient-orb.orb-3 {
+  width: 550px;
+  height: 550px;
+  background: radial-gradient(circle, #38bdf8 0%, #0284c7 50%, transparent 75%);
+  top: 30%;
+  left: 40%;
+  animation: floatOrb3 19s ease-in-out infinite alternate;
+}
+
+.gradient-orb.orb-4 {
+  width: 520px;
+  height: 520px;
+  background: radial-gradient(circle, #fbbf24 0%, #f97316 50%, transparent 75%);
+  bottom: 8%;
+  left: 12%;
+  animation: floatOrb4 24s ease-in-out infinite alternate;
+}
+
+.gradient-orb.orb-5 {
+  width: 480px;
+  height: 480px;
+  background: radial-gradient(circle, #34d399 0%, #10b981 50%, transparent 75%);
+  top: 8%;
+  right: 18%;
+  animation: floatOrb5 20s ease-in-out infinite alternate;
+}
+
+@keyframes floatOrb1 {
+  0% { transform: translate(0, 0) scale(1) rotate(0deg); }
+  50% { transform: translate(140px, 120px) scale(1.15) rotate(90deg); }
+  100% { transform: translate(60px, 200px) scale(0.9) rotate(180deg); }
+}
+
+@keyframes floatOrb2 {
+  0% { transform: translate(0, 0) scale(1) rotate(0deg); }
+  50% { transform: translate(-160px, -140px) scale(1.2) rotate(-90deg); }
+  100% { transform: translate(-80px, -220px) scale(0.95) rotate(-180deg); }
+}
+
+@keyframes floatOrb3 {
+  0% { transform: translate(0, 0) scale(0.95); }
+  33% { transform: translate(-120px, 100px) scale(1.25); }
+  66% { transform: translate(140px, -90px) scale(1.05); }
+  100% { transform: translate(-60px, -110px) scale(0.9); }
+}
+
+@keyframes floatOrb4 {
+  0% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(180px, -130px) scale(1.18); }
+  100% { transform: translate(70px, 80px) scale(0.85); }
+}
+
+@keyframes floatOrb5 {
+  0% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(-150px, 120px) scale(1.2); }
+  100% { transform: translate(-40px, -80px) scale(0.9); }
 }
 
 /* App Layout */
@@ -49,17 +160,23 @@ body {
   width: 100%;
   height: 100vh;
   overflow: hidden;
+  background: transparent;
+  position: relative;
+  z-index: 1;
 }
 
-/* Sidebar Estilo Salon Soft com estética refinada */
+/* Sidebar Estilo JungleMind Ultra-Translucent Glass */
 .sidebar {
   width: 280px;
-  background: var(--surface);
-  border-right: 1px solid var(--border-peach);
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: var(--blur);
+  -webkit-backdrop-filter: var(--blur);
+  border-right: 1px solid var(--border-subtle);
   display: flex;
   flex-direction: column;
-  transition: transform 0.3s ease;
+  transition: transform 0.3s var(--ease);
   z-index: 100;
+  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.04);
 }
 
 .sidebar-header {
@@ -67,7 +184,7 @@ body {
   display: flex;
   align-items: center;
   gap: 12px;
-  border-bottom: 1px solid rgb(255 233 218 / 50%);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
 }
 
 .salon-avatar {
@@ -170,20 +287,23 @@ body {
   flex-direction: column;
   overflow-y: auto;
   position: relative;
-  background: var(--page);
+  background: transparent;
 }
 
 .top-bar {
-  height: 64px;
-  background: var(--surface);
-  border-bottom: 1px solid var(--border-peach);
+  height: 68px;
+  background: rgba(255, 255, 255, 0.65);
+  backdrop-filter: var(--blur);
+  -webkit-backdrop-filter: var(--blur);
+  border-bottom: 1px solid var(--border-subtle);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 24px;
+  padding: 0 40px;
   position: sticky;
   top: 0;
   z-index: 50;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
 }
 
 .top-bar-title {
@@ -202,62 +322,140 @@ body {
 }
 
 .top-bar-title h2 {
-  font-size: 1.25rem;
-  font-weight: var(--weight-semibold);
+  font-size: 1.18rem;
+  font-weight: var(--weight-bold);
   color: var(--ink);
+  letter-spacing: -0.01em;
 }
 
 .top-bar-actions {
   display: flex;
   align-items: center;
   gap: 12px;
+  margin-right: 0;
+  height: 38px;
 }
 
-/* Botões Estilo Falcon AI */
+.top-bar-actions > div {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 38px;
+}
+
+/* Date input elegante no top-bar */
+.top-bar-actions .form-control[type="date"],
+.top-bar-actions input[type="date"],
+.agenda-date-picker {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 38px !important;
+  min-height: 38px !important;
+  max-height: 38px !important;
+  padding: 0 16px !important;
+  margin: 0 !important;
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: var(--blur-sm);
+  -webkit-backdrop-filter: var(--blur-sm);
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  border-radius: 999px !important;
+  font-family: var(--font-stack) !important;
+  font-size: 0.86rem !important;
+  line-height: 38px !important;
+  font-weight: 500;
+  color: var(--ink);
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+  transition: all 0.2s var(--ease);
+  outline: none;
+  box-sizing: border-box !important;
+}
+
+.top-bar-actions .form-control[type="date"]:hover,
+.top-bar-actions input[type="date"]:hover,
+.agenda-date-picker:hover {
+  background: rgba(255, 255, 255, 0.95);
+  border-color: rgba(0, 0, 0, 0.15) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+}
+
+.top-bar-actions .form-control[type="date"]:focus,
+.top-bar-actions input[type="date"]:focus,
+.agenda-date-picker:focus {
+  border-color: #141414 !important;
+  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.08);
+}
+
+/* Botões Estilo JungleMind Ultra-Modernos */
 .btn-falcon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  padding: 8px 18px;
+  height: 38px;
+  min-height: 38px;
+  max-height: 38px;
+  padding: 0 18px;
   border-radius: 999px;
-  font-size: 0.88rem;
-  font-weight: var(--weight-semibold);
+  font-size: 0.86rem;
+  font-weight: 500;
   cursor: pointer;
   border: 1px solid transparent;
-  transition: all 0.2s ease;
+  transition: all 0.2s var(--ease);
   text-decoration: none;
+  font-family: var(--font-stack);
+  letter-spacing: -0.01em;
+  box-sizing: border-box;
+  line-height: 38px;
+}
+
+.btn-falcon svg {
+  width: 16px;
+  height: 16px;
+  display: block;
 }
 
 .btn-primary {
-  background: linear-gradient(100deg, #ff9b5b 0%, #ff8840 38%, #ff6b05 100%);
-  color: #fff;
-  box-shadow: 0 4px 12px rgba(255, 105, 0, 0.35);
+  background: #141414;
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
 }
 
 .btn-primary:hover {
-  filter: brightness(1.06);
+  background: #000000;
   transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.28);
 }
 
 .btn-secondary {
-  background: var(--surface);
+  background: rgba(255, 255, 255, 0.82);
   color: var(--ink);
-  border-color: var(--border-peach);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  backdrop-filter: var(--blur-sm);
+  -webkit-backdrop-filter: var(--blur-sm);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
 }
 
 .btn-secondary:hover {
-  background: var(--panel);
+  background: #ffffff;
+  border-color: rgba(0, 0, 0, 0.16);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
 }
 
 .btn-success {
-  background: var(--green-soft);
-  color: var(--green);
-  font-weight: var(--weight-semibold);
+  background: rgba(46, 133, 64, 0.12);
+  color: #1a6636;
+  border: 1px solid rgba(46, 133, 64, 0.2);
+  font-weight: 600;
+  backdrop-filter: var(--blur-sm);
 }
 
 .btn-success:hover {
-  filter: brightness(0.96);
+  background: rgba(46, 133, 64, 0.2);
+  transform: translateY(-1px);
 }
 
 /* Conteúdo das Views */
@@ -268,14 +466,16 @@ body {
   margin: 0 auto;
 }
 
-/* Cards e Painéis */
+/* Cards e Painéis com Glassmorphism Translúcido */
 .card-shell {
-  background: var(--surface);
-  border: 1px solid var(--border-peach);
-  border-radius: 16px;
-  box-shadow: var(--shadow-card);
-  padding: 20px;
-  margin-bottom: 20px;
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: var(--blur);
+  -webkit-backdrop-filter: var(--blur);
+  border: 1px solid var(--border-subtle);
+  border-radius: 24px;
+  box-shadow: 0 18px 44px -26px rgba(0, 0, 0, 0.22), 0 4px 16px rgba(0, 0, 0, 0.04);
+  padding: 24px;
+  margin-bottom: 24px;
 }
 
 /* Abas de Navegação interna */
@@ -288,30 +488,42 @@ body {
 }
 
 .tab-btn {
-  padding: 10px 18px;
-  border-radius: 12px;
-  border: 1px solid transparent;
-  background: var(--surface);
+  padding: 9px 18px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: var(--blur-sm);
+  -webkit-backdrop-filter: var(--blur-sm);
   color: var(--muted);
-  font-size: 0.9rem;
-  font-weight: var(--weight-semibold);
+  font-size: 0.88rem;
+  font-weight: var(--weight-medium);
   cursor: pointer;
   white-space: nowrap;
-  transition: all 0.2s;
+  transition: all 0.2s var(--ease);
+}
+
+.tab-btn:hover {
+  background: rgba(255, 255, 255, 0.88);
+  color: var(--ink);
 }
 
 .tab-btn.active {
-  background: var(--orange-soft);
-  color: var(--orange);
-  border-color: var(--orange-soft);
+  background: #141414;
+  color: #ffffff;
+  border-color: #141414;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
 }
 
 /* Grade de Profissionais na Agenda */
+.agenda-container-card {
+  padding: 24px;
+}
+
 .profs-horizontal-bar {
   display: flex;
   gap: 12px;
   overflow-x: auto;
-  padding-bottom: 8px;
+  padding-bottom: 12px;
   margin-bottom: 20px;
 }
 
@@ -320,19 +532,29 @@ body {
   flex-direction: column;
   align-items: center;
   gap: 8px;
-  padding: 12px 18px;
-  background: var(--surface);
-  border: 1px solid var(--border-peach);
-  border-radius: 14px;
+  padding: 14px 20px;
+  background: rgba(255, 255, 255, 0.68);
+  backdrop-filter: var(--blur-sm);
+  -webkit-backdrop-filter: var(--blur-sm);
+  border: 1px solid var(--border-subtle);
+  border-radius: 18px;
   cursor: pointer;
-  min-width: 100px;
-  transition: all 0.2s;
+  min-width: 104px;
+  transition: all 0.2s var(--ease);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.03);
+}
+
+.prof-badge-card:hover {
+  background: rgba(255, 255, 255, 0.88);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
 }
 
 .prof-badge-card.active {
-  background: #fff8f3;
-  border-color: var(--orange);
-  box-shadow: 0 4px 12px rgba(255, 105, 0, 0.15);
+  background: rgba(255, 255, 255, 0.95);
+  border-color: rgba(255, 105, 0, 0.6);
+  box-shadow: 0 6px 20px rgba(255, 105, 0, 0.2);
+  transform: translateY(-1px);
 }
 
 .prof-badge-card img {
@@ -348,53 +570,64 @@ body {
   color: var(--ink);
 }
 
-/* Schedule Table Estilo Salon Soft Oficial */
+/* Schedule Table Estilo Glassmorphic Contemporâneo */
 .salon-schedule-table {
   width: 100%;
-  border-collapse: collapse;
-  background: var(--surface);
-  border: 1px solid #e0e0e0;
+  border-collapse: separate;
+  border-spacing: 0;
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: var(--blur);
+  -webkit-backdrop-filter: var(--blur);
+  border: 1px solid var(--border-subtle);
+  border-radius: 18px;
+  overflow: hidden;
 }
 
 .salon-schedule-table td {
-  border: 1px solid #e8e8e8;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  border-right: 1px solid rgba(0, 0, 0, 0.04);
   padding: 0;
   vertical-align: top;
 }
 
+.salon-schedule-table tr:last-child td {
+  border-bottom: none;
+}
+
 .salon-time-cell {
-  width: 65px;
+  width: 70px;
   height: 48px;
-  font-size: 0.8rem;
-  color: #555;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--muted);
   text-align: center;
   vertical-align: middle !important;
-  background: #fff;
+  background: rgba(255, 255, 255, 0.5);
   user-select: none;
-  border-right: 1px solid #ddd !important;
+  border-right: 1px solid rgba(0, 0, 0, 0.06) !important;
 }
 
 .salon-empty-cell {
   height: 48px;
-  background: #fff;
+  background: transparent;
   cursor: pointer;
   transition: background 0.15s;
 }
 
 .salon-empty-cell:hover {
-  background: #faf7f5;
+  background: rgba(255, 255, 255, 0.6);
 }
 
 .salon-block-indisponivel {
-  background: #e8e8e8 !important;
-  color: #333;
+  background: rgba(0, 0, 0, 0.04) !important;
+  color: var(--muted);
   padding: 12px 16px;
   height: 100%;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  border-left: 4px solid #888;
+  border-left: 3px solid rgba(0, 0, 0, 0.2);
 }
 
 .salon-block-indisponivel strong {
@@ -405,20 +638,22 @@ body {
 
 .salon-block-indisponivel span {
   font-size: 0.78rem;
-  color: #666;
+  color: var(--muted);
   display: block;
   margin-top: 2px;
 }
 
 td.cell-agendado {
-  background: #fff3eb !important;
-  border-left: 5px solid var(--orange) !important;
+  background: rgba(255, 243, 235, 0.75) !important;
+  backdrop-filter: var(--blur-sm);
+  -webkit-backdrop-filter: var(--blur-sm);
+  border-left: 4px solid var(--orange) !important;
   padding: 0 !important;
   vertical-align: stretch !important;
 }
 
 .salon-block-agendado {
-  background: #fff3eb !important;
+  background: transparent !important;
   padding: 12px 16px;
   height: 100%;
   min-height: 100%;
@@ -438,7 +673,7 @@ td.cell-agendado {
 
 .salon-block-agendado .app-info strong {
   font-size: 0.95rem;
-  color: #111;
+  color: var(--ink);
   display: block;
   font-weight: var(--weight-bold);
 }
@@ -453,7 +688,7 @@ td.cell-agendado {
 
 .salon-block-agendado .app-info small {
   font-size: 0.78rem;
-  color: #666;
+  color: var(--muted);
   display: block;
   margin-top: 3px;
 }
@@ -465,20 +700,20 @@ td.cell-agendado {
 }
 
 .salon-block-agendado .app-price {
-  font-size: 1.05rem;
+  font-size: 0.95rem;
   font-weight: var(--weight-bold);
-  color: #00875a;
-  background: #e3fcef;
-  padding: 3px 8px;
-  border-radius: 6px;
+  color: #1a6636;
+  background: rgba(46, 133, 64, 0.14);
+  padding: 4px 10px;
+  border-radius: 999px;
   white-space: nowrap;
 }
 
 .btn-delete-app {
-  background: #fff0f0;
+  background: rgba(211, 47, 47, 0.1);
   color: #d32f2f;
-  border: 1px solid #ffcdd2;
-  border-radius: 6px;
+  border: 1px solid rgba(211, 47, 47, 0.2);
+  border-radius: 8px;
   padding: 4px 8px;
   cursor: pointer;
   font-size: 0.75rem;
@@ -503,7 +738,7 @@ td.cell-agendado {
   justify-content: space-between;
   align-items: center;
   font-size: 0.75rem;
-  color: #888;
+  color: var(--muted);
 }
 
 /* Cards de Métricas (Financeiro) */
@@ -515,36 +750,38 @@ td.cell-agendado {
 }
 
 .metric-card {
-  padding: 18px 20px;
-  border-radius: 16px;
-  background: var(--surface);
-  border: 1px solid var(--border-peach);
+  padding: 20px 22px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: var(--blur);
+  -webkit-backdrop-filter: var(--blur);
+  border: 1px solid var(--border-subtle);
   box-shadow: var(--shadow-warm);
 }
 
 .metric-card.red {
-  border-left: 5px solid var(--red);
+  border-left: 4px solid var(--red);
 }
 
 .metric-card.green {
-  border-left: 5px solid var(--green);
+  border-left: 4px solid #1a6636;
 }
 
 .metric-card.orange {
-  border-left: 5px solid var(--orange);
+  border-left: 4px solid var(--orange);
 }
 
 .metric-label {
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.06em;
   color: var(--muted);
   font-weight: var(--weight-semibold);
   margin-bottom: 6px;
 }
 
 .metric-value {
-  font-size: 1.6rem;
+  font-size: 1.65rem;
   font-weight: var(--weight-bold);
   color: var(--ink);
 }
@@ -560,17 +797,20 @@ td.cell-agendado {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 20px;
-  background: var(--surface);
-  border: 1px solid var(--border-peach);
-  border-radius: 14px;
-  box-shadow: 0 2px 8px rgba(44, 35, 29, 0.03);
-  transition: transform 0.15s, box-shadow 0.15s;
+  padding: 18px 22px;
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: var(--blur);
+  -webkit-backdrop-filter: var(--blur);
+  border: 1px solid var(--border-subtle);
+  border-radius: 18px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.03);
+  transition: transform 0.15s, box-shadow 0.15s, background 0.15s;
 }
 
 .data-item-card:hover {
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-warm);
+  transform: translateY(-2px);
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.07);
 }
 
 .item-main-info h4 {
@@ -615,12 +855,13 @@ td.cell-agendado {
   background: var(--orange);
 }
 
-/* Modais */
+/* Modais com Frosted Glass */
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.45);
-  backdrop-filter: blur(4px);
+  background: rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   display: none;
   place-items: center;
   z-index: 200;
@@ -632,12 +873,14 @@ td.cell-agendado {
 }
 
 .modal-dialog {
-  background: var(--surface);
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: var(--blur);
+  -webkit-backdrop-filter: var(--blur);
   width: 100%;
   max-width: 500px;
-  border-radius: 20px;
-  border: 1px solid var(--border-peach);
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+  border-radius: 24px;
+  border: 1px solid var(--border-subtle);
+  box-shadow: 0 24px 60px -20px rgba(0, 0, 0, 0.3);
   overflow: hidden;
   animation: modalIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -649,15 +892,16 @@ td.cell-agendado {
 
 .modal-header {
   padding: 20px 24px;
-  border-bottom: 1px solid var(--border-peach);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
   display: flex;
   align-items: center;
   justify-content: space-between;
 }
 
 .modal-header h3 {
-  font-size: 1.15rem;
+  font-size: 1.18rem;
   font-weight: var(--weight-bold);
+  letter-spacing: -0.01em;
 }
 
 .modal-body {
@@ -676,34 +920,38 @@ td.cell-agendado {
 }
 
 .form-group label {
-  font-size: 0.85rem;
+  font-size: 0.84rem;
   font-weight: var(--weight-semibold);
-  color: #444;
+  color: var(--ink);
 }
 
 .form-control {
   width: 100%;
-  padding: 10px 14px;
-  border: 1px solid #dcd3cd;
-  border-radius: 10px;
+  padding: 11px 15px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 12px;
   font-size: 0.95rem;
+  font-family: var(--font-stack);
   outline: none;
-  background: #fff;
-  transition: border-color 0.2s;
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: var(--blur-sm);
+  -webkit-backdrop-filter: var(--blur-sm);
+  transition: all 0.2s var(--ease);
 }
 
 .form-control:focus {
-  border-color: var(--orange);
-  box-shadow: 0 0 0 3px rgba(255, 105, 0, 0.15);
+  background: #ffffff;
+  border-color: #141414;
+  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.08);
 }
 
 .modal-footer {
   padding: 16px 24px;
-  border-top: 1px solid var(--border-peach);
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
   display: flex;
   justify-content: flex-end;
   gap: 10px;
-  background: var(--panel);
+  background: rgba(255, 255, 255, 0.5);
 }
 
 /* Responsividade Mobile */
@@ -726,9 +974,11 @@ td.cell-agendado {
 }
 .slots-table-container {
   margin-top: 14px;
-  background: var(--surface);
-  border: 1px solid var(--border-peach);
-  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: var(--blur-sm);
+  -webkit-backdrop-filter: var(--blur-sm);
+  border: 1px solid var(--border-subtle);
+  border-radius: 14px;
   overflow: hidden;
   max-height: 260px;
   overflow-y: auto;
@@ -787,4 +1037,183 @@ td.cell-agendado {
   font-size: 0.7rem;
   font-weight: var(--weight-regular);
   color: var(--muted);
+}
+
+
+/* =============================================================
+   MÓVEL (< 768px): Alta Performance (Zero Lag / Zero GPU Bottlenecks)
+   ============================================================= */
+@media (max-width: 768px) {
+  /* 1. Desativa o pesado compositing de backdrop-filter no mobile */
+  *, *::before, *::after {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
+  html, body, .main-content, .view-container, .data-list, .schedule-table {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
+  }
+
+  .animated-bg {
+    background: #f4f6f8 !important;
+  }
+
+  /* 2. Top-bar adaptativa no mobile */
+  .top-bar {
+    padding: 0 16px !important;
+    height: 60px !important;
+    min-height: 60px !important;
+    max-height: 60px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    position: sticky !important;
+    top: 0 !important;
+    background: #ffffff !important;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08) !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04) !important;
+    z-index: 50 !important;
+  }
+
+  .top-bar-title {
+    display: flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+  }
+
+  .top-bar-title h2 {
+    font-size: 1.1rem !important;
+    font-weight: 700 !important;
+  }
+
+  .menu-toggle-btn {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    padding: 6px;
+    border-radius: 8px;
+    background: rgba(0, 0, 0, 0.04);
+  }
+
+  /* Oculta botões de topo extras no mobile (usamos FAB e banners) */
+  .top-bar-actions {
+    display: none !important;
+  }
+
+  /* Sidebar Flutuante (Drawer) */
+  .sidebar {
+    position: fixed !important;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 280px;
+    max-width: 82vw;
+    height: 100vh;
+    height: 100dvh;
+    transform: translateX(-100%) !important;
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    z-index: 200 !important;
+    box-shadow: 10px 0 35px rgba(0, 0, 0, 0.25) !important;
+    background: #ffffff !important;
+  }
+
+  .sidebar.open {
+    transform: translateX(0) !important;
+  }
+
+  /* 3. Cards e Contêineres Limpos sem Blur */
+  .view-container {
+    padding: 14px 12px 90px 12px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .card-shell,
+  .data-item-card,
+  .mobile-add-banner,
+  .prof-badge-card,
+  .modal-dialog,
+  .notif-dropdown,
+  .slots-table-container {
+    background: #ffffff !important;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04) !important;
+  }
+
+  .card-shell {
+    padding: 16px !important;
+    border-radius: 18px !important;
+    margin-bottom: 16px !important;
+  }
+
+  .data-item-card {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 12px !important;
+    padding: 14px 16px !important;
+    border-radius: 14px !important;
+  }
+
+  .data-item-card > div:last-child {
+    width: 100% !important;
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    flex-wrap: wrap !important;
+    gap: 10px !important;
+  }
+
+  .item-actions-group {
+    width: 100% !important;
+    justify-content: flex-end !important;
+    flex-wrap: wrap !important;
+  }
+
+  /* 4. Banner de Adicionar no Mobile */
+  .mobile-add-banner {
+    display: flex !important;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 12px 16px;
+    margin-bottom: 14px;
+    background: #ffffff !important;
+    border: 1px solid rgba(255, 105, 0, 0.2);
+    border-radius: 14px;
+    box-shadow: 0 4px 14px rgba(255, 105, 0, 0.08);
+    cursor: pointer;
+    box-sizing: border-box;
+    text-decoration: none;
+    color: var(--ink);
+  }
+
+  /* 5. Tabela de Horários da Agenda no Mobile */
+  .salon-schedule-table {
+    border-radius: 14px !important;
+    width: 100% !important;
+    table-layout: fixed !important;
+  }
+
+  td.cell-agendado {
+    background: #fff8f3 !important;
+    border-left: 4px solid var(--orange) !important;
+  }
+
+  .salon-block-agendado {
+    background: transparent !important;
+  }
+
+  /* 6. Form Controls */
+  .form-control {
+    background: #ffffff !important;
+    box-shadow: none !important;
+  }
+
+  /* 7. Modais */
+  .modal-dialog {
+    max-width: 95vw !important;
+    max-height: calc(100vh - 20px) !important;
+    border-radius: 18px !important;
+    margin: 10px auto !important;
+  }
 }
