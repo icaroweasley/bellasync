@@ -1168,7 +1168,14 @@ input[type="date"].form-control {
   }
 
   .animated-bg {
-    background: #f4f6f8 !important;
+    background: #f8fafc !important;
+  }
+
+  .gradient-orb {
+    animation: none !important;
+    will-change: auto !important;
+    filter: blur(50px) !important;
+    opacity: 0.35 !important;
   }
 
   /* 2. Top-bar adaptativa no mobile */
