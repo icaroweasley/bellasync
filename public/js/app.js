@@ -1226,22 +1226,6 @@ function renderProducts(container, actions) {
   `).join('');
 
   container.innerHTML = `
-    ${isManager ? `
-      <div class="mobile-add-banner" onclick="openNewProductModal()">
-        <div class="mobile-add-banner-content">
-          <div class="mobile-add-banner-icon">
-            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-          </div>
-          <div class="mobile-add-banner-text">
-            <strong>Adicionar Novo Produto</strong>
-            <span>Controlar itens do estoque e preços de venda</span>
-          </div>
-        </div>
-        <div class="mobile-add-banner-arrow">
-          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"></polyline></svg>
-        </div>
-      </div>
-    ` : ''}
     <div class="data-list">${prodsHtml}</div>
   `;
 }
