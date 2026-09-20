@@ -366,11 +366,66 @@ window.requestPushPermissionManually = async function() {
         body: 'Pronto! Você receberá alertas de agendamentos na tela do seu celular e computador.',
         icon: '/images/logo.png'
       });
+
+      // Inscreve dispositivo no Web Push VAPID do servidor
+      subscribeUserToWebPush();
     }
   } catch (e) {
     console.error('Erro ao pedir permissão:', e);
   }
 };
+
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding)
+    .replace(/\-/g, '+')
+    .replace(/_/g, '/');
+
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+  return outputArray;
+}
+
+async function subscribeUserToWebPush() {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    let sub = await reg.pushManager.getSubscription();
+    if (!sub) {
+      const res = await fetch('/api/push/vapid-public-key');
+      const { publicKey } = await res.json();
+      if (!publicKey) return;
+
+      const convertedKey = urlBase64ToUint8Array(publicKey);
+      sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: convertedKey
+      });
+    }
+
+    const tenantId = currentUser?.tenantId || (typeof getTenantIdFromUrl === 'function' ? getTenantIdFromUrl() : 'tenant_metamorfose');
+    const professionalId = currentUser?.professionalId || null;
+
+    await fetch('/api/push/subscribe', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-tenant-id': tenantId
+      },
+      body: JSON.stringify({
+        subscription: sub,
+        professionalId
+      })
+    });
+  } catch (err) {
+    console.warn('Erro ao assinar Web Push VAPID:', err);
+  }
+}
+
 
 window.toggleBrowserNotifications = window.handleNotificationBellClick;
 
@@ -458,6 +513,11 @@ function checkAndNotifyNewAppointments(appointmentsList) {
 
 // Inicialização
 document.addEventListener('DOMContentLoaded', async () => {
+  // Se as notificações já estiverem concedidas, garante a assinatura Web Push VAPID em segundo plano
+  if ('Notification' in window && Notification.permission === 'granted') {
+    subscribeUserToWebPush();
+  }
+
   // Atualiza identificação do usuário e salão na tela
   const nameEl = document.getElementById('userDisplayName');
   const roleEl = document.getElementById('userDisplayRole');

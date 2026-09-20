@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import webpush from 'web-push';
 import { getDb, saveDb } from './db/database.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -13,6 +14,116 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '../public')));
+
+// Configuração do VAPID para Web Push em segundo plano com celular fechado
+function initVapidKeys() {
+  const db = getDb();
+  if (!db.vapidKeys) {
+    db.vapidKeys = webpush.generateVAPIDKeys();
+    saveDb(db);
+  }
+  webpush.setVapidDetails(
+    'mailto:suporte@bellasync.online',
+    db.vapidKeys.publicKey,
+    db.vapidKeys.privateKey
+  );
+}
+initVapidKeys();
+
+async function sendPushToTenant(tenantId, targetProfId, payload) {
+  const db = getDb();
+  if (!db.pushSubscriptions || db.pushSubscriptions.length === 0) return;
+
+  const subs = db.pushSubscriptions.filter(s => {
+    if (s.tenantId !== tenantId) return false;
+    if (targetProfId && s.professionalId && s.professionalId !== targetProfId) return false;
+    return true;
+  });
+
+  for (const item of subs) {
+    try {
+      await webpush.sendNotification(item.subscription, JSON.stringify(payload));
+    } catch (err) {
+      if (err.statusCode === 410 || err.statusCode === 404) {
+        db.pushSubscriptions = db.pushSubscriptions.filter(s => s.subscription.endpoint !== item.subscription.endpoint);
+        saveDb(db);
+      }
+    }
+  }
+}
+
+// Verificador automático de atendimentos próximos (Faltam 15 minutos) rodando 24/7 no servidor
+function checkUpcomingAppointmentsReminders() {
+  try {
+    const db = getDb();
+    if (!db.appointments || db.appointments.length === 0) return;
+
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const todayStr = `${year}-${month}-${day}`;
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+
+    let modified = false;
+
+    db.appointments.forEach(app => {
+      if (app.date === todayStr && app.status !== 'cancelado' && app.status !== 'indisponivel' && !app.reminderSent) {
+        const [h, m] = (app.startTime || '00:00').split(':').map(Number);
+        const appMinutes = h * 60 + m;
+        const diff = appMinutes - currentMinutes;
+
+        // Se falta entre 0 e 15 minutos para o horário de algum cliente
+        if (diff >= 0 && diff <= 15) {
+          app.reminderSent = true;
+          modified = true;
+
+          const prof = (db.professionals || []).find(p => p.id === app.professionalId);
+          const profName = prof ? prof.name : '';
+
+          sendPushToTenant(app.tenantId, app.professionalId, {
+            title: '⏰ Atendimento em 15 Minutos!',
+            body: `Seu próximo atendimento está chegando! ${app.clientName} - ${app.serviceName} às ${app.startTime}.`,
+            url: '/'
+          });
+        }
+      }
+    });
+
+    if (modified) saveDb(db);
+  } catch (err) {
+    console.error('Erro na checagem de lembretes em background:', err);
+  }
+}
+
+setInterval(checkUpcomingAppointmentsReminders, 60000);
+
+// Endpoints de Web Push VAPID para Notificações em Segundo Plano
+app.get('/api/push/vapid-public-key', (req, res) => {
+  const db = getDb();
+  res.json({ publicKey: db.vapidKeys ? db.vapidKeys.publicKey : null });
+});
+
+app.post('/api/push/subscribe', (req, res) => {
+  const db = getDb();
+  const tenantId = getTenantId(req);
+  const { subscription, professionalId } = req.body;
+  if (!subscription || !subscription.endpoint) {
+    return res.status(400).json({ error: 'Subscription inválida' });
+  }
+  if (!db.pushSubscriptions) {
+    db.pushSubscriptions = [];
+  }
+  const existingIdx = db.pushSubscriptions.findIndex(s => s.subscription && s.subscription.endpoint === subscription.endpoint);
+  if (existingIdx >= 0) {
+    db.pushSubscriptions[existingIdx] = { tenantId, professionalId: professionalId || null, subscription };
+  } else {
+    db.pushSubscriptions.push({ tenantId, professionalId: professionalId || null, subscription });
+  }
+  saveDb(db);
+  res.json({ success: true });
+});
+
 
 function getButterflyAvatar(name) {
   let hash = 0;
@@ -1149,6 +1260,14 @@ app.post('/api/appointments', (req, res) => {
   }
 
   saveDb(db);
+
+  // Dispara Web Push em segundo plano / celular fechado para os profissionais do salão
+  sendPushToTenant(tenantId, professionalId, {
+    title: '📅 Novo Agendamento Recebido!',
+    body: `${newApp.clientName} agendou ${newApp.serviceName} para ${newApp.date} às ${newApp.startTime}.`,
+    url: '/'
+  });
+
   res.status(201).json(newApp);
 });
 
