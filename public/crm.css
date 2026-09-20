@@ -939,6 +939,31 @@ td.cell-agendado {
   background: var(--orange);
 }
 
+/* Bloqueio absoluto de rolagem na página de fundo quando qualquer modal estiver aberto */
+html.modal-open,
+body.modal-open,
+html:has(.modal-backdrop.open),
+body:has(.modal-backdrop.open),
+html:has(.modal-backdrop.active),
+body:has(.modal-backdrop.active) {
+  overflow: hidden !important;
+  touch-action: none !important;
+}
+
+body.modal-open .main-content,
+body.modal-open .view-container,
+body.modal-open .data-list,
+body:has(.modal-backdrop.open) .main-content,
+body:has(.modal-backdrop.open) .view-container,
+body:has(.modal-backdrop.open) .data-list,
+body:has(.modal-backdrop.active) .main-content,
+body:has(.modal-backdrop.active) .view-container,
+body:has(.modal-backdrop.active) .data-list {
+  overflow: hidden !important;
+  pointer-events: none !important;
+  touch-action: none !important;
+}
+
 .modal-backdrop {
   position: fixed;
   inset: 0;
@@ -950,6 +975,7 @@ td.cell-agendado {
   z-index: 200;
   padding: 16px;
   overflow-y: auto;
+  overscroll-behavior: contain !important;
   -webkit-overflow-scrolling: touch;
 }
 
@@ -969,6 +995,7 @@ td.cell-agendado {
   box-shadow: 0 24px 60px -20px rgba(0, 0, 0, 0.3);
   overflow: hidden;
   margin: 0 !important;
+  overscroll-behavior: contain !important;
   animation: modalIn 0.12s ease-out;
 }
 
@@ -995,6 +1022,8 @@ td.cell-agendado {
   padding: 24px;
   max-height: 70vh;
   overflow-y: auto;
+  overscroll-behavior: contain !important;
+  -webkit-overflow-scrolling: touch;
   display: flex;
   flex-direction: column;
   gap: 16px;

@@ -48,6 +48,19 @@ async function tenantFetch(url, options = {}) {
   return fetch(url, options);
 }
 
+function updateBodyScrollLock() {
+  setTimeout(() => {
+    const anyOpen = document.querySelector('.modal-backdrop.open, .modal-backdrop.active');
+    if (anyOpen) {
+      document.body.classList.add('modal-open');
+      document.documentElement.classList.add('modal-open');
+    } else {
+      document.body.classList.remove('modal-open');
+      document.documentElement.classList.remove('modal-open');
+    }
+  }, 10);
+}
+
 // Sistema de Modais Customizados (Substitutos de confirm() e alert() nativos)
 window.asyncConfirm = function(message, title = 'Confirmação', options = {}) {
   return new Promise((resolve) => {
@@ -87,10 +100,12 @@ window.asyncConfirm = function(message, title = 'Confirmação', options = {}) {
 
     modal.classList.add('open');
     modal.classList.add('active');
+    updateBodyScrollLock();
 
     function cleanup(result) {
       modal.classList.remove('open');
       modal.classList.remove('active');
+      updateBodyScrollLock();
       if (okBtn) okBtn.removeEventListener('click', onOk);
       if (cancelBtn) cancelBtn.removeEventListener('click', onCancel);
       resolve(result);
@@ -143,10 +158,12 @@ window.asyncAlert = function(message, title = 'Aviso', type = 'info') {
 
     modal.classList.add('open');
     modal.classList.add('active');
+    updateBodyScrollLock();
 
     function onOk() {
       modal.classList.remove('open');
       modal.classList.remove('active');
+      updateBodyScrollLock();
       if (okBtn) okBtn.removeEventListener('click', onOk);
       resolve();
     }
@@ -1444,6 +1461,7 @@ function openModal(title, bodyHtml, onConfirm) {
     modal.classList.add('open');
     modal.classList.add('active');
   }
+  updateBodyScrollLock();
 }
 
 function closeModal() {
@@ -1452,6 +1470,7 @@ function closeModal() {
     modal.classList.remove('open');
     modal.classList.remove('active');
   }
+  updateBodyScrollLock();
 }
 
 window.openNewAppointmentModal = function(defaultTime = "10:00") {
