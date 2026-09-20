@@ -383,9 +383,9 @@ body {
   max-height: 42px !important;
   padding: 0 16px !important;
   margin: 0 !important;
-  background: rgba(255, 255, 255, 0.85) !important;
-  backdrop-filter: var(--blur-sm) !important;
-  -webkit-backdrop-filter: var(--blur-sm) !important;
+  background: #ffffff !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
   border: 1px solid rgba(0, 0, 0, 0.1) !important;
   border-radius: 999px !important;
   cursor: pointer !important;
@@ -1018,16 +1018,41 @@ td.cell-agendado {
   font-size: 0.95rem;
   font-family: var(--font-stack);
   outline: none;
-  background: rgba(255, 255, 255, 0.7);
-  backdrop-filter: var(--blur-sm);
-  -webkit-backdrop-filter: var(--blur-sm);
-  transition: all 0.2s var(--ease);
+  background: #ffffff !important;
+  color: var(--ink, #141414) !important;
+  color-scheme: light !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  transition: border-color 0.2s var(--ease), box-shadow 0.2s var(--ease);
 }
 
 .form-control:focus {
-  background: #ffffff;
+  background: #ffffff !important;
   border-color: #141414;
   box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.08);
+}
+
+select,
+select.form-control {
+  background-color: #ffffff !important;
+  color: #141414 !important;
+  color-scheme: light !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+select option {
+  background-color: #ffffff !important;
+  color: #141414 !important;
+}
+
+input[type="date"],
+input[type="date"].form-control {
+  background-color: #ffffff !important;
+  color: #141414 !important;
+  color-scheme: light !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
 }
 
 .modal-footer {
@@ -1059,9 +1084,9 @@ td.cell-agendado {
 }
 .slots-table-container {
   margin-top: 14px;
-  background: rgba(255, 255, 255, 0.6);
-  backdrop-filter: var(--blur-sm);
-  -webkit-backdrop-filter: var(--blur-sm);
+  background: #ffffff !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
   border: 1px solid var(--border-subtle);
   border-radius: 14px;
   overflow: hidden;

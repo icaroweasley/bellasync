@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/crm.css">
+  <link rel="stylesheet" href="/css/crm.css?v=20260920_v208">
   <style>
     body {
       background: #eef2ee;
@@ -704,9 +704,11 @@
         if (titleEl) titleEl.innerText = title;
         if (msgEl) msgEl.innerText = message;
 
+        modal.classList.add('open');
         modal.classList.add('active');
 
         function cleanup(result) {
+          modal.classList.remove('open');
           modal.classList.remove('active');
           okBtn.removeEventListener('click', onOk);
           cancelBtn.removeEventListener('click', onCancel);
@@ -757,9 +759,11 @@
           }
         }
 
+        modal.classList.add('open');
         modal.classList.add('active');
 
         function onOk() {
+          modal.classList.remove('open');
           modal.classList.remove('active');
           okBtn.removeEventListener('click', onOk);
           resolve();
