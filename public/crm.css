@@ -952,8 +952,9 @@ td.cell-agendado {
   padding: 20px;
 }
 
-.modal-backdrop.open {
-  display: grid;
+.modal-backdrop.open,
+.modal-backdrop.active {
+  display: grid !important;
 }
 
 .modal-dialog {

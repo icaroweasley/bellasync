@@ -85,9 +85,11 @@ window.asyncConfirm = function(message, title = 'Confirmação', options = {}) {
     if (options.cancelText && cancelBtn) cancelBtn.innerText = options.cancelText;
     else if (cancelBtn) cancelBtn.innerText = 'Cancelar';
 
+    modal.classList.add('open');
     modal.classList.add('active');
 
     function cleanup(result) {
+      modal.classList.remove('open');
       modal.classList.remove('active');
       if (okBtn) okBtn.removeEventListener('click', onOk);
       if (cancelBtn) cancelBtn.removeEventListener('click', onCancel);
@@ -139,9 +141,11 @@ window.asyncAlert = function(message, title = 'Aviso', type = 'info') {
       }
     }
 
+    modal.classList.add('open');
     modal.classList.add('active');
 
     function onOk() {
+      modal.classList.remove('open');
       modal.classList.remove('active');
       if (okBtn) okBtn.removeEventListener('click', onOk);
       resolve();
@@ -156,8 +160,16 @@ window.alert = function(msg) {
 };
 
 window.logout = async function() {
-  const confirmed = await asyncConfirm('Deseja realmente sair do sistema?', 'Sair do Sistema', { isDanger: true });
-  if (confirmed) {
+  try {
+    const confirmed = await asyncConfirm('Deseja realmente sair do sistema?', 'Sair do Sistema', { isDanger: true });
+    if (confirmed) {
+      localStorage.removeItem('salon_token');
+      localStorage.removeItem('salon_user');
+      localStorage.removeItem('salon_tenant');
+      window.location.href = '/login';
+    }
+  } catch (err) {
+    console.error('Erro ao efetuar logout:', err);
     localStorage.removeItem('salon_token');
     localStorage.removeItem('salon_user');
     localStorage.removeItem('salon_tenant');
