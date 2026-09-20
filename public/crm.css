@@ -969,12 +969,12 @@ td.cell-agendado {
   box-shadow: 0 24px 60px -20px rgba(0, 0, 0, 0.3);
   overflow: hidden;
   margin: 0 !important;
-  animation: modalIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  animation: modalIn 0.12s ease-out;
 }
 
 @keyframes modalIn {
-  from { opacity: 0; transform: translateY(16px) scale(0.97); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
+  from { opacity: 0.96; transform: scale(0.97); }
+  to { opacity: 1; transform: scale(1); }
 }
 
 .modal-header {
