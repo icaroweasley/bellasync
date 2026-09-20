@@ -15,10 +15,33 @@ if (!currentUser || !currentTenant) {
   window.location.href = '/login';
 }
 
-window.currentUser = currentUser;
-window.currentTenant = currentTenant;
+const VALID_VIEWS = ['agenda', 'comissões', 'profissionais', 'clientes', 'servicos', 'produtos', 'despesas', 'aniversarios', 'balanco', 'configuracoes', 'superadmin'];
 
-let currentView = 'agenda';
+function getInitialView() {
+  try {
+    const hash = decodeURIComponent(window.location.hash.replace('#', '')).trim();
+    if (hash && VALID_VIEWS.includes(hash)) {
+      return hash;
+    }
+  } catch (e) {}
+  const saved = localStorage.getItem('bellasync_current_view');
+  if (saved && VALID_VIEWS.includes(saved)) {
+    return saved;
+  }
+  return 'agenda';
+}
+
+let currentView = getInitialView();
+
+window.addEventListener('hashchange', () => {
+  try {
+    const hash = decodeURIComponent(window.location.hash.replace('#', '')).trim();
+    if (hash && VALID_VIEWS.includes(hash) && hash !== currentView) {
+      renderView(hash);
+    }
+  } catch (e) {}
+});
+
 let selectedProfessionalId = null;
 let selectedDate = new Date().toISOString().split('T')[0];
 
@@ -808,13 +831,29 @@ window.handleFabClick = function() {
 
 // Router simples das Views
 function renderView(view) {
+  if (!VALID_VIEWS.includes(view)) view = 'agenda';
   currentView = view;
+
+  try {
+    localStorage.setItem('bellasync_current_view', view);
+    if (window.location.hash !== '#' + view) {
+      window.history.replaceState(null, '', '#' + view);
+    }
+  } catch (e) {}
+
+  // Sincroniza classe active nos botões do menu lateral
+  const navItems = document.querySelectorAll('.nav-item');
+  navItems.forEach(item => {
+    item.classList.toggle('active', item.dataset.view === view);
+  });
+
   const container = document.getElementById('viewContainer');
   const title = document.getElementById('currentViewTitle');
   const actions = document.getElementById('topBarActions');
   actions.innerHTML = '';
 
   updateFabButton(view);
+
 
   switch (view) {
     case 'agenda':
