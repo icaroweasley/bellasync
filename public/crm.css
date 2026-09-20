@@ -1173,7 +1173,7 @@ input[type="date"].form-control {
 
   /* 2. Top-bar adaptativa no mobile */
   .top-bar {
-    padding: 0 16px !important;
+    padding: 0 8px !important;
     height: 68px !important;
     min-height: 68px !important;
     max-height: 68px !important;
@@ -1186,6 +1186,11 @@ input[type="date"].form-control {
     border-bottom: 1px solid rgba(0, 0, 0, 0.08) !important;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04) !important;
     z-index: 50 !important;
+  }
+
+  .top-bar-container {
+    padding: 0 4px !important;
+    gap: 8px !important;
   }
 
   .top-bar-title {
@@ -1206,6 +1211,22 @@ input[type="date"].form-control {
     padding: 6px;
     border-radius: 8px;
     background: rgba(0, 0, 0, 0.04);
+  }
+
+  /* Centraliza o menu de notificações no meio da tela no mobile */
+  .notif-dropdown {
+    position: fixed !important;
+    top: 72px !important;
+    left: 14px !important;
+    right: 14px !important;
+    width: auto !important;
+    max-width: 380px !important;
+    margin: 0 auto !important;
+    background: #ffffff !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    box-shadow: 0 16px 40px -10px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(0, 0, 0, 0.08) !important;
+    z-index: 1000 !important;
   }
 
   /* Oculta botões de topo extras no mobile (usamos FAB e banners) */
