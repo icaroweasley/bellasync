@@ -545,6 +545,10 @@ body {
   box-sizing: border-box !important;
 }
 
+.mobile-add-banner {
+  display: none !important;
+}
+
 /* Cards e Painéis com Glassmorphism Translúcido */
 .card-shell {
   background: rgba(255, 255, 255, 0.75);
@@ -1249,98 +1253,9 @@ td.cell-agendado {
     flex-wrap: wrap !important;
   }
 
-  /* 4. Banner de Adicionar (Cadastro Rápido) - Altura e Estilo Unificados */
+  /* 4. Banner de Adicionar - Removido a pedido do usuário */
   .mobile-add-banner {
-    display: flex !important;
-    align-items: center !important;
-    justify-content: space-between !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    height: 68px !important;
-    min-height: 68px !important;
-    max-height: 68px !important;
-    padding: 0 22px !important;
-    margin-bottom: 20px !important;
-    background: rgba(255, 255, 255, 0.85) !important;
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    border: 1px solid rgba(255, 105, 0, 0.18) !important;
-    border-radius: 18px !important;
-    box-shadow: 0 4px 16px rgba(255, 105, 0, 0.06) !important;
-    cursor: pointer;
-    box-sizing: border-box !important;
-    text-decoration: none;
-    color: var(--ink, #0f172a);
-    transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
-  }
-
-  .mobile-add-banner:hover {
-    background: #ffffff !important;
-    border-color: rgba(255, 105, 0, 0.4) !important;
-    box-shadow: 0 8px 24px rgba(255, 105, 0, 0.12) !important;
-    transform: translateY(-2px);
-  }
-
-  .mobile-add-banner-content {
-    display: flex !important;
-    align-items: center !important;
-    gap: 14px !important;
-    height: 100% !important;
-  }
-
-  .mobile-add-banner-icon {
-    width: 40px !important;
-    height: 40px !important;
-    border-radius: 12px !important;
-    background: linear-gradient(135deg, #ff7a18 0%, #ff5200 100%) !important;
-    color: #ffffff !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    flex-shrink: 0 !important;
-    box-shadow: 0 4px 12px rgba(255, 105, 0, 0.3) !important;
-  }
-
-  .mobile-add-banner-text {
-    display: flex !important;
-    flex-direction: column !important;
-    justify-content: center !important;
-  }
-
-  .mobile-add-banner-text strong {
-    font-size: 0.95rem !important;
-    font-weight: 700 !important;
-    color: var(--ink, #0f172a) !important;
-    margin: 0 0 2px 0 !important;
-    line-height: 1.2 !important;
-    white-space: nowrap !important;
-  }
-
-  .mobile-add-banner-text span {
-    font-size: 0.8rem !important;
-    color: var(--muted, #64748b) !important;
-    margin: 0 !important;
-    line-height: 1.2 !important;
-    white-space: nowrap !important;
-  }
-
-  .mobile-add-banner-arrow {
-    width: 34px !important;
-    height: 34px !important;
-    border-radius: 10px !important;
-    background: rgba(255, 105, 0, 0.08) !important;
-    color: var(--orange, #ff6900) !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    flex-shrink: 0 !important;
-    transition: all 0.2s ease !important;
-  }
-
-  .mobile-add-banner:hover .mobile-add-banner-arrow {
-    background: var(--orange, #ff6900);
-    color: #ffffff;
-    transform: translateX(3px);
+    display: none !important;
   }
 
   /* 5. Tabela de Horários da Agenda no Mobile */

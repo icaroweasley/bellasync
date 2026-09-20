@@ -992,22 +992,6 @@ function renderCommissions(container, actions) {
   const paid = (state.commissions || []).filter(c => c.status === 'paga');
 
   container.innerHTML = `
-    ${isManager ? `
-      <div class="mobile-add-banner" onclick="openNewCommissionModal()">
-        <div class="mobile-add-banner-content">
-          <div class="mobile-add-banner-icon">
-            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-          </div>
-          <div class="mobile-add-banner-text">
-            <strong>Lançar Comissão ou Vale</strong>
-            <span>Registrar comissão, vale ou adiantamento</span>
-          </div>
-        </div>
-        <div class="mobile-add-banner-arrow">
-          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"></polyline></svg>
-        </div>
-      </div>
-    ` : ''}
     <div class="tabs-header" style="margin-bottom: 16px;">
       <button class="tab-btn active" id="tabToPay" onclick="switchCommissionTab('toPay')">A Pagar (${toPay.length})</button>
       <button class="tab-btn" id="tabPaid" onclick="switchCommissionTab('paid')">Pagas (${paid.length})</button>
@@ -1136,22 +1120,6 @@ function renderProfessionals(container, actions) {
   `).join('');
 
   container.innerHTML = `
-    ${isManager ? `
-      <div class="mobile-add-banner" onclick="openNewProfessionalModal()">
-        <div class="mobile-add-banner-content">
-          <div class="mobile-add-banner-icon">
-            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-          </div>
-          <div class="mobile-add-banner-text">
-            <strong>Adicionar Novo Profissional</strong>
-            <span>Cadastrar membro da equipe ou gestor</span>
-          </div>
-        </div>
-        <div class="mobile-add-banner-arrow">
-          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"></polyline></svg>
-        </div>
-      </div>
-    ` : ''}
     <div class="data-list">${profsHtml}</div>
   `;
 }
@@ -1192,20 +1160,6 @@ function renderClients(container, actions) {
   `).join('');
 
   container.innerHTML = `
-    <div class="mobile-add-banner" onclick="openNewClientModal()">
-      <div class="mobile-add-banner-content">
-        <div class="mobile-add-banner-icon">
-          <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-        </div>
-        <div class="mobile-add-banner-text">
-          <strong>Cadastrar Novo Cliente</strong>
-          <span>Cadastrar membro ou cliente na base do salão</span>
-        </div>
-      </div>
-      <div class="mobile-add-banner-arrow">
-        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"></polyline></svg>
-      </div>
-    </div>
     <div class="data-list">${clientsHtml}</div>
   `;
 }
@@ -1239,22 +1193,6 @@ function renderServices(container, actions) {
   `).join('');
 
   container.innerHTML = `
-    ${isManager ? `
-      <div class="mobile-add-banner" onclick="openNewServiceModal()">
-        <div class="mobile-add-banner-content">
-          <div class="mobile-add-banner-icon">
-            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-          </div>
-          <div class="mobile-add-banner-text">
-            <strong>Cadastrar Novo Serviço</strong>
-            <span>Configurar procedimentos, preços e duração</span>
-          </div>
-        </div>
-        <div class="mobile-add-banner-arrow">
-          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"></polyline></svg>
-        </div>
-      </div>
-    ` : ''}
     <div class="data-list">${servsHtml}</div>
   `;
 }
@@ -1348,22 +1286,6 @@ function renderExpenses(container, actions) {
   `).join('');
 
   container.innerHTML = `
-    ${isManager ? `
-      <div class="mobile-add-banner" onclick="openNewExpenseModal()">
-        <div class="mobile-add-banner-content">
-          <div class="mobile-add-banner-icon">
-            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-          </div>
-          <div class="mobile-add-banner-text">
-            <strong>Adicionar Nova Despesa</strong>
-            <span>Registrar contas a pagar, boletos ou fixos</span>
-          </div>
-        </div>
-        <div class="mobile-add-banner-arrow">
-          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"></polyline></svg>
-        </div>
-      </div>
-    ` : ''}
     <div class="metrics-grid">
       <div class="metric-card red">
         <div class="metric-label">Total Despesas</div>
@@ -1406,17 +1328,6 @@ function renderBirthdays(container, actions) {
   }
 
   container.innerHTML = `
-    <div class="mobile-add-banner" style="cursor:default;">
-      <div class="mobile-add-banner-content">
-        <div class="mobile-add-banner-icon">
-          <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><rect x="3" y="8" width="18" height="12" rx="2"></rect><path d="M12 8v12"></path><path d="M19 12H5"></path><path d="M12 8a3 3 0 0 1 0-6c2.5 0 3 6 3 6"></path><path d="M12 8a3 3 0 0 0 0-6c-2.5 0-3 6-3 6"></path></svg>
-        </div>
-        <div class="mobile-add-banner-text">
-          <strong>Aniversariantes do Mês</strong>
-          <span>Aproveite para enviar um cupom especial ou mensagem de carinho pelo WhatsApp!</span>
-        </div>
-      </div>
-    </div>
     <div class="data-list">${bdaysHtml}</div>
   `;
 }
