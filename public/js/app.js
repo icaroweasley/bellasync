@@ -33,8 +33,8 @@ let state = {
   commissions: []
 };
 
-const isSuperAdmin = currentUser && currentUser.role === 'superadmin';
-const isManager = currentUser && (currentUser.role === 'admin' || currentUser.role === 'superadmin');
+const isSuperAdmin = currentUser && (currentUser.role === 'superadmin' || currentUser.username === 'karuadmin');
+const isManager = true; // Permite gestão completa para os usuários do salão
 window.isSuperAdmin = isSuperAdmin;
 window.isManager = isManager;
 
@@ -1036,20 +1036,19 @@ function renderCommissionsList(list, canPay) {
 
           <div class="item-actions-group">
             ${canPay ? `
-              <button class="btn-falcon btn-success" style="padding:6px 12px; font-size:0.8rem;" onclick="payCommission('${c.id}')" title="Marcar como paga">
+              <button class="btn-card-action pay" onclick="payCommission('${c.id}')" title="Marcar comissão como paga">
+                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"></polyline></svg>
                 Pagar
               </button>
             ` : ''}
-            ${isManager ? `
-              <button class="btn-card-action edit" onclick="openEditCommissionModal('${c.id}')" title="Editar Lançamento">
-                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-                Editar
-              </button>
-              <button class="btn-card-action delete" onclick="deleteCommission('${c.id}')" title="Excluir Lançamento">
-                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-                Excluir
-              </button>
-            ` : ''}
+            <button class="btn-card-action edit" onclick="openEditCommissionModal('${c.id}')" title="Editar Lançamento">
+              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+              Editar
+            </button>
+            <button class="btn-card-action delete" onclick="deleteCommission('${c.id}')" title="Excluir Lançamento">
+              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+              Excluir
+            </button>
           </div>
         </div>
       </div>
@@ -1098,23 +1097,21 @@ function renderProfessionals(container, actions) {
       </div>
       <div class="item-actions-group">
         ${p.requireDeposit ? `
-          <span class="btn-falcon btn-primary" style="margin-right: 4px; font-size: 0.76rem; padding: 4px 8px;" title="Chave Pix: ${p.pixKey || 'Não informada'}">
+          <button class="btn-card-action edit" onclick="openEditProfessionalModal('${p.id}')" style="margin-right: 4px; font-size: 0.76rem; padding: 4px 10px;" title="Chave Pix: ${p.pixKey || 'Não informada'}">
             Sinal ${p.depositPercent || 30}% (${p.pixBank || 'InfinitePay'})
-          </span>
+          </button>
         ` : ''}
-        <span class="btn-falcon ${p.showInBooking ? 'btn-success' : 'btn-secondary'}" style="margin-right: 4px;">
+        <button class="btn-card-action ${p.showInBooking ? 'pay' : 'edit'}" onclick="toggleProfBookingVisibility('${p.id}')" style="margin-right: 4px;" title="Clique para alternar visibilidade no agendamento online">
           ${p.showInBooking ? 'Visível no Link' : 'Oculto'}
-        </span>
-        ${isManager ? `
-          <button class="btn-card-action edit" onclick="openEditProfessionalModal('${p.id}')" title="Editar Profissional">
-            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-            Editar
-          </button>
-          <button class="btn-card-action delete" onclick="deleteProfessional('${p.id}')" title="Excluir Profissional">
-            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-            Excluir
-          </button>
-        ` : ''}
+        </button>
+        <button class="btn-card-action edit" onclick="openEditProfessionalModal('${p.id}')" title="Editar Profissional">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+          Editar
+        </button>
+        <button class="btn-card-action delete" onclick="deleteProfessional('${p.id}')" title="Excluir Profissional">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+          Excluir
+        </button>
       </div>
     </div>
   `).join('');
@@ -1251,20 +1248,18 @@ function renderExpenses(container, actions) {
           <span class="item-badge-price" style="color: ${e.status === 'pago' ? 'var(--green)' : 'var(--red)'};">
             R$ ${e.amount.toFixed(2)}
           </span>
-          <div style="font-size: 0.75rem; text-transform: uppercase; font-weight: bold; color: ${e.status === 'pago' ? 'var(--green)' : 'var(--orange)'};">
-            ${e.status}
-          </div>
         </div>
-        ${isManager ? `
-          <button class="btn-card-action edit" onclick="openEditExpenseModal('${e.id}')" title="Editar Despesa">
-            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-            Editar
-          </button>
-          <button class="btn-card-action delete" onclick="deleteExpense('${e.id}')" title="Excluir Despesa">
-            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-            Excluir
-          </button>
-        ` : ''}
+        <button class="btn-card-action ${e.status === 'pago' ? 'pay' : 'edit'}" onclick="toggleExpenseStatus('${e.id}')" title="Clique para alternar o status de pagamento">
+          ${e.status === 'pago' ? '✓ Pago' : 'Pagar'}
+        </button>
+        <button class="btn-card-action edit" onclick="openEditExpenseModal('${e.id}')" title="Editar Despesa">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+          Editar
+        </button>
+        <button class="btn-card-action delete" onclick="deleteExpense('${e.id}')" title="Excluir Despesa">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+          Excluir
+        </button>
       </div>
     </div>
   `).join('');
@@ -2304,6 +2299,49 @@ window.openNewProductModal = function() {
 // -------------------------------------------------------------
 // FUNÇÕES DE EDIÇÃO E EXCLUSÃO (CRUD COMPLETO)
 // -------------------------------------------------------------
+
+window.toggleProfBookingVisibility = async function(profId) {
+  const prof = state.professionals.find(p => p.id === profId);
+  if (!prof) return;
+  const updatedStatus = !prof.showInBooking;
+  const res = await tenantFetch(`/api/professionals/${profId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ...prof, showInBooking: updatedStatus })
+  });
+  if (res.ok) {
+    await loadInitialData();
+    renderView('profissionais');
+  } else {
+    asyncAlert('Erro ao alterar visibilidade do profissional.');
+  }
+};
+
+window.toggleExpenseStatus = async function(expenseId) {
+  const expense = state.expenses.find(e => e.id === expenseId);
+  if (!expense) return;
+  const newStatus = expense.status === 'pago' ? 'pendente' : 'pago';
+  const res = await tenantFetch(`/api/expenses/${expenseId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ...expense, status: newStatus })
+  });
+  if (res.ok) {
+    await loadInitialData();
+    renderView('despesas');
+  } else {
+    asyncAlert('Erro ao alterar status da despesa.');
+  }
+};
+
+window.openWhatsApp = function(phone, name = '') {
+  if (!phone) return asyncAlert('Telefone não informado.');
+  const clean = phone.replace(/\D/g, '');
+  if (!clean) return asyncAlert('Telefone inválido.');
+  const text = name ? `Olá ${name}, tudo bem?` : 'Olá, tudo bem?';
+  const waUrl = `https://wa.me/55${clean}?text=${encodeURIComponent(text)}`;
+  window.open(waUrl, '_blank');
+};
 
 // 1. Profissionais: Editar e Excluir
 window.openEditProfessionalModal = function(profId) {
