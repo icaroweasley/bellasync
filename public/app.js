@@ -586,18 +586,29 @@ function setupMobileToggle() {
   const overlay = document.getElementById('sidebarOverlay');
 
   if (toggleBtn && sidebar) {
-    toggleBtn.addEventListener('click', () => {
+    toggleBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
       sidebar.classList.toggle('open');
       if (overlay) overlay.classList.toggle('active', sidebar.classList.contains('open'));
     });
   }
 
   if (overlay && sidebar) {
-    overlay.addEventListener('click', () => {
+    overlay.addEventListener('click', (e) => {
+      e.stopPropagation();
       sidebar.classList.remove('open');
       overlay.classList.remove('active');
     });
   }
+
+  document.addEventListener('click', (e) => {
+    if (sidebar && sidebar.classList.contains('open')) {
+      if (!sidebar.contains(e.target) && (!toggleBtn || !toggleBtn.contains(e.target))) {
+        sidebar.classList.remove('open');
+        if (overlay) overlay.classList.remove('active');
+      }
+    }
+  });
 }
 
 // Controle de Ação Contextual do Botão Flutuante (+)

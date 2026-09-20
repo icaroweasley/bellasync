@@ -1164,7 +1164,7 @@ input[type="date"].form-control {
 
   html, body, .main-content, .view-container, .data-list, .schedule-table {
     -webkit-overflow-scrolling: touch;
-    overscroll-behavior-y: contain;
+    overscroll-behavior-y: auto !important;
   }
 
   .animated-bg {
@@ -1260,6 +1260,21 @@ input[type="date"].form-control {
 
   .sidebar.open {
     transform: translateX(0) !important;
+  }
+
+  .sidebar-overlay {
+    position: fixed !important;
+    inset: 0 !important;
+    background: rgba(0, 0, 0, 0.45) !important;
+    z-index: 150 !important;
+    display: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    cursor: pointer !important;
+  }
+
+  .sidebar-overlay.active {
+    display: block !important;
   }
 
   /* 3. Cards e Contêineres Limpos sem Blur */
