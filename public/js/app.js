@@ -286,6 +286,7 @@ document.addEventListener('click', (e) => {
 });
 
 function playNotificationSound() {
+  if (state && state.settings && state.settings.notifySound === false) return;
   try {
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     const osc = audioCtx.createOscillator();
@@ -457,6 +458,7 @@ async function showSystemOrSwNotification(title, options) {
 
 function checkAndNotifyNewAppointments(appointmentsList) {
   if (!Array.isArray(appointmentsList)) return;
+  if (state.settings && state.settings.notifyNewAppointments === false) return;
 
   // Na primeira carga, apenas memoriza os IDs existentes para não disparar enxurrada
   if (!notificationsInitialized) {
@@ -510,6 +512,44 @@ function checkAndNotifyNewAppointments(appointmentsList) {
     }
   });
 }
+
+let birthdayNotificationsChecked = false;
+function checkAndNotifyBirthdays() {
+  if (birthdayNotificationsChecked) return;
+  if (!state.clients || !Array.isArray(state.clients)) return;
+  if (state.settings && state.settings.notifyBirthdays === false) return;
+
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  const todayStr = `${year}-${month}-${day}`;
+
+  const todayBirthdays = state.clients.filter(c => c.birthday && isBirthdayToday(c.birthday, month, day));
+
+  if (todayBirthdays.length > 0) {
+    birthdayNotificationsChecked = true;
+    todayBirthdays.forEach(cli => {
+      const notifId = `bday_${todayStr}_${cli.id}`;
+      saveNotificationToHistory({
+        id: notifId,
+        title: '🎂 Aniversariante do Dia!',
+        body: `Hoje é aniversário de ${cli.name}! Envie os parabéns ou ofereça um mimo especial.`,
+        timeStr: '08:00',
+        date: todayStr
+      });
+
+      showSystemOrSwNotification('🎂 Aniversariante do Dia!', {
+        body: `Hoje é aniversário de ${cli.name}! Envie os parabéns ou ofereça um mimo especial.`,
+        icon: '/images/logo.png',
+        badge: '/images/logo.png',
+        tag: notifId,
+        data: { url: '/' }
+      });
+    });
+  }
+}
+
 
 // Inicialização
 document.addEventListener('DOMContentLoaded', async () => {
@@ -629,6 +669,7 @@ async function loadInitialData() {
     };
 
     checkAndNotifyNewAppointments(apps);
+    checkAndNotifyBirthdays();
     updateNotificationBadge();
 
     if (state.professionals.length > 0 && !selectedProfessionalId) {
@@ -1385,10 +1426,30 @@ function renderExpenses(container, actions) {
 
 // 8. Render Aniversariantes
 function renderBirthdays(container, actions) {
-  const currentMonth = "09"; // Setembro como referência
-  const birthdays = state.clients.filter(c => c.birthday && c.birthday.split('-')[1] === currentMonth);
+  const now = new Date();
+  const currentMonth = String(now.getMonth() + 1).padStart(2, '0');
+  const birthdays = state.clients.filter(c => {
+    if (!c.birthday) return false;
+    return isBirthdayToday(c.birthday, currentMonth, String(c.birthday).split('-')[2] || '');
+  });
 
-  let bdaysHtml = birthdays.map(c => `
+  // Mostra todos os clientes que fazem aniversário no mês atual
+  const monthBirthdays = state.clients.filter(c => {
+    if (!c.birthday) return false;
+    if (c.birthday.includes('-')) {
+      const parts = c.birthday.split('-');
+      const m = parts[0].length === 4 ? parts[1] : parts[1];
+      return String(m).padStart(2, '0') === currentMonth;
+    }
+    if (c.birthday.includes('/')) {
+      const parts = c.birthday.split('/');
+      const m = parts[2] && parts[2].length === 4 ? parts[1] : parts[0];
+      return String(m).padStart(2, '0') === currentMonth;
+    }
+    return false;
+  });
+
+  let bdaysHtml = monthBirthdays.map(c => `
     <div class="data-item-card">
       <div class="item-main-info">
         <h4>${c.name}</h4>
@@ -1402,7 +1463,7 @@ function renderBirthdays(container, actions) {
     </div>
   `).join('');
 
-  if (birthdays.length === 0) {
+  if (monthBirthdays.length === 0) {
     bdaysHtml = `<div class="card-shell" style="text-align:center; color:var(--muted);">Nenhum aniversariante no mês atual.</div>`;
   }
 
@@ -1413,97 +1474,139 @@ function renderBirthdays(container, actions) {
 
 // 9. Render Configurações
 function renderSettings(container, actions) {
-  if (!isManager) {
-    container.innerHTML = `
-      <div class="card-shell">
-        <h3 style="margin-bottom: 16px;">Dados do Salão</h3>
+  const notifyNew = state.settings.notifyNewAppointments !== false;
+  const notifyRem = state.settings.notifyReminders !== false;
+  const notifyBday = state.settings.notifyBirthdays !== false;
+  const notifySnd = state.settings.notifySound !== false;
+
+  const salonCardHtml = `
+    <div class="card-shell" style="margin-bottom: 20px;">
+      <h3 style="margin-bottom: 16px;">Dados do Salão</h3>
+      ${!isManager ? `
         <div style="background: #fff3cd; color: #856404; padding: 12px 16px; border-radius: 8px; margin-bottom: 16px; font-size: 0.9rem; display: flex; align-items: center; gap: 8px;">
           <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
-          <span>Apenas <strong>gestores</strong> podem alterar as configurações do salão.</span>
+          <span>Apenas <strong>gestores</strong> podem alterar os dados cadastrais do salão.</span>
         </div>
-        <div class="form-group" style="margin-bottom: 14px;">
-          <label>Nome do Estabelecimento</label>
-          <input type="text" class="form-control" id="cfgName" value="${state.settings.salonName || ''}" disabled>
-        </div>
-        <div class="form-group" style="margin-bottom: 14px;">
-          <label>Telefone / WhatsApp</label>
-          <input type="text" class="form-control" id="cfgPhone" value="${state.settings.phone || ''}" disabled>
-        </div>
-        <div class="form-group" style="margin-bottom: 14px;">
-          <label>Endereço Completo</label>
-          <input type="text" class="form-control" id="cfgAddress" value="${state.settings.address || ''}" disabled>
-        </div>
-        <div class="form-group" style="margin-bottom: 14px;">
-          <label>Intervalo entre Agendamentos na Grade</label>
-          <select class="form-control" id="cfgInterval" disabled>
-            <option value="15" ${state.settings.intervalMinutes === 15 ? 'selected' : ''}>15 em 15 minutos</option>
-            <option value="30" ${state.settings.intervalMinutes === 30 ? 'selected' : ''}>30 em 30 minutos</option>
-            <option value="45" ${state.settings.intervalMinutes === 45 ? 'selected' : ''}>45 em 45 minutos</option>
-            <option value="60" ${state.settings.intervalMinutes === 60 ? 'selected' : ''}>1 em 1 hora</option>
-          </select>
-        </div>
-      </div>
-    `;
-    return;
-  }
-
-  container.innerHTML = `
-    <div class="card-shell">
-      <h3 style="margin-bottom: 16px;">Dados do Salão</h3>
+      ` : ''}
       <div class="form-group" style="margin-bottom: 14px;">
         <label>Nome do Estabelecimento</label>
-        <input type="text" class="form-control" id="cfgName" value="${state.settings.salonName || ''}">
+        <input type="text" class="form-control" id="cfgName" value="${state.settings.salonName || ''}" ${!isManager ? 'disabled' : ''}>
       </div>
       <div class="form-group" style="margin-bottom: 14px;">
         <label>Telefone / WhatsApp</label>
-        <input type="text" class="form-control" id="cfgPhone" value="${state.settings.phone || ''}">
+        <input type="text" class="form-control" id="cfgPhone" value="${state.settings.phone || ''}" ${!isManager ? 'disabled' : ''}>
       </div>
       <div class="form-group" style="margin-bottom: 14px;">
         <label>Endereço Completo</label>
-        <input type="text" class="form-control" id="cfgAddress" value="${state.settings.address || ''}">
+        <input type="text" class="form-control" id="cfgAddress" value="${state.settings.address || ''}" ${!isManager ? 'disabled' : ''}>
       </div>
       <div class="form-group" style="margin-bottom: 14px;">
         <label>Intervalo entre Agendamentos na Grade</label>
-        <select class="form-control" id="cfgInterval">
+        <select class="form-control" id="cfgInterval" ${!isManager ? 'disabled' : ''}>
           <option value="15" ${state.settings.intervalMinutes === 15 ? 'selected' : ''}>15 em 15 minutos</option>
           <option value="30" ${state.settings.intervalMinutes === 30 ? 'selected' : ''}>30 em 30 minutos</option>
           <option value="45" ${state.settings.intervalMinutes === 45 ? 'selected' : ''}>45 em 45 minutos</option>
           <option value="60" ${state.settings.intervalMinutes === 60 ? 'selected' : ''}>1 em 1 hora</option>
         </select>
       </div>
+    </div>
+  `;
 
+  const notificationCardHtml = `
+    <div class="card-shell" style="margin-bottom: 20px;">
+      <h3 style="margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
+        <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 01-3.46 0"></path></svg>
+        Notificações & Lembretes
+      </h3>
+      
+      <div class="switch-group">
+        <div>
+          <span class="switch-label-title">Novos Agendamentos</span>
+          <span class="switch-label-sub">Receber alertas quando um novo agendamento for realizado.</span>
+        </div>
+        <label class="custom-switch">
+          <input type="checkbox" id="cfgNotifyNewAppointments" ${notifyNew ? 'checked' : ''}>
+          <span class="switch-slider"></span>
+        </label>
+      </div>
+
+      <div class="switch-group">
+        <div>
+          <span class="switch-label-title">Lembretes 15 min antes</span>
+          <span class="switch-label-sub">Alerta automático 15 minutos antes de começar cada atendimento.</span>
+        </div>
+        <label class="custom-switch">
+          <input type="checkbox" id="cfgNotifyReminders" ${notifyRem ? 'checked' : ''}>
+          <span class="switch-slider"></span>
+        </label>
+      </div>
+
+      <div class="switch-group">
+        <div>
+          <span class="switch-label-title">Aniversariantes do Dia</span>
+          <span class="switch-label-sub">Notificar quando um cliente cadastrado fizer aniversário hoje.</span>
+        </div>
+        <label class="custom-switch">
+          <input type="checkbox" id="cfgNotifyBirthdays" ${notifyBday ? 'checked' : ''}>
+          <span class="switch-slider"></span>
+        </label>
+      </div>
+
+      <div class="switch-group">
+        <div>
+          <span class="switch-label-title">Som de Alerta</span>
+          <span class="switch-label-sub">Tocar um sinal sonoro ao receber notificações.</span>
+        </div>
+        <label class="custom-switch">
+          <input type="checkbox" id="cfgNotifySound" ${notifySnd ? 'checked' : ''}>
+          <span class="switch-slider"></span>
+        </label>
+      </div>
+    </div>
+  `;
+
+  container.innerHTML = `
+    ${salonCardHtml}
+    ${notificationCardHtml}
+    <div style="margin-top: 20px;">
       <button class="btn-falcon btn-primary" onclick="saveSettings()">Salvar Configurações</button>
     </div>
   `;
 }
 
 window.saveSettings = async function() {
-  if (!isManager) {
-    asyncAlert('Apenas gestores têm permissão para alterar as configurações do salão.');
-    return;
-  }
-
   const updated = {
     ...state.settings,
-    salonName: document.getElementById('cfgName').value,
-    phone: document.getElementById('cfgPhone').value,
-    address: document.getElementById('cfgAddress').value,
-    intervalMinutes: Number(document.getElementById('cfgInterval').value)
+    salonName: isManager ? document.getElementById('cfgName').value : (state.settings.salonName || ''),
+    phone: isManager ? document.getElementById('cfgPhone').value : (state.settings.phone || ''),
+    address: isManager ? document.getElementById('cfgAddress').value : (state.settings.address || ''),
+    intervalMinutes: isManager ? Number(document.getElementById('cfgInterval').value) : (state.settings.intervalMinutes || 30),
+    notifyNewAppointments: document.getElementById('cfgNotifyNewAppointments').checked,
+    notifyReminders: document.getElementById('cfgNotifyReminders').checked,
+    notifyBirthdays: document.getElementById('cfgNotifyBirthdays').checked,
+    notifySound: document.getElementById('cfgNotifySound').checked
   };
+
   const res = await tenantFetch('/api/settings', {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(updated)
   });
+
   if (!res.ok) {
     const err = await res.json();
     asyncAlert(err.error || 'Erro ao salvar configurações.');
     return;
   }
+
   await loadInitialData();
-  document.getElementById('salonHeaderName').innerText = updated.salonName;
+  if (updated.salonName) {
+    const hdrName = document.getElementById('salonHeaderName');
+    if (hdrName) hdrName.innerText = updated.salonName;
+  }
   asyncAlert('Configurações atualizadas com sucesso!');
 };
+
 
 // Modais Genéricos de Cadastro
 function openModal(title, bodyHtml, onConfirm) {

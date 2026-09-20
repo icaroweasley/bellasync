@@ -52,6 +52,33 @@ async function sendPushToTenant(tenantId, targetProfId, payload) {
   }
 }
 
+// Helper para checar se a data de nascimento é hoje
+function isBirthdayToday(bdayStr, targetMonth, targetDay) {
+  if (!bdayStr) return false;
+  const clean = String(bdayStr).trim();
+  let m = '', d = '';
+  if (clean.includes('-')) {
+    const parts = clean.split('-');
+    if (parts[0].length === 4) {
+      m = parts[1];
+      d = parts[2];
+    } else {
+      m = parts[1];
+      d = parts[0];
+    }
+  } else if (clean.includes('/')) {
+    const parts = clean.split('/');
+    if (parts[2] && parts[2].length === 4) {
+      d = parts[0];
+      m = parts[1];
+    } else {
+      m = parts[0];
+      d = parts[1];
+    }
+  }
+  return (String(m).padStart(2, '0') === targetMonth && String(d).padStart(2, '0') === targetDay);
+}
+
 // Verificador automático de atendimentos próximos (Faltam 15 minutos) rodando 24/7 no servidor
 function checkUpcomingAppointmentsReminders() {
   try {
@@ -69,6 +96,9 @@ function checkUpcomingAppointmentsReminders() {
 
     db.appointments.forEach(app => {
       if (app.date === todayStr && app.status !== 'cancelado' && app.status !== 'indisponivel' && !app.reminderSent) {
+        const tenant = (db.tenants || []).find(t => t.id === app.tenantId);
+        if (tenant && tenant.settings && tenant.settings.notifyReminders === false) return;
+
         const [h, m] = (app.startTime || '00:00').split(':').map(Number);
         const appMinutes = h * 60 + m;
         const diff = appMinutes - currentMinutes;
@@ -77,9 +107,6 @@ function checkUpcomingAppointmentsReminders() {
         if (diff >= 0 && diff <= 15) {
           app.reminderSent = true;
           modified = true;
-
-          const prof = (db.professionals || []).find(p => p.id === app.professionalId);
-          const profName = prof ? prof.name : '';
 
           sendPushToTenant(app.tenantId, app.professionalId, {
             title: '⏰ Atendimento em 15 Minutos!',
@@ -96,7 +123,53 @@ function checkUpcomingAppointmentsReminders() {
   }
 }
 
-setInterval(checkUpcomingAppointmentsReminders, 60000);
+// Verificador automático de aniversariantes do dia rodando 24/7 no servidor
+function checkBirthdayReminders() {
+  try {
+    const db = getDb();
+    if (!db.clients || db.clients.length === 0) return;
+
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const todayStr = `${year}-${month}-${day}`;
+
+    if (!db.birthdaySentLog) db.birthdaySentLog = {};
+    let modified = false;
+
+    (db.tenants || []).forEach(tenant => {
+      if (tenant.settings && tenant.settings.notifyBirthdays === false) return;
+
+      const tenantClients = db.clients.filter(c => c.tenantId === tenant.id && c.birthday);
+      tenantClients.forEach(cli => {
+        if (isBirthdayToday(cli.birthday, month, day)) {
+          const logKey = `${todayStr}_${cli.id}`;
+          if (!db.birthdaySentLog[logKey]) {
+            db.birthdaySentLog[logKey] = true;
+            modified = true;
+
+            sendPushToTenant(tenant.id, null, {
+              title: '🎂 Aniversariante do Dia!',
+              body: `Hoje é aniversário de ${cli.name}! Envie os parabéns ou ofereça um mimo especial.`,
+              url: '/'
+            });
+          }
+        }
+      });
+    });
+
+    if (modified) saveDb(db);
+  } catch (err) {
+    console.error('Erro na checagem de aniversariantes em background:', err);
+  }
+}
+
+setInterval(() => {
+  checkUpcomingAppointmentsReminders();
+  checkBirthdayReminders();
+}, 60000);
+
 
 // Endpoints de Web Push VAPID para Notificações em Segundo Plano
 app.get('/api/push/vapid-public-key', (req, res) => {
@@ -1262,11 +1335,15 @@ app.post('/api/appointments', (req, res) => {
   saveDb(db);
 
   // Dispara Web Push em segundo plano / celular fechado para os profissionais do salão
-  sendPushToTenant(tenantId, professionalId, {
-    title: '📅 Novo Agendamento Recebido!',
-    body: `${newApp.clientName} agendou ${newApp.serviceName} para ${newApp.date} às ${newApp.startTime}.`,
-    url: '/'
-  });
+  const tenant = (db.tenants || []).find(t => t.id === tenantId);
+  if (!tenant || !tenant.settings || tenant.settings.notifyNewAppointments !== false) {
+    sendPushToTenant(tenantId, professionalId, {
+      title: '📅 Novo Agendamento Recebido!',
+      body: `${newApp.clientName} agendou ${newApp.serviceName} para ${newApp.date} às ${newApp.startTime}.`,
+      url: '/'
+    });
+  }
+
 
   res.status(201).json(newApp);
 });
