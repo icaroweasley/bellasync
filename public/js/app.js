@@ -849,6 +849,10 @@ function renderView(view) {
       title.innerText = 'Aniversariantes';
       renderBirthdays(container, actions);
       break;
+    case 'balanco':
+      title.innerText = 'Balanço Mensal & Metas';
+      renderBalanco(container, actions);
+      break;
     case 'configuracoes':
       title.innerText = 'Configurações do Salão';
       renderSettings(container, actions);
@@ -1471,6 +1475,200 @@ function renderBirthdays(container, actions) {
     <div class="data-list">${bdaysHtml}</div>
   `;
 }
+
+// 8.5 Render Balanço Mensal & Metas
+let selectedBalancoMonth = null;
+
+function renderBalanco(container, actions) {
+  const now = new Date();
+  const currentYearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  
+  if (!selectedBalancoMonth) {
+    selectedBalancoMonth = currentYearMonth;
+  }
+
+  // Gera lista de opções dos últimos 12 meses
+  const monthOptions = [];
+  for (let i = 0; i < 12; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const ym = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    const label = d.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+    const capitalized = label.charAt(0).toUpperCase() + label.slice(1);
+    monthOptions.push({ ym, label: capitalized });
+  }
+
+  // Filtragem dos dados para o mês selecionado
+  const monthApps = (state.appointments || []).filter(a => a.date && a.date.startsWith(selectedBalancoMonth) && a.status !== 'cancelado');
+  const monthExps = (state.expenses || []).filter(e => e.date && e.date.startsWith(selectedBalancoMonth));
+  
+  const totalGrossRevenue = monthApps.reduce((acc, a) => acc + (Number(a.price) || 0), 0);
+  const totalAppCount = monthApps.length;
+  const totalExpenses = monthExps.reduce((acc, e) => acc + (Number(e.amount) || 0), 0);
+
+  // Calcula comissão total do mês
+  let totalCommissions = 0;
+  (state.professionals || []).forEach(prof => {
+    const profApps = monthApps.filter(a => a.professionalId === prof.id);
+    const profGross = profApps.reduce((acc, a) => acc + (Number(a.price) || 0), 0);
+    const rate = (Number(prof.commissionDefault) || 50) / 100;
+    totalCommissions += profGross * rate;
+  });
+
+  const estimatedNetProfit = totalGrossRevenue - totalExpenses - totalCommissions;
+
+  // Render Seletor de Mês nas actions superiores
+  actions.innerHTML = `
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <label style="font-size: 0.85rem; font-weight: 600; color: var(--muted); margin: 0;">Mês de Referência:</label>
+      <select class="form-control" id="balancoMonthSelect" style="width: auto; padding: 6px 12px; font-weight: 600;" onchange="changeBalancoMonth(this.value)">
+        ${monthOptions.map(m => `<option value="${m.ym}" ${m.ym === selectedBalancoMonth ? 'selected' : ''}>${m.label}</option>`).join('')}
+      </select>
+    </div>
+  `;
+
+  // Cards de Resumo Financeiro
+  const overallSummaryHtml = `
+    <div class="balanco-summary-cards">
+      <div class="balanco-card">
+        <div class="balanco-card-title">💰 Faturamento Bruto</div>
+        <div class="balanco-card-value">R$ ${totalGrossRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+        <div class="balanco-card-sub">${totalAppCount} atendimentos no mês</div>
+      </div>
+      <div class="balanco-card">
+        <div class="balanco-card-title">🤝 Comissões</div>
+        <div class="balanco-card-value" style="color: #d97706;">R$ ${totalCommissions.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+        <div class="balanco-card-sub">Repasse aos profissionais</div>
+      </div>
+      <div class="balanco-card">
+        <div class="balanco-card-title">💸 Despesas</div>
+        <div class="balanco-card-value" style="color: #dc2626;">R$ ${totalExpenses.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+        <div class="balanco-card-sub">${monthExps.length} lançamentos de custo</div>
+      </div>
+      <div class="balanco-card">
+        <div class="balanco-card-title">📈 Lucro Líquido Estimado</div>
+        <div class="balanco-card-value" style="color: ${estimatedNetProfit >= 0 ? '#16a34a' : '#dc2626'};">R$ ${estimatedNetProfit.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+        <div class="balanco-card-sub">Faturamento - Comissões - Despesas</div>
+      </div>
+    </div>
+  `;
+
+  // Balanço e Metas por Profissional
+  const myProfId = currentUser?.professionalId;
+
+  let profCardsHtml = (state.professionals || []).map(prof => {
+    const profApps = monthApps.filter(a => a.professionalId === prof.id);
+    const profGross = profApps.reduce((acc, a) => acc + (Number(a.price) || 0), 0);
+    const profCount = profApps.length;
+    const commRate = (Number(prof.commissionDefault) || 50) / 100;
+    const profComm = profGross * commRate;
+
+    const goal = Number(prof.monthlyGoal) || 3000;
+    const pct = goal > 0 ? Math.min(100, Math.round((profGross / goal) * 100)) : 0;
+    const isMe = myProfId && prof.id === myProfId;
+
+    return `
+      <div class="prof-goal-card" style="${isMe ? 'border: 2px solid var(--orange, #ff6900); background: rgba(255, 105, 0, 0.02);' : ''}">
+        <div class="prof-goal-header">
+          <div class="prof-goal-info">
+            <img src="${prof.avatar || getButterflyAvatar(prof.name)}" class="prof-goal-avatar" alt="${prof.name}">
+            <div>
+              <h4 class="prof-goal-title">${prof.name} ${isMe ? '<span style="font-size:0.75rem; background: var(--orange, #ff6900); color:#fff; padding:2px 6px; border-radius:10px; margin-left:4px;">Você</span>' : ''}</h4>
+              <span class="prof-goal-role">${prof.role || 'Profissional'} • Comissão (${prof.commissionDefault || 50}%)</span>
+            </div>
+          </div>
+          <div>
+            <button class="btn-falcon btn-secondary" style="padding: 6px 12px; font-size: 0.8rem;" onclick="openEditGoalModal('${prof.id}', '${prof.name}', ${goal})">
+              🎯 ${goal > 0 ? 'Alterar Meta' : 'Definir Meta'}
+            </button>
+          </div>
+        </div>
+
+        <div class="prof-goal-stats">
+          <div class="prof-stat-item">
+            <label>Faturamento Bruto</label>
+            <span style="color: #16a34a;">R$ ${profGross.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+          </div>
+          <div class="prof-stat-item">
+            <label>Atendimentos</label>
+            <span>${profCount}</span>
+          </div>
+          <div class="prof-stat-item">
+            <label>Comissão a Receber</label>
+            <span style="color: #d97706;">R$ ${profComm.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+          </div>
+          <div class="prof-stat-item">
+            <label>Meta Mensal</label>
+            <span>R$ ${goal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+          </div>
+        </div>
+
+        <div class="goal-bar-wrapper">
+          <div class="goal-bar-header">
+            <span>Progresso da Meta Mensal</span>
+            <span style="color: ${pct >= 100 ? '#16a34a' : 'var(--orange, #ff6900)'};">${pct}% Atingido ${pct >= 100 ? '🎉 (Meta Batida!)' : ''}</span>
+          </div>
+          <div class="goal-bar-track">
+            <div class="goal-bar-fill" style="width: ${pct}%; background: ${pct >= 100 ? 'linear-gradient(90deg, #16a34a 0%, #22c55e 100%)' : 'linear-gradient(90deg, #ff6900 0%, #ff8c00 100%)'};"></div>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  if (!profCardsHtml) {
+    profCardsHtml = `<div class="card-shell" style="text-align:center; color:var(--muted);">Nenhum profissional cadastrado.</div>`;
+  }
+
+  container.innerHTML = `
+    ${overallSummaryHtml}
+    <div style="margin-top: 24px;">
+      <h3 style="margin-bottom: 16px; font-size: 1.1rem; font-weight: 700; color: var(--ink);">🎯 Desempenho e Metas Individuais</h3>
+      ${profCardsHtml}
+    </div>
+  `;
+}
+
+window.changeBalancoMonth = function(monthVal) {
+  selectedBalancoMonth = monthVal;
+  const container = document.getElementById('viewContainer');
+  const actions = document.getElementById('topBarActions');
+  renderBalanco(container, actions);
+};
+
+window.openEditGoalModal = function(profId, profName, currentGoal) {
+  openModal(
+    `🎯 Definir Meta Mensal — ${profName}`,
+    `
+      <div class="form-group" style="margin-bottom: 14px;">
+        <label>Valor da Meta de Faturamento Mensal (R$)</label>
+        <input type="number" step="100" class="form-control" id="mProfGoalValue" value="${currentGoal || 3000}" placeholder="Ex: 5000">
+        <small style="color: var(--muted); margin-top: 4px; display: block;">Digite o valor total em reais que o profissional deseja/deve faturar no mês.</small>
+      </div>
+    `,
+    async () => {
+      const val = Number(document.getElementById('mProfGoalValue').value) || 0;
+      try {
+        const res = await tenantFetch(`/api/professionals/${profId}/goal`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ monthlyGoal: val })
+        });
+        if (res.ok) {
+          await loadInitialData();
+          closeModal();
+          const container = document.getElementById('viewContainer');
+          const actions = document.getElementById('topBarActions');
+          renderBalanco(container, actions);
+          asyncAlert(`Meta de ${profName} atualizada para R$ ${val.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}!`);
+        } else {
+          asyncAlert('Erro ao atualizar meta.');
+        }
+      } catch (e) {
+        asyncAlert('Erro ao conectar ao servidor.');
+      }
+    }
+  );
+};
 
 // 9. Render Configurações
 function renderSettings(container, actions) {

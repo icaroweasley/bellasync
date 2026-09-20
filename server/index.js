@@ -966,6 +966,7 @@ app.put('/api/professionals/:id', requireManager, (req, res) => {
   if (req.body.pixKey !== undefined) prof.pixKey = req.body.pixKey;
   if (req.body.pixKeyType !== undefined) prof.pixKeyType = req.body.pixKeyType;
   if (req.body.pixName !== undefined) prof.pixName = req.body.pixName;
+  if (req.body.monthlyGoal !== undefined) prof.monthlyGoal = Number(req.body.monthlyGoal) || 0;
 
   // Atualizar dados de usuário correspondente se existirem
   const user = (db.users || []).find(u => u.professionalId === prof.id && u.tenantId === tenantId);
@@ -980,6 +981,20 @@ app.put('/api/professionals/:id', requireManager, (req, res) => {
   saveDb(db);
   res.json(prof);
 });
+
+// Endpoint rápido para qualquer profissional atualizar sua meta mensal
+app.put('/api/professionals/:id/goal', (req, res) => {
+  const db = getDb();
+  const tenantId = getTenantId(req);
+  const prof = (db.professionals || []).find(p => p.id === req.params.id && p.tenantId === tenantId);
+  if (!prof) {
+    return res.status(404).json({ error: 'Profissional não encontrado.' });
+  }
+  prof.monthlyGoal = Number(req.body.monthlyGoal) || 0;
+  saveDb(db);
+  res.json({ success: true, monthlyGoal: prof.monthlyGoal });
+});
+
 
 app.delete('/api/professionals/:id', requireManager, (req, res) => {
   const db = getDb();
