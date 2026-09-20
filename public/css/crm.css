@@ -1308,12 +1308,20 @@ input[type="date"].form-control {
     box-shadow: none !important;
   }
 
-  /* 7. Modais */
+  /* 7. Modais no Mobile (Zero Glitch / Zero Lag) */
+  .modal-backdrop {
+    padding: 12px !important;
+    place-items: center !important;
+  }
+
   .modal-dialog {
     max-width: 95vw !important;
-    max-height: calc(100vh - 20px) !important;
+    max-height: calc(100vh - 24px) !important;
     border-radius: 18px !important;
-    margin: 10px auto !important;
+    margin: 0 !important;
+    animation: none !important;
+    transform: none !important;
+    background: #ffffff !important;
   }
 }
 
