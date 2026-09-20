@@ -1191,6 +1191,7 @@ input[type="date"].form-control {
   .top-bar-container {
     padding: 0 4px !important;
     gap: 8px !important;
+    position: relative !important;
   }
 
   .top-bar-title {
@@ -1213,19 +1214,25 @@ input[type="date"].form-control {
     background: rgba(0, 0, 0, 0.04);
   }
 
+  .notif-wrapper {
+    position: static !important;
+  }
+
   /* Centraliza o menu de notificações no meio da tela no mobile */
   .notif-dropdown {
-    position: fixed !important;
-    top: 72px !important;
-    left: 14px !important;
-    right: 14px !important;
+    position: absolute !important;
+    top: 68px !important;
+    left: 12px !important;
+    right: 12px !important;
     width: auto !important;
-    max-width: 380px !important;
+    max-width: 360px !important;
     margin: 0 auto !important;
     background: #ffffff !important;
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
-    box-shadow: 0 16px 40px -10px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(0, 0, 0, 0.08) !important;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 18px !important;
+    box-shadow: 0 16px 40px -10px rgba(0, 0, 0, 0.22), 0 0 0 1px rgba(0, 0, 0, 0.05) !important;
     z-index: 1000 !important;
   }
 
