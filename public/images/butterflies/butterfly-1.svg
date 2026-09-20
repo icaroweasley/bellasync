@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
+  <defs>
+    <linearGradient id="bg1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fff7ed"/>
+      <stop offset="100%" stop-color="#ffedd5"/>
+    </linearGradient>
+    <linearGradient id="wing1a" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ff8c00"/>
+      <stop offset="100%" stop-color="#ea580c"/>
+    </linearGradient>
+    <linearGradient id="wing1b" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fbbf24"/>
+      <stop offset="100%" stop-color="#f97316"/>
+    </linearGradient>
+  </defs>
+  <circle cx="50" cy="50" r="48" fill="url(#bg1)"/>
+  <!-- Asas de Borboleta Esquerda -->
+  <path d="M 50 48 C 30 12, 6 22, 12 46 C 18 62, 38 56, 50 48 Z" fill="url(#wing1a)"/>
+  <path d="M 50 52 C 34 56, 12 68, 18 82 C 24 92, 44 80, 50 52 Z" fill="url(#wing1b)"/>
+  <!-- Asas de Borboleta Direita -->
+  <path d="M 50 48 C 70 12, 94 22, 88 46 C 82 62, 62 56, 50 48 Z" fill="url(#wing1a)"/>
+  <path d="M 50 52 C 66 56, 88 68, 82 82 C 76 92, 56 80, 50 52 Z" fill="url(#wing1b)"/>
+  <!-- Detalhes e Pontos das Asas -->
+  <circle cx="28" cy="34" r="3" fill="#ffffff" opacity="0.8"/>
+  <circle cx="72" cy="34" r="3" fill="#ffffff" opacity="0.8"/>
+  <circle cx="30" cy="70" r="2.5" fill="#ffffff" opacity="0.8"/>
+  <circle cx="70" cy="70" r="2.5" fill="#ffffff" opacity="0.8"/>
+  <!-- Antenas e Corpo -->
+  <path d="M 48 35 Q 42 20, 36 16 M 52 35 Q 58 20, 64 16" stroke="#431407" stroke-width="2.2" stroke-linecap="round" fill="none"/>
+  <circle cx="36" cy="16" r="2" fill="#431407"/>
+  <circle cx="64" cy="16" r="2" fill="#431407"/>
+  <ellipse cx="50" cy="50" rx="3.5" ry="18" fill="#431407"/>
+</svg>

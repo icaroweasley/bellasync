@@ -86,7 +86,7 @@ const initialData = {
       phone: "(67) 98424-8821",
       email: "sarah@metamorfose.com",
       access: "Gestor",
-      avatar: "https://api.dicebear.com/7.x/bottts/svg?seed=Sarah",
+      avatar: "/images/butterflies/butterfly-1.svg",
       showInBooking: true,
       commissionDefault: 50,
       active: true
@@ -99,7 +99,7 @@ const initialData = {
       phone: "(67) 99162-9269",
       email: "ana@metamorfose.com",
       access: "Gestor",
-      avatar: "https://api.dicebear.com/7.x/bottts/svg?seed=Ana",
+      avatar: "/images/butterflies/butterfly-2.svg",
       showInBooking: true,
       commissionDefault: 50,
       active: true
@@ -112,7 +112,7 @@ const initialData = {
       phone: "(67) 99273-4259",
       email: "ilda@metamorfose.com",
       access: "Gestor",
-      avatar: "https://api.dicebear.com/7.x/bottts/svg?seed=Ilda",
+      avatar: "/images/butterflies/butterfly-5.svg",
       showInBooking: true,
       commissionDefault: 50,
       active: true
@@ -125,7 +125,7 @@ const initialData = {
       phone: "(67) 98454-0935",
       email: "priscila@metamorfose.com",
       access: "Profissional de Servicos",
-      avatar: "https://api.dicebear.com/7.x/bottts/svg?seed=Priscila",
+      avatar: "/images/butterflies/butterfly-4.svg",
       showInBooking: true,
       commissionDefault: 40,
       active: true
@@ -138,7 +138,7 @@ const initialData = {
       phone: "(67) 8134-8704",
       email: "admin@metamorfose.com",
       access: "Gestor",
-      avatar: "https://api.dicebear.com/7.x/bottts/svg?seed=Icaro",
+      avatar: "/images/butterflies/butterfly-3.svg",
       showInBooking: false,
       commissionDefault: 0,
       active: true

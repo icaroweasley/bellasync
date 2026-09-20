@@ -12,7 +12,15 @@ const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json());
-app.use(express.static(path.join(__dirname, '../public')));
+function getButterflyAvatar(name) {
+  let hash = 0;
+  const str = String(name || 'Profissional');
+  for (let i = 0; i < str.length; i++) {
+    hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const index = (Math.abs(hash) % 8) + 1;
+  return `/images/butterflies/butterfly-${index}.svg`;
+}
 
 // Middleware para extrair tenantId das requisições autenticadas/painel
 function getTenantId(req) {
@@ -102,7 +110,7 @@ app.post('/api/auth/register-salon', (req, res) => {
     phone: phone || '',
     email: adminEmail,
     access: 'Gestor',
-    avatar: `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(adminName || 'Gestor')}`,
+    avatar: getButterflyAvatar(adminName || 'Gestor'),
     showInBooking: false,
     commissionDefault: 0,
     active: true
@@ -722,7 +730,7 @@ app.post('/api/professionals', requireManager, (req, res) => {
     phone: req.body.phone || '',
     email: req.body.email || '',
     access: req.body.access || 'Profissional de Servicos',
-    avatar: req.body.avatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(req.body.name)}`,
+    avatar: req.body.avatar || getButterflyAvatar(req.body.name),
     showInBooking: req.body.showInBooking ?? true,
     commissionDefault: Number(req.body.commissionDefault) || 50,
     requireDeposit: !!req.body.requireDeposit,
