@@ -1428,11 +1428,19 @@ function openModal(title, bodyHtml, onConfirm) {
   confirmBtn.parentNode.replaceChild(newBtn, confirmBtn);
   newBtn.addEventListener('click', onConfirm);
 
-  document.getElementById('genericModal').classList.add('open');
+  const modal = document.getElementById('genericModal');
+  if (modal) {
+    modal.classList.add('open');
+    modal.classList.add('active');
+  }
 }
 
 function closeModal() {
-  document.getElementById('genericModal').classList.remove('open');
+  const modal = document.getElementById('genericModal');
+  if (modal) {
+    modal.classList.remove('open');
+    modal.classList.remove('active');
+  }
 }
 
 window.openNewAppointmentModal = function(defaultTime = "10:00") {
