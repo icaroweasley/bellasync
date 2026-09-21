@@ -134,8 +134,8 @@
 
   <div class="booking-wrapper">
     <div class="booking-header">
-      <div style="display:inline-block;">
-        <div class="salon-avatar" style="width:70px; height:70px; font-size:1.6rem; margin: 0 auto 10px;">MH</div>
+      <div id="bSalonLogoContainer" style="display:inline-block; margin-bottom:12px;">
+        <div class="salon-avatar" style="width:76px; height:76px; font-size:1.7rem; margin: 0 auto;">MH</div>
       </div>
       <p style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--orange); font-weight: var(--weight-bold);">Seja bem-vindo(a) ao</p>
       <h1 id="bSalonName">Metamorfose Hair</h1>
@@ -308,6 +308,17 @@
           document.title = `Agendamento Online — ${data.tenant.name}`;
         }
         if (data.tenant.phone) document.getElementById('bSalonPhone').innerText = data.tenant.phone;
+
+        const salonLogoUrl = data.tenant.logo || data.tenant.photo || settings.logo || settings.photo;
+        const logoContainer = document.getElementById('bSalonLogoContainer');
+        if (logoContainer) {
+          if (salonLogoUrl) {
+            logoContainer.innerHTML = `<img src="${salonLogoUrl}" alt="${data.tenant.name || 'Salão'}" style="width:84px; height:84px; border-radius:50%; object-fit:cover; border:3px solid var(--orange); box-shadow:0 6px 18px rgba(255,105,0,0.28); margin: 0 auto; display:block;">`;
+          } else {
+            const initials = (data.tenant.name || 'Salão').split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+            logoContainer.innerHTML = `<div class="salon-avatar" style="width:76px; height:76px; font-size:1.7rem; margin: 0 auto;">${initials}</div>`;
+          }
+        }
 
         // Aplicar regras de agendamento definidas pelo salão
         const allowSameDay = settings.allowSameDayBooking !== false;

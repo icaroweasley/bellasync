@@ -584,7 +584,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Atualiza identificação do usuário e salão na tela
   const nameEl = document.getElementById('userDisplayName');
   const roleEl = document.getElementById('userDisplayRole');
+  const userAvatarEl = document.getElementById('sidebarUserAvatar');
   const salonNameEl = document.getElementById('salonHeaderName');
+  const salonLogoEl = document.getElementById('sidebarSalonLogo');
   const publicLinkEl = document.getElementById('publicBookingLink');
 
   if (nameEl && currentUser) nameEl.innerText = currentUser.name;
@@ -597,7 +599,18 @@ document.addEventListener('DOMContentLoaded', async () => {
       roleEl.innerText = 'Profissional';
     }
   }
+
+  if (userAvatarEl && currentUser) {
+    const profMatch = currentUser.professionalId ? (state.professionals || []).find(p => p.id === currentUser.professionalId) : null;
+    const userPhoto = currentUser.avatar || profMatch?.avatar || getButterflyAvatar(currentUser.name);
+    userAvatarEl.src = userPhoto;
+  }
+
   if (salonNameEl && currentTenant) salonNameEl.innerText = currentTenant.name;
+  if (salonLogoEl && currentTenant) {
+    const sLogo = currentTenant.logo || currentTenant.photo || state.settings?.logo || state.settings?.photo;
+    if (sLogo) salonLogoEl.src = sLogo;
+  }
   if (publicLinkEl && currentTenant) {
     publicLinkEl.href = `/agendar?salao=${currentTenant.slug || currentTenant.id}`;
   }
@@ -1716,6 +1729,8 @@ function renderSettings(container, actions) {
   const notifyBday = state.settings.notifyBirthdays !== false;
   const notifySnd = state.settings.notifySound !== false;
 
+  const currentSalonLogo = state.settings.logo || state.settings.photo || currentTenant?.logo || currentTenant?.photo || '/images/logo.png';
+
   const salonCardHtml = `
     <div class="card-shell" style="margin-bottom: 20px;">
       <h3 style="margin-bottom: 16px;">Dados do Salão</h3>
@@ -1725,6 +1740,24 @@ function renderSettings(container, actions) {
           <span>Apenas <strong>gestores</strong> podem alterar os dados cadastrais do salão.</span>
         </div>
       ` : ''}
+
+      <div class="form-group" style="margin-bottom: 20px; border-bottom: 1px solid var(--border-peach); padding-bottom: 18px;">
+        <label style="font-weight: 700; color: var(--ink);">📸 Foto / Logo do Salão</label>
+        <p style="font-size: 0.82rem; color: var(--muted); margin-bottom: 12px;">Essa foto é exibida no cabeçalho do seu link público de agendamento online para os clientes.</p>
+        <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
+          <img id="settingSalonLogoPreview" src="${currentSalonLogo}" alt="Foto Salão" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 3px solid var(--orange); box-shadow: 0 4px 14px rgba(255,105,0,0.22);">
+          <div>
+            <label class="btn-falcon btn-secondary" style="cursor: pointer; padding: 6px 14px; font-size: 0.82rem; display: inline-flex; align-items: center; gap: 6px; ${!isManager ? 'opacity:0.5; pointer-events:none;' : ''}">
+              <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+              <span>Alterar Foto do Salão</span>
+              <input type="file" id="settingSalonLogoInput" accept="image/*" style="display: none;" onchange="handleSalonLogoSelect(event)" ${!isManager ? 'disabled' : ''}>
+            </label>
+            <input type="hidden" id="settingSalonLogoValue" value="${state.settings.logo || state.settings.photo || ''}">
+            <small style="display: block; margin-top: 6px; color: var(--muted); font-size: 0.75rem;">Formato recomendado: JPG, PNG ou WEBP. Compressão automática.</small>
+          </div>
+        </div>
+      </div>
+
       <div class="form-group" style="margin-bottom: 14px;">
         <label>Nome do Estabelecimento</label>
         <input type="text" class="form-control" id="cfgName" value="${state.settings.salonName || ''}" ${!isManager ? 'disabled' : ''}>
@@ -1812,11 +1845,15 @@ function renderSettings(container, actions) {
 }
 
 window.saveSettings = async function() {
+  const logoVal = document.getElementById('settingSalonLogoValue')?.value || state.settings.logo || state.settings.photo || '';
+
   const updated = {
     ...state.settings,
     salonName: isManager ? document.getElementById('cfgName').value : (state.settings.salonName || ''),
     phone: isManager ? document.getElementById('cfgPhone').value : (state.settings.phone || ''),
     address: isManager ? document.getElementById('cfgAddress').value : (state.settings.address || ''),
+    logo: isManager ? logoVal : (state.settings.logo || ''),
+    photo: isManager ? logoVal : (state.settings.photo || ''),
     intervalMinutes: isManager ? Number(document.getElementById('cfgInterval').value) : (state.settings.intervalMinutes || 30),
     notifyNewAppointments: document.getElementById('cfgNotifyNewAppointments').checked,
     notifyReminders: document.getElementById('cfgNotifyReminders').checked,
@@ -1840,6 +1877,10 @@ window.saveSettings = async function() {
   if (updated.salonName) {
     const hdrName = document.getElementById('salonHeaderName');
     if (hdrName) hdrName.innerText = updated.salonName;
+  }
+  if (updated.logo || updated.photo) {
+    const sLogoEl = document.getElementById('sidebarSalonLogo');
+    if (sLogoEl) sLogoEl.src = updated.logo || updated.photo;
   }
   asyncAlert('Configurações atualizadas com sucesso!');
 };
@@ -2557,6 +2598,20 @@ window.openNewProfessionalModal = function() {
     return;
   }
   const html = `
+    <div class="form-group" style="margin-bottom: 14px;">
+      <label>Foto de Perfil do Profissional</label>
+      <div style="display: flex; align-items: center; gap: 14px; margin-top: 6px;">
+        <img id="mProfAvatarPreview" src="/images/butterflies/butterfly-1.svg" style="width: 58px; height: 58px; border-radius: 50%; object-fit: cover; border: 2px solid var(--orange);">
+        <div>
+          <label class="btn-falcon btn-secondary" style="cursor: pointer; padding: 5px 12px; font-size: 0.8rem; display: inline-flex; align-items: center; gap: 6px;">
+            <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+            <span>Escolher Foto</span>
+            <input type="file" id="mProfAvatarInput" accept="image/*" style="display: none;" onchange="handleNewProfAvatarSelect(event)">
+          </label>
+          <input type="hidden" id="mProfAvatarValue" value="/images/butterflies/butterfly-1.svg">
+        </div>
+      </div>
+    </div>
     <div class="form-group">
       <label>Nome Completo</label>
       <input type="text" class="form-control" id="mProfName" placeholder="Ex: Juliana Castro">
@@ -2666,10 +2721,7 @@ window.openNewProfessionalModal = function() {
     const pixKey = document.getElementById('mProfPixKey').value.trim();
     const pixName = document.getElementById('mProfPixName').value.trim() || name;
 
-    if (!name) {
-      asyncAlert('Nome é obrigatório!');
-      return;
-    }
+    const avatar = document.getElementById('mProfAvatarValue')?.value || getButterflyAvatar(name);
 
     await tenantFetch('/api/professionals', {
       method: 'POST',
@@ -2677,6 +2729,7 @@ window.openNewProfessionalModal = function() {
       body: JSON.stringify({
         name,
         role,
+        avatar,
         phone,
         username,
         email,
@@ -2803,6 +2856,20 @@ window.openEditProfessionalModal = function(profId) {
   if (!prof) return asyncAlert('Profissional não encontrado.');
 
   const html = `
+    <div class="form-group" style="margin-bottom: 14px;">
+      <label>Foto de Perfil do Profissional</label>
+      <div style="display: flex; align-items: center; gap: 14px; margin-top: 6px;">
+        <img id="mEditProfAvatarPreview" src="${prof.avatar || getButterflyAvatar(prof.name || 'P')}" style="width: 58px; height: 58px; border-radius: 50%; object-fit: cover; border: 2px solid var(--orange);">
+        <div>
+          <label class="btn-falcon btn-secondary" style="cursor: pointer; padding: 5px 12px; font-size: 0.8rem; display: inline-flex; align-items: center; gap: 6px;">
+            <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+            <span>Escolher Foto</span>
+            <input type="file" id="mEditProfAvatarInput" accept="image/*" style="display: none;" onchange="handleEditProfAvatarSelect(event)">
+          </label>
+          <input type="hidden" id="mEditProfAvatarValue" value="${prof.avatar || ''}">
+        </div>
+      </div>
+    </div>
     <div class="form-group">
       <label>Nome Completo</label>
       <input type="text" class="form-control" id="mEditProfName" value="${prof.name || ''}">
@@ -2912,6 +2979,8 @@ window.openEditProfessionalModal = function(profId) {
       return;
     }
 
+    const avatar = document.getElementById('mEditProfAvatarValue')?.value || '';
+
     const payload = {
       name,
       role,
@@ -2925,7 +2994,8 @@ window.openEditProfessionalModal = function(profId) {
       pixBank,
       pixKeyType,
       pixKey,
-      pixName
+      pixName,
+      avatar
     };
     if (password) payload.password = password;
 
@@ -3885,4 +3955,181 @@ window.updateDefaultPrice = async function(currentPrice) {
     body: JSON.stringify({ defaultMonthlyPrice: Number(newPrice) })
   });
   renderSuperAdmin(document.getElementById('viewContainer'));
+};
+
+// -------------------------------------------------------------
+// HELPER COMPRESSOR E GERENCIAMENTO DE FOTOS DE PERFIL E SALÃO
+// -------------------------------------------------------------
+function compressImage(file, maxWidth = 500, maxHeight = 500, quality = 0.85) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > maxWidth) {
+            height = Math.round((height * maxWidth) / width);
+            width = maxWidth;
+          }
+        } else {
+          if (height > maxHeight) {
+            width = Math.round((width * maxHeight) / height);
+            height = maxHeight;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+
+        const mimeType = file.type === 'image/png' ? 'image/png' : 'image/jpeg';
+        resolve(canvas.toDataURL(mimeType, quality));
+      };
+      img.onerror = (err) => reject(err);
+      img.src = e.target.result;
+    };
+    reader.onerror = (err) => reject(err);
+    reader.readAsDataURL(file);
+  });
+}
+
+window.handleSalonLogoSelect = async function(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  try {
+    const compressed = await compressImage(file, 500, 500, 0.85);
+    const preview = document.getElementById('settingSalonLogoPreview');
+    const inputVal = document.getElementById('settingSalonLogoValue');
+    if (preview) preview.src = compressed;
+    if (inputVal) inputVal.value = compressed;
+  } catch (err) {
+    console.error("Erro ao carregar logo do salão:", err);
+    asyncAlert("Erro ao processar imagem da foto do salão.");
+  }
+};
+
+window.handleNewProfAvatarSelect = async function(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  try {
+    const compressed = await compressImage(file, 400, 400, 0.85);
+    const preview = document.getElementById('mProfAvatarPreview');
+    const inputVal = document.getElementById('mProfAvatarValue');
+    if (preview) preview.src = compressed;
+    if (inputVal) inputVal.value = compressed;
+  } catch (err) {
+    console.error("Erro ao carregar foto do profissional:", err);
+    asyncAlert("Erro ao processar foto do profissional.");
+  }
+};
+
+window.handleEditProfAvatarSelect = async function(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  try {
+    const compressed = await compressImage(file, 400, 400, 0.85);
+    const preview = document.getElementById('mEditProfAvatarPreview');
+    const inputVal = document.getElementById('mEditProfAvatarValue');
+    if (preview) preview.src = compressed;
+    if (inputVal) inputVal.value = compressed;
+  } catch (err) {
+    console.error("Erro ao carregar foto do profissional:", err);
+    asyncAlert("Erro ao processar foto do profissional.");
+  }
+};
+
+window.handleProfileAvatarSelect = async function(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  try {
+    const compressed = await compressImage(file, 400, 400, 0.85);
+    const preview = document.getElementById('profileAvatarPreview');
+    const inputVal = document.getElementById('profileAvatarValue');
+    if (preview) preview.src = compressed;
+    if (inputVal) inputVal.value = compressed;
+  } catch (err) {
+    console.error("Erro ao carregar foto de perfil:", err);
+    asyncAlert("Erro ao processar foto de perfil.");
+  }
+};
+
+window.openProfileModal = function() {
+  if (!currentUser) return;
+  const modal = document.getElementById('userProfileModal');
+  if (!modal) return;
+  
+  const nameInput = document.getElementById('profileNameInput');
+  const passInput = document.getElementById('profilePasswordInput');
+  const preview = document.getElementById('profileAvatarPreview');
+  const valueInput = document.getElementById('profileAvatarValue');
+
+  if (nameInput) nameInput.value = currentUser.name || '';
+  if (passInput) passInput.value = '';
+
+  const profMatch = currentUser.professionalId ? (state.professionals || []).find(p => p.id === currentUser.professionalId) : null;
+  const userPhoto = currentUser.avatar || profMatch?.avatar || getButterflyAvatar(currentUser.name || 'P');
+  if (preview) preview.src = userPhoto;
+  if (valueInput) valueInput.value = userPhoto;
+
+  modal.classList.add('open');
+};
+
+window.closeProfileModal = function() {
+  const modal = document.getElementById('userProfileModal');
+  if (modal) modal.classList.remove('open');
+};
+
+window.saveUserProfile = async function() {
+  if (!currentUser) return;
+  const name = document.getElementById('profileNameInput').value.trim();
+  const password = document.getElementById('profilePasswordInput').value.trim();
+  const avatar = document.getElementById('profileAvatarValue').value;
+
+  if (!name) {
+    await asyncAlert("Por favor digite o seu nome.");
+    return;
+  }
+
+  try {
+    const res = await fetch('/api/auth/profile', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-tenant-id': currentTenant ? currentTenant.id : 'tenant_metamorfose',
+        'x-user-id': currentUser.id
+      },
+      body: JSON.stringify({
+        userId: currentUser.id,
+        name,
+        password,
+        avatar
+      })
+    });
+    const updatedUser = await res.json();
+    if (res.ok) {
+      currentUser = updatedUser;
+      localStorage.setItem('salon_user', JSON.stringify(updatedUser));
+
+      const nameEl = document.getElementById('userDisplayName');
+      if (nameEl) nameEl.innerText = updatedUser.name;
+
+      const userAvatarEl = document.getElementById('sidebarUserAvatar');
+      if (userAvatarEl) userAvatarEl.src = updatedUser.avatar;
+
+      closeProfileModal();
+      await asyncAlert("Perfil e foto atualizados com sucesso!", "Sucesso", "success");
+      await loadInitialData();
+    } else {
+      await asyncAlert(updatedUser.error || "Erro ao atualizar perfil.");
+    }
+  } catch (err) {
+    console.error(err);
+    await asyncAlert("Erro de conexão ao salvar perfil.");
+  }
 };
