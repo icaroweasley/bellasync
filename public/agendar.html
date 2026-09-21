@@ -3,7 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>Agendamento Online — Metamorfose Hair</title>
+  <title>Agendamento Online — BellaSync</title>
+  <link rel="icon" type="image/png" href="/images/logo.png?v=20260920_v222">
+  <link rel="apple-touch-icon" href="/images/icon-512.png?v=20260920_v222">
+  <link rel="manifest" href="/manifest.json?v=20260920_v222">
+  <meta name="theme-color" content="#ff6900">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -25,84 +29,71 @@
     }
     .booking-header {
       text-align: center;
-      padding: 32px 26px;
-      background: rgba(255, 255, 255, 0.75);
-      backdrop-filter: blur(24px) saturate(1.25);
-      -webkit-backdrop-filter: blur(24px) saturate(1.25);
-      border-radius: 28px;
-      border: 1px solid rgba(255, 255, 255, 0.5);
-      box-shadow: 0 20px 48px -20px rgba(0, 0, 0, 0.22), 0 4px 16px rgba(0, 0, 0, 0.04);
-      margin-bottom: 22px;
+      margin-bottom: 24px;
+      background: rgba(255, 255, 255, 0.7);
+      backdrop-filter: blur(12px);
+      border: 1.5px solid rgba(255, 255, 255, 0.8);
+      border-radius: 24px;
+      padding: 24px 16px;
+      box-shadow: 0 10px 30px -5px rgba(0,0,0,0.05);
     }
     .booking-header h1 {
-      font-size: 1.45rem;
-      font-weight: 700;
+      font-size: 1.6rem;
+      font-weight: var(--weight-bold);
       color: var(--ink);
-      letter-spacing: -0.02em;
+      margin-top: 4px;
     }
     .booking-header p {
-      font-size: 0.9rem;
       color: var(--muted);
-      margin-top: 6px;
+      font-size: 0.9rem;
     }
     .accordion-category {
-      background: rgba(255, 255, 255, 0.72);
-      backdrop-filter: blur(20px) saturate(1.2);
-      -webkit-backdrop-filter: blur(20px) saturate(1.2);
-      border: 1px solid rgba(255, 255, 255, 0.45);
-      border-radius: 20px;
-      margin-bottom: 14px;
+      background: rgba(255, 255, 255, 0.85);
+      backdrop-filter: blur(10px);
+      border-radius: 16px;
+      margin-bottom: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.9);
+      box-shadow: 0 4px 14px -3px rgba(0,0,0,0.04);
       overflow: hidden;
-      box-shadow: 0 8px 24px -10px rgba(0, 0, 0, 0.12);
     }
     .category-header {
-      padding: 18px 24px;
+      padding: 16px 20px;
+      font-weight: var(--weight-bold);
+      font-size: 1.05rem;
+      color: var(--ink);
       display: flex;
-      align-items: center;
       justify-content: space-between;
+      align-items: center;
       cursor: pointer;
-      font-weight: 600;
-      background: transparent;
-      transition: background 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-    }
-    .category-header:hover {
-      background: rgba(255, 255, 255, 0.4);
+      user-select: none;
+      background: rgba(255, 255, 255, 0.5);
     }
     .category-body {
-      padding: 0 18px 18px;
       display: none;
-      flex-direction: column;
-      gap: 12px;
+      padding: 8px 16px 16px 16px;
+      border-top: 1px solid var(--border-peach);
     }
     .category-body.open {
-      display: flex;
+      display: block;
     }
     .service-book-card {
-      padding: 16px 20px;
-      background: rgba(255, 255, 255, 0.65);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      border-radius: 16px;
-      border: 1px solid rgba(255, 255, 255, 0.5);
       display: flex;
       justify-content: space-between;
       align-items: center;
-      transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), background 0.2s;
+      padding: 12px 0;
+      border-bottom: 1px dashed var(--border-peach);
     }
-    .service-book-card:hover {
-      background: rgba(255, 255, 255, 0.88);
-      transform: translateY(-1px);
+    .service-book-card:last-child {
+      border-bottom: none;
     }
     .service-book-info h4 {
-      font-size: 1rem;
-      font-weight: 600;
+      font-size: 0.98rem;
+      font-weight: var(--weight-semibold);
       color: var(--ink);
     }
     .service-book-info span {
       font-size: 0.85rem;
       color: var(--muted);
-      display: block;
-      margin-top: 3px;
     }
     .service-book-cta {
       text-align: right;
@@ -141,12 +132,6 @@
       <h1 id="bSalonName">Metamorfose Hair</h1>
       <p id="bSalonPhone">(67) 98424-8821</p>
       <small style="color:var(--muted); margin-top:6px; display:block;">Agende online com disponibilidade em tempo real</small>
-    </div>
-
-    <!-- Nossa Equipe de Profissionais -->
-    <div id="bSalonTeamSection" style="margin-bottom: 24px; display: none;">
-      <h3 style="font-size: 1.05rem; font-weight: var(--weight-bold); margin-bottom: 12px; padding-left: 4px;">Nossa Equipe</h3>
-      <div id="bSalonTeamGrid" style="display: flex; gap: 12px; overflow-x: auto; padding: 4px 4px 12px 4px; -webkit-overflow-scrolling: touch;"></div>
     </div>
 
     <h3 style="font-size: 1.15rem; font-weight: var(--weight-bold); margin-bottom: 14px; padding-left: 4px;">Selecione o Serviço Desejado</h3>
@@ -412,24 +397,6 @@
       return getButterflyAvatar(prof.name || 'P');
     }
 
-    function renderTeamCards() {
-      const teamSection = document.getElementById('bSalonTeamSection');
-      const teamGrid = document.getElementById('bSalonTeamGrid');
-      if (!teamSection || !teamGrid) return;
-      if (!professionals || professionals.length === 0) {
-        teamSection.style.display = 'none';
-        return;
-      }
-      teamSection.style.display = 'block';
-      teamGrid.innerHTML = professionals.map(p => `
-        <div style="flex: 0 0 auto; text-align: center; width: 90px; background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.8); border-radius: 16px; padding: 12px 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.04);">
-          <img src="${getProfAvatarUrl(p)}" alt="${p.name}" style="width: 58px; height: 58px; border-radius: 50%; object-fit: cover; border: 2.5px solid var(--orange); box-shadow: 0 4px 12px rgba(255,105,0,0.22); margin: 0 auto 8px auto; display: block;">
-          <div style="font-size: 0.82rem; font-weight: 700; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${p.name.split(' ')[0]}</div>
-          <div style="font-size: 0.72rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px;">${p.role || 'Profissional'}</div>
-        </div>
-      `).join('');
-    }
-
     function onProfSelectChange() {
       updateSelectedProfCard();
       fetchAvailableSlots();
@@ -463,24 +430,31 @@
 
       accordion.innerHTML = categories.map((cat, idx) => {
         const catServices = services.filter(s => (s.category || 'Outros') === cat);
-        const servicesHtml = catServices.map(s => `
-          <div class="service-book-card">
-            <div class="service-book-info">
-              <h4>${s.name}</h4>
-              <span style="display:inline-flex; align-items:center; gap:4px;">
-                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-                Duração: <strong>${s.durationMinutes} min</strong>
-              </span>
-              ${s.observation ? `<small style="color:#999; font-size:0.75rem;">${s.observation}</small>` : ''}
+        const servicesHtml = catServices.map(s => {
+          const isPkg = s.isPackage || (s.sessionsCount && s.sessionsCount > 1) || cat.toLowerCase().includes('pacote');
+          const sessionsNum = s.sessionsCount || 3;
+          return `
+            <div class="service-book-card">
+              <div class="service-book-info">
+                <h4 style="display:flex; align-items:center; gap:8px;">
+                  <span>${s.name}</span>
+                  ${isPkg ? `<span style="background:#0f172a; color:#fff; font-size:0.68rem; font-weight:700; padding:2px 8px; border-radius:12px; letter-spacing:0.02em;">Pacote ${sessionsNum}x Sessões</span>` : ''}
+                </h4>
+                <span style="display:inline-flex; align-items:center; gap:4px;">
+                  <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                  Duração: <strong>${s.durationMinutes} min por sessão</strong>
+                </span>
+                ${s.observation ? `<small style="color:#999; font-size:0.75rem;">${s.observation}</small>` : ''}
+              </div>
+              <div class="service-book-cta">
+                <span class="item-badge-price">R$ ${s.price.toFixed(2)}</span>
+                <button class="btn-falcon btn-success" style="padding: 7px 16px; font-size:0.82rem;" onclick="openBookingModal('${s.id}')">
+                  ${isPkg ? 'Comprar Pacote' : 'Reservar'}
+                </button>
+              </div>
             </div>
-            <div class="service-book-cta">
-              <span class="item-badge-price">R$ ${s.price.toFixed(2)}</span>
-              <button class="btn-falcon btn-success" style="padding: 7px 16px; font-size:0.82rem;" onclick="openBookingModal('${s.id}')">
-                Reservar
-              </button>
-            </div>
-          </div>
-        `).join('');
+          `;
+        }).join('');
 
         return `
           <div class="accordion-category">

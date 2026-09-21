@@ -1442,6 +1442,40 @@ app.post('/api/appointments', (req, res) => {
 
   db.appointments.push(newApp);
 
+  // Se o serviço agendado for um Pacote de Múltiplas Sessões, gera o controle de sessões (Check-list) no CRM
+  if (serviceId) {
+    const servObj = (db.services || []).find(s => s.id === serviceId && s.tenantId === tenantId);
+    if (servObj && (servObj.isPackage || (servObj.sessionsCount && servObj.sessionsCount > 1) || (servObj.category && servObj.category.toLowerCase().includes('pacote')) || (servObj.name && servObj.name.toLowerCase().includes('pacote')))) {
+      const totalSessions = servObj.sessionsCount || 3;
+      const sessions = [];
+      for (let i = 1; i <= totalSessions; i++) {
+        sessions.push({
+          sessionNum: i,
+          completed: false,
+          completedAt: null,
+          professionalName: null,
+          notes: i === 1 ? `Sessão 1 agendada para ${date} às ${startTime}` : ''
+        });
+      }
+      if (!db.packages) db.packages = [];
+      db.packages.push({
+        id: 'pkg_' + Date.now(),
+        tenantId: tenantId,
+        clientId: clientId || null,
+        clientName: clientName || 'Cliente',
+        clientPhone: clientPhone || '',
+        packageName: servObj.name,
+        totalSessions,
+        completedCount: 0,
+        price: price || servObj.price,
+        notes: `Comprado online em ${date}`,
+        status: 'ativo',
+        createdAt: date || new Date().toISOString().split('T')[0],
+        sessions
+      });
+    }
+  }
+
   // Se o cliente ainda não existir na base do salão, já cadastra automaticamente
   if (clientName && clientPhone) {
     const existingClient = (db.clients || []).find(
@@ -1831,7 +1865,7 @@ app.get('/api/packages', (req, res) => {
   res.json(list);
 });
 
-app.post('/api/packages', requireManager, (req, res) => {
+app.post('/api/packages', (req, res) => {
   const db = getDb();
   const tenantId = getTenantId(req);
   const totalSessions = Math.max(1, parseInt(req.body.totalSessions, 10) || 5);
@@ -2025,7 +2059,19 @@ app.post('/api/commissions/pay/:id', (req, res) => {
   }
 });
 
-// Rota fallback para agendamento online público ou admin
+// Rotas Principais de Páginas e CRM
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/home.html'));
+});
+
+app.get('/home', (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/home.html'));
+});
+
+app.get('/app', (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/index.html'));
+});
+
 app.get('/agendar', (req, res) => {
   res.sendFile(path.join(__dirname, '../public/agendar.html'));
 });

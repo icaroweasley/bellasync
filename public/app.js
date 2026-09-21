@@ -642,11 +642,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     navSuperAdmin.style.display = 'flex';
   }
 
-  // Esconde Balanço & Metas e Configurações no sidebar para quem não é Gestor
+  // Esconde Balanço & Metas no sidebar para quem não é Gestor (Configurações fica visível para Notificações)
   const navBalanco = document.getElementById('navItemBalanco');
   const navConfig = document.getElementById('navItemConfiguracoes');
   if (navBalanco) navBalanco.style.display = isManager ? 'flex' : 'none';
-  if (navConfig) navConfig.style.display = isManager ? 'flex' : 'none';
+  if (navConfig) navConfig.style.display = 'flex';
 
   // Se o usuário logado for profissional com ID associado, foca nele por padrão
   if (currentUser && currentUser.professionalId) {
@@ -944,12 +944,7 @@ function renderView(view) {
       renderBalanco(container, actions);
       break;
     case 'configuracoes':
-      if (!isManager) {
-        asyncAlert('As Configurações do Estabelecimento são de acesso exclusivo para Gestores.');
-        renderView('agenda');
-        return;
-      }
-      title.innerText = 'Configurações do Salão';
+      title.innerText = isManager ? 'Configurações do Salão' : 'Notificações & Preferências';
       renderSettings(container, actions);
       break;
     case 'superadmin':
@@ -1534,11 +1529,6 @@ function renderPackages(container, actions) {
 }
 
 window.openNewPackageModal = function() {
-  if (!isManager) {
-    asyncAlert('Apenas gestores têm permissão para cadastrar novos pacotes.');
-    return;
-  }
-
   const clientOptions = (state.clients || []).map(c => `<option value="${c.name}">${c.name} (${c.phone || 'Sem telefone'})</option>`).join('');
 
   const html = `
@@ -2091,6 +2081,16 @@ function renderSettings(container, actions) {
       </div>
     </div>
   `;
+
+  if (!isManager) {
+    container.innerHTML = `
+      ${notificationCardHtml}
+      <div style="margin-top: 20px;">
+        <button class="btn-falcon btn-primary" onclick="saveSettings()">Salvar Preferências de Notificação</button>
+      </div>
+    `;
+    return;
+  }
 
   container.innerHTML = `
     ${salonCardHtml}
