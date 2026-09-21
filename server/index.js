@@ -12,7 +12,8 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ limit: '10mb', extended: true }));
 app.use(express.static(path.join(__dirname, '../public')));
 
 // Configuração do VAPID para Web Push em segundo plano com celular fechado
@@ -359,6 +360,9 @@ app.post('/api/auth/login', (req, res) => {
     slug: 'default'
   };
 
+  const profAvatar = user.professionalId ? (db.professionals.find(p => p.id === user.professionalId)?.avatar) : null;
+  const userAvatar = user.avatar || profAvatar || getButterflyAvatar(user.name);
+
   res.json({
     token: 'token_' + user.id + '_' + Date.now(),
     user: {
@@ -368,9 +372,61 @@ app.post('/api/auth/login', (req, res) => {
       email: user.email,
       role: user.role,
       tenantId: user.tenantId,
-      professionalId: user.professionalId || null
+      professionalId: user.professionalId || null,
+      avatar: userAvatar
     },
     tenant: tenant
+  });
+});
+
+// Endpoint para o usuário logado (gestor ou profissional) atualizar seu perfil (foto, nome, senha)
+app.put('/api/auth/profile', (req, res) => {
+  const db = getDb();
+  const tenantId = getTenantId(req);
+  const { userId, name, avatar, password } = req.body;
+
+  const user = (db.users || []).find(u => u.id === userId || (u.tenantId === tenantId && req.headers['x-user-id'] === u.id));
+  const targetUser = user || (db.users || []).find(u => u.tenantId === tenantId);
+
+  if (!targetUser) {
+    return res.status(404).json({ error: 'Usuário não encontrado.' });
+  }
+
+  if (name) targetUser.name = name;
+  if (avatar !== undefined) targetUser.avatar = avatar;
+  if (password) targetUser.password = password;
+
+  // Se o usuário possui perfil profissional associado, sincroniza nome e avatar no profissional
+  if (targetUser.professionalId) {
+    const prof = (db.professionals || []).find(p => p.id === targetUser.professionalId && p.tenantId === tenantId);
+    if (prof) {
+      if (name) prof.name = name;
+      if (avatar !== undefined) prof.avatar = avatar;
+    }
+  }
+
+  // Se for gestor (admin), atualiza avatar do gestor no salão se necessário
+  if (targetUser.role === 'admin' || targetUser.role === 'superadmin') {
+    const tenant = (db.tenants || []).find(t => t.id === tenantId);
+    if (tenant) {
+      if (!tenant.settings) tenant.settings = {};
+      if (avatar !== undefined) tenant.settings.managerAvatar = avatar;
+    }
+  }
+
+  saveDb(db);
+
+  const updatedProfAvatar = targetUser.professionalId ? (db.professionals.find(p => p.id === targetUser.professionalId)?.avatar) : null;
+
+  res.json({
+    id: targetUser.id,
+    name: targetUser.name,
+    username: targetUser.username || targetUser.email,
+    email: targetUser.email,
+    role: targetUser.role,
+    tenantId: targetUser.tenantId,
+    professionalId: targetUser.professionalId || null,
+    avatar: targetUser.avatar || updatedProfAvatar || getButterflyAvatar(targetUser.name)
   });
 });
 
@@ -460,6 +516,8 @@ app.get('/api/public/salon/:slug', (req, res) => {
       slug: tenant.slug,
       phone: tenant.phone,
       address: tenant.address,
+      logo: tenant.logo || tenant.settings?.logo || '',
+      photo: tenant.photo || tenant.settings?.photo || '',
       settings: tenant.settings
     },
     professionals,
@@ -868,6 +926,8 @@ app.get('/api/settings', (req, res) => {
     slug: tenant.slug,
     phone: tenant.phone,
     address: tenant.address,
+    logo: tenant.logo || tenant.settings?.logo || '',
+    photo: tenant.photo || tenant.settings?.photo || '',
     ...(tenant.settings || {})
   });
 });
@@ -880,6 +940,16 @@ app.put('/api/settings', requireManager, (req, res) => {
     if (req.body.salonName) tenant.name = req.body.salonName;
     if (req.body.phone) tenant.phone = req.body.phone;
     if (req.body.address) tenant.address = req.body.address;
+    if (req.body.logo !== undefined) {
+      tenant.logo = req.body.logo;
+      if (!tenant.settings) tenant.settings = {};
+      tenant.settings.logo = req.body.logo;
+    }
+    if (req.body.photo !== undefined) {
+      tenant.photo = req.body.photo;
+      if (!tenant.settings) tenant.settings = {};
+      tenant.settings.photo = req.body.photo;
+    }
     tenant.settings = { ...tenant.settings, ...req.body };
     saveDb(db);
     res.json({
@@ -887,6 +957,8 @@ app.put('/api/settings', requireManager, (req, res) => {
       slug: tenant.slug,
       phone: tenant.phone,
       address: tenant.address,
+      logo: tenant.logo || tenant.settings?.logo || '',
+      photo: tenant.photo || tenant.settings?.photo || '',
       ...tenant.settings
     });
   } else {
@@ -937,7 +1009,8 @@ app.post('/api/professionals', requireManager, (req, res) => {
       username: loginUser.toLowerCase(),
       email: req.body.email || `${loginUser}@salao.local`,
       password: req.body.password,
-      role: newProf.access === 'Gestor' ? 'admin' : 'professional'
+      role: newProf.access === 'Gestor' ? 'admin' : 'professional',
+      avatar: newProf.avatar
     });
   }
 
@@ -955,6 +1028,7 @@ app.put('/api/professionals/:id', requireManager, (req, res) => {
 
   if (req.body.name) prof.name = req.body.name;
   if (req.body.role) prof.role = req.body.role;
+  if (req.body.avatar !== undefined) prof.avatar = req.body.avatar;
   if (req.body.phone !== undefined) prof.phone = req.body.phone;
   if (req.body.email !== undefined) prof.email = req.body.email;
   if (req.body.access) prof.access = req.body.access;
@@ -972,6 +1046,7 @@ app.put('/api/professionals/:id', requireManager, (req, res) => {
   const user = (db.users || []).find(u => u.professionalId === prof.id && u.tenantId === tenantId);
   if (user) {
     user.name = prof.name;
+    if (prof.avatar) user.avatar = prof.avatar;
     user.role = prof.access === 'Gestor' ? 'admin' : 'professional';
     if (req.body.password) {
       user.password = req.body.password;

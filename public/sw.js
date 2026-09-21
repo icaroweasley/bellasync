@@ -1,5 +1,5 @@
 // Service Worker para BellaSync PWA e Push Notifications
-const CACHE_NAME = 'bellasync-cache-v20260918_v109';
+const CACHE_NAME = 'bellasync-cache-v20260921_v224';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
