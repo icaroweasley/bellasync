@@ -328,7 +328,7 @@
         localStorage.setItem('salon_tenant', JSON.stringify(data.tenant));
 
         // Redireciona para o painel principal
-        window.location.href = '/';
+        window.location.href = '/app';
       } catch (err) {
         console.error(err);
         await asyncAlert('Erro de comunicação com o servidor.', 'Erro de Conexão', 'error');
@@ -389,7 +389,7 @@
         localStorage.setItem('salon_tenant', JSON.stringify(loginData.tenant));
 
         await asyncAlert(`Salão ${salonName} cadastrado com sucesso! Redirecionando para o seu novo painel.`, 'Sucesso', 'success');
-        window.location.href = '/';
+        window.location.href = '/app';
       } catch (err) {
         console.error(err);
         await asyncAlert('Erro de comunicação com o servidor.', 'Erro de Conexão', 'error');
@@ -398,9 +398,9 @@
       }
     }
 
-    // Se já estiver logado, redireciona para a home
+    // Se já estiver logado, redireciona para o CRM
     if (localStorage.getItem('salon_user')) {
-      window.location.href = '/';
+      window.location.href = '/app';
     }
 
     window.asyncAlert = function(message, title = 'Aviso', type = 'info') {
