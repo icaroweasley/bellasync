@@ -455,7 +455,7 @@ function sanitizeDb(data) {
   }
   const defaultTenantId = data.tenants[0].id;
 
-  const collections = ['professionals', 'services', 'clients', 'appointments', 'products', 'expenses', 'commissions'];
+  const collections = ['professionals', 'services', 'clients', 'appointments', 'products', 'expenses', 'commissions', 'packages'];
   for (const col of collections) {
     if (Array.isArray(data[col])) {
       for (const item of data[col]) {

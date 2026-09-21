@@ -1685,11 +1685,31 @@ app.get('/api/expenses', (req, res) => {
   const db = getDb();
   const tenantId = getTenantId(req);
   const { monthYear } = req.query;
-  let list = (db.expenses || []).filter(e => e.tenantId === tenantId);
+  let allExpenses = (db.expenses || []).filter(e => e.tenantId === tenantId);
+
   if (monthYear) {
-    list = list.filter(e => e.monthYear === monthYear);
+    const list = [];
+    allExpenses.forEach(e => {
+      if (e.monthYear === monthYear) {
+        list.push(e);
+      } else if (e.isRecurring && e.monthYear < monthYear) {
+        // Gera item virtual para o mês solicitado
+        const day = (e.dueDate || '').split('-')[2] || '05';
+        const virtualDueDate = `${monthYear}-${day}`;
+        list.push({
+          ...e,
+          id: `${e.id}_rec_${monthYear}`,
+          originalId: e.id,
+          dueDate: virtualDueDate,
+          monthYear: monthYear,
+          status: e.status || 'pendente'
+        });
+      }
+    });
+    return res.json(list);
   }
-  res.json(list);
+
+  res.json(allExpenses);
 });
 
 app.post('/api/expenses', requireManager, (req, res) => {
@@ -1702,6 +1722,7 @@ app.post('/api/expenses', requireManager, (req, res) => {
   const paymentType = req.body.paymentType || 'Pix';
   const category = req.body.category || 'Geral';
   const status = req.body.status || 'pendente';
+  const isRecurring = !!req.body.isRecurring;
 
   if (!db.expenses) db.expenses = [];
 
@@ -1714,14 +1735,12 @@ app.post('/api/expenses', requireManager, (req, res) => {
     const baseDay = parseInt(dayStr, 10);
 
     for (let i = 1; i <= installments; i++) {
-      // Ajustar data mês a mês
       const targetDate = new Date(baseYear, baseMonth + (i - 1), baseDay);
       const yyyy = targetDate.getFullYear();
       const mm = String(targetDate.getMonth() + 1).padStart(2, '0');
       const dd = String(targetDate.getDate()).padStart(2, '0');
       const expDueDate = `${yyyy}-${mm}-${dd}`;
 
-      // Ajusta centavos na última parcela se houver dízima
       const currentAmount = (i === installments) 
         ? +(totalAmount - (installmentAmount * (installments - 1))).toFixed(2)
         : installmentAmount;
@@ -1737,7 +1756,8 @@ app.post('/api/expenses', requireManager, (req, res) => {
         status: status,
         monthYear: expDueDate.substring(0, 7),
         installmentIndex: i,
-        totalInstallments: installments
+        totalInstallments: installments,
+        isRecurring: false
       };
       db.expenses.push(newExp);
       createdExpenses.push(newExp);
@@ -1756,7 +1776,8 @@ app.post('/api/expenses', requireManager, (req, res) => {
     amount: totalAmount,
     dueDate: baseDueDate,
     status: status,
-    monthYear: baseDueDate.substring(0, 7)
+    monthYear: baseDueDate.substring(0, 7),
+    isRecurring: isRecurring
   };
   db.expenses.push(newExp);
   saveDb(db);
@@ -1766,7 +1787,8 @@ app.post('/api/expenses', requireManager, (req, res) => {
 app.put('/api/expenses/:id', requireManager, (req, res) => {
   const db = getDb();
   const tenantId = getTenantId(req);
-  const exp = (db.expenses || []).find(e => e.id === req.params.id && e.tenantId === tenantId);
+  const targetId = req.params.id.split('_rec_')[0];
+  const exp = (db.expenses || []).find(e => (e.id === req.params.id || e.id === targetId) && e.tenantId === tenantId);
   if (!exp) {
     return res.status(404).json({ error: 'Despesa não encontrada.' });
   }
@@ -1780,6 +1802,7 @@ app.put('/api/expenses/:id', requireManager, (req, res) => {
     exp.monthYear = exp.dueDate.substring(0, 7);
   }
   if (req.body.status) exp.status = req.body.status;
+  if (req.body.isRecurring !== undefined) exp.isRecurring = !!req.body.isRecurring;
 
   saveDb(db);
   res.json(exp);
@@ -1788,13 +1811,113 @@ app.put('/api/expenses/:id', requireManager, (req, res) => {
 app.delete('/api/expenses/:id', requireManager, (req, res) => {
   const db = getDb();
   const tenantId = getTenantId(req);
-  const idx = (db.expenses || []).findIndex(e => e.id === req.params.id && e.tenantId === tenantId);
+  const targetId = req.params.id.split('_rec_')[0];
+  const idx = (db.expenses || []).findIndex(e => (e.id === req.params.id || e.id === targetId) && e.tenantId === tenantId);
   if (idx === -1) {
     return res.status(404).json({ error: 'Despesa não encontrada.' });
   }
   const removed = db.expenses.splice(idx, 1)[0];
   saveDb(db);
   res.json({ message: 'Despesa excluída com sucesso.', removed });
+});
+
+// -------------------------------------------------------------
+// PACOTES DE SERVIÇOS (TICKAGEM POR SESSÕES / CHECK-LIST)
+// -------------------------------------------------------------
+app.get('/api/packages', (req, res) => {
+  const db = getDb();
+  const tenantId = getTenantId(req);
+  const list = (db.packages || []).filter(p => p.tenantId === tenantId);
+  res.json(list);
+});
+
+app.post('/api/packages', requireManager, (req, res) => {
+  const db = getDb();
+  const tenantId = getTenantId(req);
+  const totalSessions = Math.max(1, parseInt(req.body.totalSessions, 10) || 5);
+  const packageName = (req.body.packageName || 'Pacote de Serviços').trim();
+  const clientName = (req.body.clientName || 'Cliente').trim();
+  const clientId = req.body.clientId || null;
+  const price = Number(req.body.price) || 0;
+  const notes = req.body.notes || '';
+
+  if (!db.packages) db.packages = [];
+
+  const sessions = [];
+  for (let i = 1; i <= totalSessions; i++) {
+    sessions.push({
+      sessionNum: i,
+      completed: false,
+      completedAt: null,
+      professionalName: null,
+      notes: ''
+    });
+  }
+
+  const newPkg = {
+    id: 'pkg_' + Date.now(),
+    tenantId,
+    clientId,
+    clientName,
+    packageName,
+    totalSessions,
+    completedCount: 0,
+    price,
+    notes,
+    status: 'ativo',
+    createdAt: new Date().toISOString().split('T')[0],
+    sessions
+  };
+
+  db.packages.push(newPkg);
+  saveDb(db);
+  res.status(201).json(newPkg);
+});
+
+app.put('/api/packages/:id/session', (req, res) => {
+  const db = getDb();
+  const tenantId = getTenantId(req);
+  const pkg = (db.packages || []).find(p => p.id === req.params.id && p.tenantId === tenantId);
+
+  if (!pkg) {
+    return res.status(404).json({ error: 'Pacote não encontrado.' });
+  }
+
+  const { sessionNum, completed, professionalName, notes } = req.body;
+  const session = pkg.sessions.find(s => s.sessionNum === Number(sessionNum));
+
+  if (!session) {
+    return res.status(404).json({ error: 'Sessão do pacote não encontrada.' });
+  }
+
+  session.completed = !!completed;
+  session.completedAt = completed ? new Date().toISOString() : null;
+  if (professionalName !== undefined) session.professionalName = professionalName;
+  if (notes !== undefined) session.notes = notes;
+
+  pkg.completedCount = pkg.sessions.filter(s => s.completed).length;
+  if (pkg.completedCount === pkg.totalSessions) {
+    pkg.status = 'concluido';
+  } else {
+    pkg.status = 'ativo';
+  }
+
+  saveDb(db);
+  res.json(pkg);
+});
+
+app.delete('/api/packages/:id', requireManager, (req, res) => {
+  const db = getDb();
+  const tenantId = getTenantId(req);
+  const idx = (db.packages || []).findIndex(p => p.id === req.params.id && p.tenantId === tenantId);
+
+  if (idx === -1) {
+    return res.status(404).json({ error: 'Pacote não encontrado.' });
+  }
+
+  const removed = db.packages.splice(idx, 1)[0];
+  saveDb(db);
+  res.json({ message: 'Pacote excluído com sucesso.', removed });
 });
 
 // 8. Comissões & Vales

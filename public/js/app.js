@@ -25,7 +25,7 @@ function getButterflyAvatar(name) {
   return `/images/butterflies/butterfly-${index}.svg`;
 }
 
-const VALID_VIEWS = ['agenda', 'comissões', 'profissionais', 'clientes', 'servicos', 'produtos', 'despesas', 'aniversarios', 'balanco', 'configuracoes', 'superadmin'];
+const VALID_VIEWS = ['agenda', 'comissões', 'profissionais', 'clientes', 'servicos', 'pacotes', 'produtos', 'despesas', 'aniversarios', 'balanco', 'configuracoes', 'superadmin'];
 
 function getInitialView() {
   try {
@@ -631,6 +631,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     navSuperAdmin.style.display = 'flex';
   }
 
+  // Esconde Balanço & Metas e Configurações no sidebar para quem não é Gestor
+  const navBalanco = document.getElementById('navItemBalanco');
+  const navConfig = document.getElementById('navItemConfiguracoes');
+  if (navBalanco) navBalanco.style.display = isManager ? 'flex' : 'none';
+  if (navConfig) navConfig.style.display = isManager ? 'flex' : 'none';
+
   // Se o usuário logado for profissional com ID associado, foca nele por padrão
   if (currentUser && currentUser.professionalId) {
     selectedProfessionalId = currentUser.professionalId;
@@ -692,7 +698,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 async function loadInitialData() {
   try {
-    const [settings, profs, servs, clis, apps, prods, exps, comms] = await Promise.all([
+    const [settings, profs, servs, clis, apps, prods, exps, comms, pkgs] = await Promise.all([
       tenantFetch('/api/settings').then(r => r.json()),
       tenantFetch('/api/professionals').then(r => r.json()),
       tenantFetch('/api/services').then(r => r.json()),
@@ -700,7 +706,8 @@ async function loadInitialData() {
       tenantFetch('/api/appointments').then(r => r.json()),
       tenantFetch('/api/products').then(r => r.json()),
       tenantFetch('/api/expenses').then(r => r.json()),
-      tenantFetch('/api/commissions').then(r => r.json())
+      tenantFetch('/api/commissions').then(r => r.json()),
+      tenantFetch('/api/packages').then(r => r.json()).catch(() => [])
     ]);
 
     state = {
@@ -711,7 +718,8 @@ async function loadInitialData() {
       appointments: apps,
       products: prods,
       expenses: exps,
-      commissions: comms
+      commissions: comms,
+      packages: pkgs || []
     };
 
     checkAndNotifyNewAppointments(apps);
@@ -899,6 +907,10 @@ function renderView(view) {
       title.innerText = 'Serviços';
       renderServices(container, actions);
       break;
+    case 'pacotes':
+      title.innerText = 'Pacotes de Serviços & Check-list';
+      renderPackages(container, actions);
+      break;
     case 'produtos':
       title.innerText = 'Produtos & Estoque';
       renderProducts(container, actions);
@@ -912,10 +924,20 @@ function renderView(view) {
       renderBirthdays(container, actions);
       break;
     case 'balanco':
+      if (!isManager) {
+        asyncAlert('O Balanço e Faturamento Geral do salão são de acesso exclusivo para Gestores.');
+        renderView('agenda');
+        return;
+      }
       title.innerText = 'Balanço Mensal & Metas';
       renderBalanco(container, actions);
       break;
     case 'configuracoes':
+      if (!isManager) {
+        asyncAlert('As Configurações do Estabelecimento são de acesso exclusivo para Gestores.');
+        renderView('agenda');
+        return;
+      }
       title.innerText = 'Configurações do Salão';
       renderSettings(container, actions);
       break;
@@ -1425,6 +1447,195 @@ function renderServices(container, actions) {
     <div class="data-list">${servsHtml}</div>
   `;
 }
+
+// 5.5 Render Pacotes de Serviços (Check-list / Tickagem por Sessões)
+function renderPackages(container, actions) {
+  actions.innerHTML = isManager ? `
+    <button class="btn-falcon btn-primary" onclick="openNewPackageModal()">+ Criar / Vender Pacote</button>
+  ` : '';
+
+  if (!state.packages || state.packages.length === 0) {
+    container.innerHTML = `
+      <div class="card-shell" style="text-align: center; padding: 36px 20px;">
+        <div style="background: rgba(255,105,0,0.1); width: 56px; height: 56px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 14px;">
+          <svg width="28" height="28" fill="none" stroke="var(--orange)" stroke-width="2" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+        </div>
+        <h4 style="margin-bottom: 6px; color: var(--ink); font-weight:700;">Nenhum Pacote de Serviços Ativo</h4>
+        <p style="color: var(--muted); font-size: 0.88rem; max-width: 420px; margin: 0 auto 18px;">
+          Venda pacotes com múltiplas sessões (ex: Alisamento em 5 dias, Tratamento semanal) e acompanhe o check-list de OKs de cada sessão realizada!
+        </p>
+        ${isManager ? `<button class="btn-falcon btn-primary" onclick="openNewPackageModal()">Criar Primeiro Pacote</button>` : ''}
+      </div>
+    `;
+    return;
+  }
+
+  const pkgCards = state.packages.map(pkg => {
+    const pct = Math.round((pkg.completedCount / pkg.totalSessions) * 100);
+    const sessionsHtml = (pkg.sessions || []).map(s => `
+      <div style="background: ${s.completed ? '#f0fdf4' : '#ffffff'}; border: 1px solid ${s.completed ? '#bbf7d0' : '#e2e8f0'}; border-radius: 10px; padding: 8px 12px; display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 6px;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <button class="btn-falcon ${s.completed ? 'btn-success' : 'btn-secondary'}" onclick="togglePackageSessionTick('${pkg.id}', ${s.sessionNum}, ${!s.completed})" style="padding: 4px 10px; font-size: 0.78rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;">
+            ${s.completed ? '✓ Concluído' : '○ Marcar OK'}
+          </button>
+          <span style="font-size: 0.85rem; font-weight: 600; color: var(--ink);">Sessão ${s.sessionNum} de ${pkg.totalSessions}</span>
+        </div>
+        <div style="font-size: 0.76rem; color: var(--muted); text-align: right;">
+          ${s.completed ? `Realizado ${s.completedAt ? 'em ' + new Date(s.completedAt).toLocaleDateString('pt-BR') : ''} ${s.professionalName ? 'por ' + s.professionalName : ''}` : 'Pendente'}
+        </div>
+      </div>
+    `).join('');
+
+    return `
+      <div class="card-shell" style="margin-bottom: 16px;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 10px; margin-bottom: 10px;">
+          <div>
+            <h3 style="margin: 0; font-size: 1.05rem; color: var(--ink); font-weight: 700;">${pkg.packageName}</h3>
+            <p style="margin: 2px 0 0 0; font-size: 0.85rem; color: var(--muted);">Cliente: <strong>${pkg.clientName}</strong> ${pkg.price ? '• R$ ' + Number(pkg.price).toFixed(2).replace('.', ',') : ''}</p>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="background: ${pkg.status === 'concluido' ? '#dcfce7' : '#fff7ed'}; color: ${pkg.status === 'concluido' ? '#15803d' : '#c2410c'}; font-size: 0.78rem; font-weight: 700; padding: 4px 10px; border-radius: 999px;">
+              ${pkg.status === 'concluido' ? '✓ Pacote Concluído' : `${pkg.completedCount}/${pkg.totalSessions} Sessões`}
+            </span>
+            ${isManager ? `
+              <button class="btn-card-action delete" onclick="deletePackage('${pkg.id}')" title="Excluir Pacote">
+                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+              </button>
+            ` : ''}
+          </div>
+        </div>
+
+        <div style="background: #e2e8f0; height: 8px; border-radius: 999px; overflow: hidden; margin-bottom: 12px;">
+          <div style="background: var(--orange); height: 100%; width: ${pct}%; transition: width 0.3s;"></div>
+        </div>
+
+        ${pkg.notes ? `<p style="font-size: 0.8rem; color: var(--muted); margin-bottom: 8px; background: #f8fafc; padding: 6px 10px; border-radius: 8px;">📝 Obs: ${pkg.notes}</p>` : ''}
+
+        <div style="margin-top: 10px;">
+          <strong style="font-size: 0.82rem; color: var(--muted); display: block; margin-bottom: 4px;">Tickagem de Sessões:</strong>
+          ${sessionsHtml}
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  container.innerHTML = `<div class="data-list">${pkgCards}</div>`;
+}
+
+window.openNewPackageModal = function() {
+  if (!isManager) {
+    asyncAlert('Apenas gestores têm permissão para cadastrar novos pacotes.');
+    return;
+  }
+
+  const clientOptions = (state.clients || []).map(c => `<option value="${c.name}">${c.name} (${c.phone || 'Sem telefone'})</option>`).join('');
+
+  const html = `
+    <div class="form-group">
+      <label>Cliente</label>
+      <select class="form-control" id="mPkgClientSelect" onchange="document.getElementById('mPkgClientCustom').value = this.value">
+        <option value="">-- Selecione uma Cliente da Lista --</option>
+        ${clientOptions}
+      </select>
+      <input type="text" class="form-control" id="mPkgClientCustom" placeholder="Ou digite o nome da cliente" style="margin-top: 6px;">
+    </div>
+    <div class="form-group">
+      <label>Nome do Pacote / Procedimento</label>
+      <input type="text" class="form-control" id="mPkgName" placeholder="Ex: Pacote Alisamento 5 Dias, Tratamento Cronograma">
+    </div>
+    <div class="form-group">
+      <label>Quantidade de Sessões / Etapas</label>
+      <input type="number" class="form-control" id="mPkgSessions" value="5" min="1" max="30">
+    </div>
+    <div class="form-group">
+      <label>Valor Total do Pacote (R$)</label>
+      <input type="number" class="form-control" id="mPkgPrice" placeholder="Ex: 350.00" step="0.50">
+    </div>
+    <div class="form-group">
+      <label>Observações / Recomendações Técnicas</label>
+      <textarea class="form-control" id="mPkgNotes" rows="2" placeholder="Instruções para os profissionais durante as sessões"></textarea>
+    </div>
+  `;
+
+  openModal('Vender / Criar Pacote de Serviços', html, async () => {
+    const clientName = document.getElementById('mPkgClientCustom').value.trim() || document.getElementById('mPkgClientSelect').value;
+    const packageName = document.getElementById('mPkgName').value.trim();
+    const totalSessions = parseInt(document.getElementById('mPkgSessions').value, 10) || 5;
+    const price = Number(document.getElementById('mPkgPrice').value) || 0;
+    const notes = document.getElementById('mPkgNotes').value.trim();
+
+    if (!clientName || !packageName) {
+      asyncAlert('Nome da Cliente e Nome do Pacote são obrigatórios.');
+      return;
+    }
+
+    const clientMatch = (state.clients || []).find(c => c.name === clientName);
+
+    const res = await tenantFetch('/api/packages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        clientId: clientMatch ? clientMatch.id : null,
+        clientName,
+        packageName,
+        totalSessions,
+        price,
+        notes
+      })
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      asyncAlert(err.error || 'Erro ao criar pacote.');
+      return;
+    }
+
+    closeModal();
+    await loadInitialData();
+    renderView('pacotes');
+  });
+};
+
+window.togglePackageSessionTick = async function(pkgId, sessionNum, completed) {
+  const profName = currentUser ? currentUser.name : 'Profissional';
+  const res = await tenantFetch(`/api/packages/${pkgId}/session`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      sessionNum,
+      completed,
+      professionalName: profName
+    })
+  });
+
+  if (!res.ok) {
+    const err = await res.json();
+    asyncAlert(err.error || 'Erro ao atualizar sessão do pacote.');
+    return;
+  }
+
+  await loadInitialData();
+  renderView('pacotes');
+};
+
+window.deletePackage = async function(pkgId) {
+  if (!isManager) {
+    await asyncAlert('Apenas gestores têm permissão para excluir pacotes.', 'Acesso Restrito', 'warning');
+    return;
+  }
+  const confirmed = await asyncConfirm('Deseja realmente excluir este pacote e seu histórico de sessões?', 'Excluir Pacote', { isDanger: true });
+  if (!confirmed) return;
+
+  const res = await tenantFetch(`/api/packages/${pkgId}`, { method: 'DELETE' });
+  if (!res.ok) {
+    const err = await res.json();
+    await asyncAlert(err.error || 'Erro ao excluir pacote.', 'Erro', 'error');
+    return;
+  }
+
+  await loadInitialData();
+  renderView('pacotes');
+};
 
 // 6. Render Produtos
 function renderProducts(container, actions) {
@@ -2494,12 +2705,17 @@ window.openNewClientModal = function() {
       <label>Data de Nascimento</label>
       <input type="date" class="form-control" id="mCliBday">
     </div>
+    <div class="form-group">
+      <label>Anotações e Histórico (Química, Alergias, Fórmulas)</label>
+      <textarea class="form-control" id="mCliNotes" rows="3" placeholder="Ex: Fórmula 6.0 + 20vol, alérgica a esmalte tal, prefere café sem açúcar..."></textarea>
+    </div>
   `;
 
   openModal('Cadastrar Cliente', html, async () => {
     const name = document.getElementById('mCliName').value;
     const phone = document.getElementById('mCliPhone').value;
     const birthday = document.getElementById('mCliBday').value;
+    const notes = document.getElementById('mCliNotes').value;
 
     if (!name) {
       asyncAlert('O nome do cliente é obrigatório!');
@@ -2509,7 +2725,7 @@ window.openNewClientModal = function() {
     await tenantFetch('/api/clients', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, phone, birthday })
+      body: JSON.stringify({ name, phone, birthday, notes })
     });
 
     closeModal();
@@ -2527,7 +2743,7 @@ window.openNewExpenseModal = function() {
   const html = `
     <div class="form-group">
       <label>Descrição</label>
-      <input type="text" class="form-control" id="mExpDesc" placeholder="Ex: Conta de Luz / Produtos">
+      <input type="text" class="form-control" id="mExpDesc" placeholder="Ex: Conta de Luz / Aluguel">
     </div>
     <div class="form-group">
       <label>Categoria</label>
@@ -2550,7 +2766,13 @@ window.openNewExpenseModal = function() {
         <option value="Dinheiro">Dinheiro</option>
       </select>
     </div>
-    <div class="form-group" id="mExpInstallmentsWrapper" style="display:none; background: #fff7ed; padding: 12px; border-radius: 10px; border: 1px solid #ffedd5;">
+    <div class="form-group" style="display:flex; align-items:center; gap:8px; margin-top:8px;">
+      <input type="checkbox" id="mExpRecurring">
+      <label for="mExpRecurring" style="margin:0; font-weight:600; color:var(--ink); font-size:0.88rem; cursor:pointer;">
+        Despesa Recorrente (Repetir todo mês automaticamente)
+      </label>
+    </div>
+    <div class="form-group" id="mExpInstallmentsWrapper" style="display:none; background: #fff7ed; padding: 12px; border-radius: 10px; border: 1px solid #ffedd5; margin-top:8px;">
       <label style="color: var(--orange); font-weight: 600;">Parcelamento</label>
       <select class="form-control" id="mExpInstallments" onchange="updateExpenseInstallmentPreview()">
         <option value="1">À vista (1x)</option>
@@ -2578,6 +2800,7 @@ window.openNewExpenseModal = function() {
     const amount = Number(document.getElementById('mExpAmount').value);
     const dueDate = document.getElementById('mExpDueDate').value || today;
     const paymentType = document.getElementById('mExpType').value;
+    const isRecurring = document.getElementById('mExpRecurring').checked;
     const installments = (paymentType === 'Cartão' || paymentType === 'Boleto')
       ? (parseInt(document.getElementById('mExpInstallments').value, 10) || 1)
       : 1;
@@ -2590,7 +2813,7 @@ window.openNewExpenseModal = function() {
     await tenantFetch('/api/expenses', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ description, category, amount, dueDate, paymentType, installments, status: 'pendente' })
+      body: JSON.stringify({ description, category, amount, dueDate, paymentType, installments, isRecurring, status: 'pendente' })
     });
 
     closeModal();
@@ -3280,8 +3503,8 @@ window.openEditClientModal = function(clientId) {
       <input type="date" class="form-control" id="mEditCliBday" value="${cli.birthday || ''}">
     </div>
     <div class="form-group">
-      <label>Observações</label>
-      <input type="text" class="form-control" id="mEditCliNotes" value="${cli.notes || ''}" placeholder="Preferências, alergias, etc.">
+      <label>Anotações e Histórico (Química, Alergias, Fórmulas de Tintura)</label>
+      <textarea class="form-control" id="mEditCliNotes" rows="3" placeholder="Fórmulas, alergias, química anterior, preferências...">${cli.notes || ''}</textarea>
     </div>
   `;
 
