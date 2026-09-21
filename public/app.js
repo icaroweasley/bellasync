@@ -15,6 +15,16 @@ if (!currentUser || !currentTenant) {
   window.location.href = '/login';
 }
 
+function getButterflyAvatar(name) {
+  let hash = 0;
+  const str = String(name || 'Profissional');
+  for (let i = 0; i < str.length; i++) {
+    hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const index = (Math.abs(hash) % 8) + 1;
+  return `/images/butterflies/butterfly-${index}.svg`;
+}
+
 const VALID_VIEWS = ['agenda', 'comissões', 'profissionais', 'clientes', 'servicos', 'produtos', 'despesas', 'aniversarios', 'balanco', 'configuracoes', 'superadmin'];
 
 function getInitialView() {
