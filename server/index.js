@@ -529,6 +529,22 @@ app.get('/api/public/salon/:slug', (req, res) => {
 // ASSINATURAS (SAAS) & MERCADO PAGO
 // -------------------------------------------------------------
 
+function calculateTenantSubscriptionPrice(tenant, db) {
+  if (!tenant) return { basePrice: 49.90, profCount: 0, extraProfs: 0, extraPrice: 0, totalPrice: 49.90 };
+  const profCount = (db.professionals || []).filter(p => p.tenantId === tenant.id).length;
+  const basePrice = Number(tenant.subscription?.baseMonthlyPrice || tenant.subscription?.monthlyPrice) || Number(db.platformSettings?.defaultMonthlyPrice) || 49.90;
+  const extraProfs = Math.max(0, profCount - 5);
+  const extraPrice = extraProfs * 10.00;
+  const totalPrice = basePrice + extraPrice;
+  return {
+    basePrice,
+    profCount,
+    extraProfs,
+    extraPrice,
+    totalPrice
+  };
+}
+
 // Obter status de assinatura do salão atual
 app.get('/api/subscription/status', (req, res) => {
   const db = getDb();
@@ -539,10 +555,12 @@ app.get('/api/subscription/status', (req, res) => {
     return res.status(404).json({ error: 'Salão não encontrado.' });
   }
 
+  const priceInfo = calculateTenantSubscriptionPrice(tenant, db);
+
   const sub = tenant.subscription || {
     status: 'active',
     isLifetime: false,
-    monthlyPrice: 49.90,
+    monthlyPrice: priceInfo.totalPrice,
     expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
   };
 
@@ -553,7 +571,12 @@ app.get('/api/subscription/status', (req, res) => {
       isLifetime: true,
       daysRemaining: 9999,
       warningLevel: 'none',
-      message: ''
+      message: '',
+      basePrice: priceInfo.basePrice,
+      profCount: priceInfo.profCount,
+      extraProfs: priceInfo.extraProfs,
+      extraPrice: priceInfo.extraPrice,
+      monthlyPrice: priceInfo.totalPrice
     });
   }
 
@@ -584,7 +607,11 @@ app.get('/api/subscription/status', (req, res) => {
   res.json({
     status: isBlocked ? 'expired' : sub.status,
     isLifetime: false,
-    monthlyPrice: sub.monthlyPrice || db.platformSettings?.defaultMonthlyPrice || 49.90,
+    basePrice: priceInfo.basePrice,
+    profCount: priceInfo.profCount,
+    extraProfs: priceInfo.extraProfs,
+    extraPrice: priceInfo.extraPrice,
+    monthlyPrice: priceInfo.totalPrice,
     expiresAt: sub.expiresAt,
     daysRemaining: diffDays,
     warningLevel,
@@ -608,7 +635,8 @@ app.post('/api/subscription/create-pix', async (req, res) => {
       return res.status(400).json({ error: 'Este salão possui acesso vitalício. Nenhuma cobrança pode ser gerada.' });
     }
 
-    const price = Number(tenant.subscription?.monthlyPrice) || Number(db.platformSettings?.defaultMonthlyPrice) || 49.90;
+    const priceInfo = calculateTenantSubscriptionPrice(tenant, db);
+    const price = priceInfo.totalPrice;
     const mpToken = db.platformSettings?.mpAccessToken;
 
     if (!mpToken) {
@@ -655,7 +683,11 @@ app.post('/api/subscription/create-pix', async (req, res) => {
       qrCode: pointOfInteraction?.qr_code,
       qrCodeBase64: pointOfInteraction?.qr_code_base64,
       ticketUrl: pointOfInteraction?.ticket_url,
-      amount: price
+      amount: price,
+      basePrice: priceInfo.basePrice,
+      profCount: priceInfo.profCount,
+      extraProfs: priceInfo.extraProfs,
+      extraPrice: priceInfo.extraPrice
     });
   } catch (err) {
     console.error('Erro ao gerar Pix Mercado Pago:', err);
@@ -678,7 +710,8 @@ app.post('/api/subscription/create-card-plan', async (req, res) => {
       return res.status(400).json({ error: 'Este salão possui acesso vitalício. Nenhuma assinatura pode ser cobrada.' });
     }
 
-    const price = Number(tenant.subscription?.monthlyPrice) || Number(db.platformSettings?.defaultMonthlyPrice) || 49.90;
+    const priceInfo = calculateTenantSubscriptionPrice(tenant, db);
+    const price = priceInfo.totalPrice;
     const mpToken = db.platformSettings?.mpAccessToken;
 
     if (!mpToken) {
@@ -977,6 +1010,12 @@ app.get('/api/professionals', (req, res) => {
 app.post('/api/professionals', requireManager, (req, res) => {
   const db = getDb();
   const tenantId = getTenantId(req);
+
+  const existingProfs = (db.professionals || []).filter(p => p.tenantId === tenantId);
+  if (existingProfs.length >= 10) {
+    return res.status(400).json({ error: 'O salão atingiu o limite máximo de 10 profissionais cadastrados.' });
+  }
+
   const newProf = {
     id: 'prof_' + Date.now(),
     tenantId: tenantId,

@@ -1289,7 +1289,15 @@ window.payCommission = async function(id) {
 
 // 3. Render Profissionais
 function renderProfessionals(container, actions) {
+  const profCount = state.professionals.length;
+  const extraProfs = Math.max(0, profCount - 5);
+  const basePrice = Number(currentSubscriptionData?.basePrice || currentSubscriptionData?.monthlyPrice) || 49.90;
+  const totalMonthly = basePrice + (extraProfs * 10);
+
   actions.innerHTML = isManager ? `
+    <span style="font-size:0.84rem; font-weight:500; color:var(--muted); background:rgba(255,255,255,0.85); padding:6px 14px; border-radius:999px; border:1px solid rgba(0,0,0,0.06); height:38px; display:inline-flex; align-items:center; box-sizing:border-box;">
+      <strong style="color:var(--ink); margin-right:4px;">${profCount} / 10</strong> Profissionais
+    </span>
     <button class="btn-falcon btn-primary" onclick="openNewProfessionalModal()">+ Adicionar Profissional</button>
   ` : '';
 
@@ -1324,6 +1332,23 @@ function renderProfessionals(container, actions) {
   `).join('');
 
   container.innerHTML = `
+    <div style="background: rgba(255, 105, 0, 0.05); border: 1px solid rgba(255, 105, 0, 0.18); border-radius: 16px; padding: 14px 18px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+      <div style="display: flex; align-items: center; gap: 12px; flex: 1; min-width: 260px;">
+        <div style="background: rgba(255, 105, 0, 0.12); width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+          <svg width="22" height="22" fill="none" stroke="var(--orange)" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+        </div>
+        <div>
+          <h5 style="margin: 0; font-size: 0.92rem; color: var(--ink); font-weight: 700;">Regra de Assinatura por Profissionais</h5>
+          <p style="margin: 2px 0 0 0; font-size: 0.8rem; color: var(--muted); line-height: 1.4;">
+            O plano inclui até <strong>5 profissionais</strong>. Do 6º ao 10º profissional (máximo 10), acrescenta <strong>+R$ 10,00/mês</strong> por cada profissional.
+          </p>
+        </div>
+      </div>
+      <div style="text-align: right; background: #ffffff; padding: 8px 16px; border-radius: 12px; border: 1px solid rgba(0,0,0,0.06); box-shadow: 0 2px 8px rgba(0,0,0,0.03);">
+        <small style="display: block; font-size: 0.72rem; color: var(--muted); font-weight: 500;">Mensalidade do Salão (${profCount}/10 profs)</small>
+        <strong style="font-size: 1.05rem; color: var(--orange); font-weight: 800;">R$ ${totalMonthly.toFixed(2).replace('.', ',')} <span style="font-size: 0.75rem; font-weight: normal; color: var(--muted);">/ mês</span></strong>
+      </div>
+    </div>
     <div class="data-list">${profsHtml}</div>
   `;
 }
@@ -2607,7 +2632,29 @@ window.openNewProfessionalModal = function() {
     asyncAlert('Apenas gestores têm permissão para adicionar profissionais.');
     return;
   }
+
+  const currentCount = state.professionals.length;
+  if (currentCount >= 10) {
+    asyncAlert('Seu salão já atingiu o limite máximo de 10 profissionais cadastrados.');
+    return;
+  }
+
+  const isExtra = currentCount >= 5;
+  const nextCount = currentCount + 1;
+  const baseMonthly = Number(currentSubscriptionData?.basePrice || currentSubscriptionData?.monthlyPrice) || 49.90;
+  const nextMonthly = baseMonthly + (Math.max(0, nextCount - 5) * 10);
+
+  const priceNoticeHtml = isExtra ? `
+    <div style="background: #fff7ed; border: 1px solid #fed7aa; border-radius: 12px; padding: 10px 14px; margin-bottom: 14px; color: #c2410c; font-size: 0.84rem; display: flex; align-items: center; gap: 10px;">
+      <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+      <div>
+        <strong>Aviso de Assinatura:</strong> Este será o <strong>${nextCount}º profissional</strong> do seu salão. A mensalidade do salão passará a ser de <strong>R$ ${nextMonthly.toFixed(2).replace('.', ',')}/mês</strong> (+R$ 10,00/mês).
+      </div>
+    </div>
+  ` : '';
+
   const html = `
+    ${priceNoticeHtml}
     <div class="form-group" style="margin-bottom: 14px;">
       <label>Foto de Perfil do Profissional</label>
       <div style="display: flex; align-items: center; gap: 14px; margin-top: 6px;">
