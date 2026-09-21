@@ -193,15 +193,26 @@ window.asyncAlert = function(message, title = 'Aviso', type = 'info') {
     modal.classList.add('active');
     updateBodyScrollLock();
 
-    function onOk() {
+    let resolved = false;
+    function cleanup() {
+      if (resolved) return;
+      resolved = true;
       modal.classList.remove('open');
       modal.classList.remove('active');
       updateBodyScrollLock();
       if (okBtn) okBtn.removeEventListener('click', onOk);
+      modal.removeEventListener('click', onBackdrop);
+      window.removeEventListener('keydown', onKeyDown);
       resolve();
     }
 
+    function onOk() { cleanup(); }
+    function onBackdrop(e) { if (e.target === modal) cleanup(); }
+    function onKeyDown(e) { if (e.key === 'Enter' || e.key === 'Escape') cleanup(); }
+
     if (okBtn) okBtn.addEventListener('click', onOk);
+    modal.addEventListener('click', onBackdrop);
+    window.addEventListener('keydown', onKeyDown);
   });
 };
 
