@@ -978,17 +978,17 @@ window.openExpenseModal = () => window.openNewExpenseModal && window.openNewExpe
 
 function renderEmptyStateHtml({ icon, title, description, buttonText, buttonOnClick }) {
   return `
-    <div class="card-shell" style="text-align: center; padding: 44px 24px; max-width: 520px; margin: 20px auto; border-radius: 20px; background: #ffffff; box-shadow: 0 4px 20px rgba(0,0,0,0.04);">
-      <div style="background: rgba(255, 105, 0, 0.1); width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; border: 1px solid rgba(255, 105, 0, 0.2);">
+    <div class="card-shell" style="text-align: center; padding: 36px 18px; width: 100%; max-width: 520px; margin: 16px auto; border-radius: 20px; background: #ffffff; box-shadow: 0 4px 20px rgba(0,0,0,0.04); box-sizing: border-box; overflow: hidden;">
+      <div style="background: rgba(255, 105, 0, 0.1); width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; border: 1px solid rgba(255, 105, 0, 0.2); flex-shrink: 0;">
         ${icon || ''}
       </div>
-      <h3 style="margin: 0 0 8px 0; color: var(--ink, #0f172a); font-weight: 700; font-size: 1.15rem;">${title || ''}</h3>
-      <p style="color: var(--muted, #64748b); font-size: 0.88rem; line-height: 1.5; margin: 0 0 20px 0;">
+      <h3 style="margin: 0 0 8px 0; color: var(--ink, #0f172a); font-weight: 700; font-size: 1.12rem; word-break: break-word;">${title || ''}</h3>
+      <p style="color: var(--muted, #64748b); font-size: 0.86rem; line-height: 1.5; margin: 0 0 18px 0; word-break: break-word;">
         ${description || ''}
       </p>
       ${buttonText && buttonOnClick ? `
-        <button class="btn-falcon btn-primary" onclick="${buttonOnClick}" style="margin: 0 auto; display: inline-flex; align-items: center; gap: 8px;">
-          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+        <button class="btn-falcon btn-primary" onclick="${buttonOnClick}" style="margin: 0 auto; display: inline-flex; align-items: center; justify-content: center; gap: 8px; max-width: 100%; white-space: normal; text-align: center; padding: 10px 18px; line-height: 1.3;">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" style="flex-shrink:0;"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
           <span>${buttonText}</span>
         </button>
       ` : ''}
@@ -2099,41 +2099,39 @@ function renderPackages(container, actions) {
   );
   const clientPackages = state.packages || [];
 
-  // Botões na barra superior
-  if (actions && isManager) {
-    actions.innerHTML = `
-      <div style="display:flex; align-items:center; gap:8px;">
-        <button class="btn-falcon btn-primary" onclick="openNewPackageModal()" style="height:38px; display:inline-flex; align-items:center; gap:6px; font-size:0.84rem; padding:0 14px;">
-          <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-          Novo Pacote
-        </button>
-        ${catalogPackages.length > 0 ? `
-          <button class="btn-falcon btn-secondary" onclick="openSellPackageModal()" title="Vender pacote para uma cliente no balcão" style="height:38px; display:inline-flex; align-items:center; gap:6px; font-size:0.84rem; padding:0 12px;">
-            🏷️ Vender p/ Cliente
-          </button>
-        ` : ''}
-      </div>
-    `;
-  }
-
   const activeTab = window.currentPackageTab;
 
-  // Barra de Abas interna da seção Pacotes
+  // Barra de Abas interna da seção Pacotes (100% responsiva para mobile e desktop)
   const tabsHeaderHtml = `
-    <div style="display: flex; gap: 8px; margin-bottom: 18px; border-bottom: 1px solid var(--border-peach); padding-bottom: 12px; flex-wrap: wrap; align-items: center; justify-content: space-between;">
-      <div style="display: flex; gap: 6px; background: rgba(0,0,0,0.04); padding: 4px; border-radius: 12px;">
-        <button class="btn-falcon ${activeTab === 'catalogo' ? 'btn-primary' : 'btn-secondary'}" onclick="switchPackageTab('catalogo')" style="padding: 7px 16px; font-size: 0.84rem; font-weight: 600; border-radius: 8px;">
-          📦 Catálogo de Pacotes (${catalogPackages.length})
-        </button>
-        <button class="btn-falcon ${activeTab === 'checklist' ? 'btn-primary' : 'btn-secondary'}" onclick="switchPackageTab('checklist')" style="padding: 7px 16px; font-size: 0.84rem; font-weight: 600; border-radius: 8px;">
-          📋 Check-list das Clientes (${clientPackages.length})
-        </button>
+    <div style="width: 100%; max-width: 100%; margin-bottom: 16px; box-sizing: border-box;">
+      <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+        <div style="display: flex; gap: 6px; background: rgba(0,0,0,0.06); padding: 4px; border-radius: 12px; width: 100%; max-width: 420px; box-sizing: border-box;">
+          <button type="button" class="btn-falcon ${activeTab === 'catalogo' ? 'btn-primary' : 'btn-secondary'}" onclick="switchPackageTab('catalogo')" style="flex: 1; min-width: 0; padding: 8px 6px; font-size: 0.82rem; font-weight: 600; border-radius: 8px; justify-content: center; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+            📦 Catálogo (${catalogPackages.length})
+          </button>
+          <button type="button" class="btn-falcon ${activeTab === 'checklist' ? 'btn-primary' : 'btn-secondary'}" onclick="switchPackageTab('checklist')" style="flex: 1; min-width: 0; padding: 8px 6px; font-size: 0.82rem; font-weight: 600; border-radius: 8px; justify-content: center; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+            📋 Check-list (${clientPackages.length})
+          </button>
+        </div>
+        ${isManager ? `
+          <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
+            <button class="btn-falcon btn-primary" onclick="openNewPackageModal()" style="padding: 7px 14px; font-size: 0.82rem; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">
+              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+              <span>Novo Pacote</span>
+            </button>
+            ${catalogPackages.length > 0 ? `
+              <button class="btn-falcon btn-secondary" onclick="openSellPackageModal()" style="padding: 7px 12px; font-size: 0.82rem; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">
+                <span>🏷️ Vender p/ Cliente</span>
+              </button>
+            ` : ''}
+          </div>
+        ` : ''}
       </div>
-      <div style="font-size:0.8rem; color:var(--muted);">
+      <p style="font-size: 0.78rem; color: var(--muted); margin: 4px 0 0 0; line-height: 1.35; word-break: break-word;">
         ${activeTab === 'catalogo' 
-          ? 'Pacotes ofertados no link de agendamento online e no balcão' 
+          ? 'Pacotes do salão disponíveis no agendamento online e no balcão' 
           : 'Controle de OKs das sessões realizadas pelas clientes'}
-      </div>
+      </p>
     </div>
   `;
 

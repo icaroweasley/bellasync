@@ -43,6 +43,13 @@
   -webkit-tap-highlight-color: transparent;
 }
 
+html {
+  width: 100%;
+  max-width: 100vw;
+  overflow-x: hidden;
+  box-sizing: border-box;
+}
+
 body {
   background-color: var(--page);
   color: var(--ink);
@@ -50,10 +57,13 @@ body {
   font-weight: var(--weight-regular);
   -webkit-font-smoothing: antialiased;
   text-rendering: geometricPrecision;
+  width: 100%;
+  max-width: 100vw;
   min-height: 100vh;
   display: flex;
   overflow-x: hidden;
   position: relative;
+  box-sizing: border-box;
 }
 
 /* Background Colorido Claro com Bolhas em Movimento e Blur (Animated Gradient Orbs) */
@@ -283,9 +293,12 @@ body {
 /* Main Area */
 .main-content {
   flex: 1;
+  min-width: 0;
+  max-width: 100%;
   display: flex;
   flex-direction: column;
   overflow-y: auto;
+  overflow-x: hidden;
   position: relative;
   background: transparent;
 }
@@ -1307,9 +1320,12 @@ input[type="date"].form-control {
     -webkit-backdrop-filter: none !important;
   }
 
-  html, body, .main-content, .view-container, .data-list, .schedule-table {
+  html, body, .app-container, .main-content, .view-container, .data-list, .schedule-table {
     -webkit-overflow-scrolling: touch;
     overscroll-behavior-y: auto !important;
+    overflow-x: hidden !important;
+    max-width: 100vw !important;
+    box-sizing: border-box !important;
   }
 
   .animated-bg {
