@@ -1266,8 +1266,6 @@ function renderAgenda(container, actions) {
       </div>
     </div>
   `;
-    </div>
-  `;
 
   // Filtro de profissionais (com opção Todos inclusa)
   const isAllSelected = selectedProfessionalId === 'all' || !selectedProfessionalId;
