@@ -362,14 +362,14 @@ body {
   display: none !important;
 }
 
-.top-bar-actions > div,
-.agenda-actions-wrapper {
+.desktop-topbar-actions {
   display: flex !important;
   align-items: center !important;
-  gap: 10px !important;
-  height: 100% !important;
-  flex-wrap: nowrap !important;
-  flex-shrink: 0 !important;
+  gap: 8px !important;
+}
+
+.mobile-topbar-actions {
+  display: none !important;
 }
 
 /* Container pílula elegante do Datepicker no top-bar */
@@ -1223,6 +1223,7 @@ input[type="date"].form-control {
     border-bottom: 1px solid rgba(0, 0, 0, 0.08) !important;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04) !important;
     z-index: 50 !important;
+    overflow: visible !important;
   }
 
   .top-bar-container {
@@ -1241,7 +1242,7 @@ input[type="date"].form-control {
   .top-bar-title {
     display: flex !important;
     align-items: center !important;
-    gap: 10px !important;
+    gap: 8px !important;
     overflow: hidden !important;
     flex: 1 !important;
   }
@@ -1253,6 +1254,7 @@ input[type="date"].form-control {
     white-space: nowrap !important;
     overflow: hidden !important;
     text-overflow: ellipsis !important;
+    display: block !important;
   }
 
   .menu-toggle-btn {
@@ -1260,6 +1262,8 @@ input[type="date"].form-control {
     align-items: center;
     justify-content: center;
     padding: 6px;
+    min-width: 36px;
+    height: 36px;
     border-radius: 8px;
     background: rgba(0, 0, 0, 0.04);
     flex-shrink: 0;
@@ -1286,7 +1290,6 @@ input[type="date"].form-control {
     z-index: 1000 !important;
   }
 
-  /* Barra de Ações/Calendário disposta embaixo da top-bar no mobile */
   .top-bar-actions {
     display: flex !important;
     width: 100% !important;
@@ -1305,6 +1308,16 @@ input[type="date"].form-control {
     display: none !important;
   }
 
+  .desktop-topbar-actions {
+    display: none !important;
+  }
+
+  .mobile-topbar-actions {
+    display: flex !important;
+    align-items: center !important;
+    flex-shrink: 0 !important;
+  }
+
   .agenda-actions-wrapper {
     width: 100% !important;
     display: flex !important;
@@ -1314,30 +1327,19 @@ input[type="date"].form-control {
     flex-shrink: 0 !important;
   }
 
-  .agenda-date-wrapper {
+  .agenda-header-datepicker {
     flex: 1 !important;
     width: 100% !important;
-    max-width: 100% !important;
-    justify-content: center !important;
-    height: 40px !important;
-    min-height: 40px !important;
-    background: #ffffff !important;
-    border: 1px solid #cbd5e1 !important;
-    border-radius: 12px !important;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 4px !important;
   }
 
-  .agenda-date-picker {
-    width: 100% !important;
-    text-align: center !important;
-    font-weight: 600 !important;
-    font-size: 0.9rem !important;
-  }
-
-  .btn-date-arrow {
+  .btn-date-nav {
     height: 40px !important;
-    min-height: 40px !important;
-    padding: 0 10px !important;
+    min-width: 40px !important;
+    padding: 0 !important;
     border-radius: 12px !important;
     background: #ffffff !important;
     border: 1px solid #cbd5e1 !important;
@@ -1348,6 +1350,73 @@ input[type="date"].form-control {
     flex-shrink: 0 !important;
   }
 
+  .btn-date-picker-trigger {
+    flex: 1 !important;
+    width: 100% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 6px !important;
+    height: 40px !important;
+    padding: 0 10px !important;
+    background: #ffffff !important;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 12px !important;
+    font-size: 0.88rem !important;
+    font-weight: 600 !important;
+    color: var(--ink, #0f172a) !important;
+    cursor: pointer !important;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04) !important;
+  }
+
+  .btn-date-picker-trigger svg {
+    width: 14px !important;
+    height: 14px !important;
+  }
+
+  #mobileActionsTrigger {
+    padding: 6px !important;
+    min-width: 36px !important;
+    height: 36px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border-radius: 10px !important;
+    flex-shrink: 0 !important;
+  }
+
+  #mobileActionsTrigger svg {
+    width: 18px !important;
+    height: 18px !important;
+  }
+
+  .mobile-actions-dropdown {
+    position: fixed !important;
+    width: 240px;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 16px;
+    box-shadow: 0 16px 40px -10px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(0, 0, 0, 0.05);
+    z-index: 999999 !important;
+    padding: 8px;
+    animation: calendarPopIn 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .mobile-action-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+
+  .mobile-action-menu-item:hover, .mobile-action-menu-item:active {
+    background: #f1f5f9;
+  }
+
+>>>>>>> 4963667a0d602cfe85a626379fa831e267b27eff
   /* Sidebar Flutuante (Drawer) */
   .sidebar {
     position: fixed !important;
@@ -1975,6 +2044,12 @@ input[type="date"].form-control {
   box-shadow: 0 2px 8px rgba(0,0,0,0.02);
 }
 
+.prof-goal-card.is-me-card {
+  background: #ffffff !important;
+  border: 2px solid #ff6900 !important;
+  box-shadow: 0 4px 18px rgba(255, 105, 0, 0.14) !important;
+}
+
 .prof-goal-header {
   display: flex;
   align-items: center;
@@ -2059,6 +2134,342 @@ input[type="date"].form-control {
   border-radius: 6px;
   transition: width 0.4s ease;
 }
+
+/* Date Picker Header com Popover e Seta (Screenshots 1 & 2) */
+.agenda-header-datepicker {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  position: relative;
+}
+
+.btn-date-nav {
+  background: transparent;
+  border: none;
+  color: var(--ink, #0f172a);
+  padding: 6px 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+}
+
+.btn-date-nav:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.btn-date-picker-trigger {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 8px 14px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--ink, #0f172a);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+  transition: all 0.2s ease;
+}
+
+.btn-date-picker-trigger:hover {
+  border-color: var(--orange, #ff6900);
+  background: #fffdfb;
+}
+
+/* Popover Calendário (Screenshot 2) */
+.calendar-popover {
+  position: fixed !important;
+  width: 320px;
+  max-width: 92vw;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 18px;
+  box-shadow: 0 20px 45px -10px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(0,0,0,0.05);
+  z-index: 999999 !important;
+  padding: 16px;
+  animation: calendarPopIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes calendarPopIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(-10px) scale(0.96); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+}
+
+.popover-month-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: #1e293b;
+}
+
+.popover-days-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  text-align: center;
+}
+
+.popover-weekday-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #64748b;
+  padding: 4px 0;
+}
+
+.popover-day-cell {
+  position: relative;
+  aspect-ratio: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: #1e293b;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.popover-day-cell:hover:not(.other-month) {
+  background: #f1f5f9;
+}
+
+.popover-day-cell.other-month {
+  color: #cbd5e1;
+  cursor: default;
+}
+
+.popover-day-cell.selected {
+  background: #3b82f6 !important;
+  color: #ffffff !important;
+  font-weight: 700;
+  box-shadow: 0 4px 10px rgba(59, 130, 246, 0.35);
+}
+
+.popover-day-cell .dot-indicator {
+  width: 4px;
+  height: 4px;
+  background-color: #16a34a;
+  border-radius: 50%;
+  position: absolute;
+  bottom: 3px;
+}
+
+.popover-day-cell.selected .dot-indicator {
+  background-color: #ffffff;
+}
+
+/* Modo Lista da Agenda (Screenshot 5) */
+.btn-add-appointment-banner {
+  width: 100%;
+  background: #e6f7ef;
+  color: #0d7040;
+  border: 1px solid #c3edd7;
+  border-radius: 12px;
+  padding: 12px 16px;
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 20px;
+  transition: background 0.2s;
+}
+
+.btn-add-appointment-banner:hover {
+  background: #d4f2e3;
+}
+
+.agenda-date-group-title {
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: #475569;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  margin: 20px 0 10px 0;
+  padding-bottom: 4px;
+}
+
+.agenda-list-item-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 14px 16px;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.agenda-list-item-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+
+.agenda-list-client-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.agenda-list-client-avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: #f1f5f9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #64748b;
+  flex-shrink: 0;
+}
+
+.agenda-list-client-name {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: #0f172a;
+  margin-bottom: 2px;
+}
+
+.agenda-list-service-sub {
+  font-size: 0.82rem;
+  color: #64748b;
+}
+
+.agenda-list-badge-time {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.status-badge-pill {
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.status-badge-pill.agendado {
+  background: #0284c7;
+  color: #ffffff;
+}
+
+.status-badge-pill.concluido {
+  background: #16a34a;
+  color: #ffffff;
+}
+
+.status-badge-pill.cancelado {
+  background: #ef4444;
+  color: #ffffff;
+}
+
+.agenda-list-time-range {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #475569;
+}
+
+/* Configuracoes - Modo de Visualizacao (Screenshot 3 & 4) */
+.setting-menu-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  margin-bottom: 10px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.setting-menu-item:hover {
+  background: #f8fafc;
+}
+
+.start-hour-pills {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+
+.start-hour-pill {
+  padding: 8px 16px;
+  border-radius: 20px;
+  background: #f1f5f9;
+  color: #334155;
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+  border: 1px solid #e2e8f0;
+  transition: all 0.15s;
+}
+
+.start-hour-pill.selected {
+  background: #fff3cd;
+  color: #856404;
+  border-color: #ffebabaa;
+}
+
+.view-mode-card-option {
+  border: 2px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 16px;
+  margin-bottom: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: all 0.2s;
+}
+
+.view-mode-card-option.selected {
+  border-color: #0f172a;
+  background: #fafafa;
+}
+
+.view-mode-radio-circle {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 2px solid #cbd5e1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.view-mode-card-option.selected .view-mode-radio-circle {
+  border-color: #0f172a;
+}
+
+.view-mode-card-option.selected .view-mode-radio-circle::after {
+  content: "";
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #0f172a;
+}
+
 
 
 

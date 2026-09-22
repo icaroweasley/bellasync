@@ -67,7 +67,7 @@ let state = {
 };
 
 const isSuperAdmin = currentUser && (currentUser.role === 'superadmin' || currentUser.username === 'karuadmin');
-const isManager = true; // Permite gestão completa para os usuários do salão
+const isManager = Boolean(!currentUser || currentUser.role === 'admin' || currentUser.role === 'superadmin' || currentUser.role === 'gestor' || currentUser.isManager === true);
 window.isSuperAdmin = isSuperAdmin;
 window.isManager = isManager;
 
@@ -642,10 +642,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     navSuperAdmin.style.display = 'flex';
   }
 
-  // Esconde Balanço & Metas no sidebar para quem não é Gestor (Configurações fica visível para Notificações)
   const navBalanco = document.getElementById('navItemBalanco');
   const navConfig = document.getElementById('navItemConfiguracoes');
-  if (navBalanco) navBalanco.style.display = isManager ? 'flex' : 'none';
+  if (navBalanco) navBalanco.style.display = 'flex';
   if (navConfig) navConfig.style.display = 'flex';
 
   // Se o usuário logado for profissional com ID associado, foca nele por padrão
@@ -891,6 +890,7 @@ function renderView(view) {
 
   const container = document.getElementById('viewContainer');
   const title = document.getElementById('currentViewTitle');
+  if (title) title.style.display = 'block';
   const actions = document.getElementById('topBarActions');
   actions.innerHTML = '';
 
@@ -935,11 +935,6 @@ function renderView(view) {
       renderBirthdays(container, actions);
       break;
     case 'balanco':
-      if (!isManager) {
-        asyncAlert('O Balanço e Faturamento Geral do salão são de acesso exclusivo para Gestores.');
-        renderView('agenda');
-        return;
-      }
       title.innerText = 'Balanço Mensal & Metas';
       renderBalanco(container, actions);
       break;
@@ -957,6 +952,243 @@ function renderView(view) {
 }
 
 // 1. Render Agenda
+// Helper de Formatação da Data (ex: "seg, 21/09/2026")
+function formatFormattedDateTitle(dateStr) {
+  if (!dateStr) return '';
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const dt = new Date(y, m - 1, d);
+  const weekDays = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'];
+  const dayName = weekDays[dt.getDay()];
+  const dd = String(d).padStart(2, '0');
+  const mm = String(m).padStart(2, '0');
+  return `${dayName}, ${dd}/${mm}/${y}`;
+}
+
+window.navigateAgendaDate = function(daysDelta) {
+  const [y, m, d] = selectedDate.split('-').map(Number);
+  const dt = new Date(y, m - 1, d);
+  dt.setDate(dt.getDate() + daysDelta);
+  const newY = dt.getFullYear();
+  const newM = String(dt.getMonth() + 1).padStart(2, '0');
+  const newD = String(dt.getDate()).padStart(2, '0');
+  selectedDate = `${newY}-${newM}-${newD}`;
+  
+  const container = document.getElementById('viewContainer');
+  const actions = document.getElementById('topBarActions');
+  renderAgenda(container, actions);
+};
+
+let popoverMonthState = null;
+
+window.toggleCalendarPopover = function(e) {
+  if (e) e.stopPropagation();
+  let existing = document.getElementById('calendarPopover');
+  if (existing) {
+    existing.remove();
+    return;
+  }
+
+  const [y, m] = selectedDate.split('-').map(Number);
+  popoverMonthState = { year: y, month: m - 1 };
+
+  const triggerBtn = document.getElementById('agendaDatePickerTrigger');
+  if (!triggerBtn) return;
+
+  const popover = document.createElement('div');
+  popover.className = 'calendar-popover';
+  popover.id = 'calendarPopover';
+
+  renderPopoverCalendarContent(popover);
+
+  const rect = triggerBtn.getBoundingClientRect();
+  const leftPos = Math.min(window.innerWidth - 175, Math.max(175, rect.left + rect.width / 2));
+  popover.style.position = 'fixed';
+  popover.style.top = `${rect.bottom + 8}px`;
+  popover.style.left = `${leftPos}px`;
+  popover.style.transform = 'translateX(-50%)';
+  popover.style.zIndex = '999999';
+
+  document.body.appendChild(popover);
+
+  setTimeout(() => {
+    const closeListener = (evt) => {
+      if (popover && !popover.contains(evt.target) && evt.target !== triggerBtn && !triggerBtn.contains(evt.target)) {
+        popover.remove();
+        document.removeEventListener('click', closeListener);
+      }
+    };
+    document.addEventListener('click', closeListener);
+  }, 50);
+};
+
+window.toggleMobileActionsDropdown = function(e) {
+  if (e) e.stopPropagation();
+  let existing = document.getElementById('mobileActionsDropdown');
+  if (existing) {
+    existing.remove();
+    return;
+  }
+
+  const triggerBtn = document.getElementById('mobileActionsTrigger');
+  if (!triggerBtn) return;
+
+  const drop = document.createElement('div');
+  drop.id = 'mobileActionsDropdown';
+  drop.className = 'mobile-actions-dropdown';
+
+  const isList = state.settings.agendaViewMode === 'list';
+  const maxDays = state.settings.maxBookingDaysAhead || 30;
+
+  drop.innerHTML = `
+    <div class="mobile-action-menu-item" onclick="openAgendaViewModeModal(); document.getElementById('mobileActionsDropdown')?.remove();">
+      <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">${isList ? '<line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line>' : '<rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line>'}</svg>
+      <div>
+        <div style="font-weight:700; color:#0f172a;">Modo: ${isList ? 'Lista' : 'Calendário'}</div>
+        <div style="font-size:0.75rem; color:#64748b;">Alternar exibição da agenda</div>
+      </div>
+    </div>
+
+    <div class="mobile-action-menu-item" onclick="openBlockTimeModal(); document.getElementById('mobileActionsDropdown')?.remove();">
+      <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg>
+      <div>
+        <div style="font-weight:700; color:#0f172a;">Bloquear Horários</div>
+        <div style="font-size:0.75rem; color:#64748b;">Fechar horários / folgas</div>
+      </div>
+    </div>
+
+    ${isManager ? `
+    <div class="mobile-action-menu-item" onclick="openBookingRulesModal(); document.getElementById('mobileActionsDropdown')?.remove();">
+      <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line></svg>
+      <div>
+        <div style="font-weight:700; color:#0f172a;">Agendamento Online (${maxDays}d)</div>
+        <div style="font-size:0.75rem; color:#64748b;">Janela de dias futuros</div>
+      </div>
+    </div>
+    ` : ''}
+
+    <div class="mobile-action-menu-item" onclick="refreshAgendaData(); document.getElementById('mobileActionsDropdown')?.remove();">
+      <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+      <div>
+        <div style="font-weight:700; color:#0f172a;">Atualizar Dados</div>
+        <div style="font-size:0.75rem; color:#64748b;">Recarregar informações</div>
+      </div>
+    </div>
+  `;
+
+  const rect = triggerBtn.getBoundingClientRect();
+  drop.style.position = 'fixed';
+  drop.style.top = `${rect.bottom + 8}px`;
+  drop.style.left = `${Math.min(window.innerWidth - 130, Math.max(130, rect.left + rect.width / 2))}px`;
+  drop.style.transform = 'translateX(-50%)';
+  drop.style.zIndex = '999999';
+
+  document.body.appendChild(drop);
+
+  setTimeout(() => {
+    const closeListener = (evt) => {
+      if (drop && !drop.contains(evt.target) && evt.target !== triggerBtn && !triggerBtn.contains(evt.target)) {
+        drop.remove();
+        document.removeEventListener('click', closeListener);
+      }
+    };
+    document.addEventListener('click', closeListener);
+  }, 50);
+};
+
+function renderPopoverCalendarContent(popover) {
+  const { year, month } = popoverMonthState;
+  const monthNames = ['JANEIRO', 'FEVEREIRO', 'MARÇO', 'ABRIL', 'MAIO', 'JUNHO', 'JULHO', 'AGOSTO', 'SETEMBRO', 'OUTUBRO', 'NOVEMBRO', 'DEZEMBRO'];
+  const monthLabel = `${monthNames[month].slice(0, 4)}. DE ${year}`;
+
+  const firstDay = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const prevMonthDays = new Date(year, month, 0).getDate();
+
+  const appointmentDates = new Set();
+  (state.appointments || []).forEach(a => {
+    if (a.status !== 'cancelado' && a.date) {
+      const [ay, am, ad] = a.date.split('-').map(Number);
+      if (ay === year && am === month + 1) {
+        appointmentDates.add(ad);
+      }
+    }
+  });
+
+  let cellsHtml = '';
+
+  for (let i = firstDay - 1; i >= 0; i--) {
+    const dayNum = prevMonthDays - i;
+    cellsHtml += `<div class="popover-day-cell other-month">${dayNum}</div>`;
+  }
+
+  for (let day = 1; day <= daysInMonth; day++) {
+    const currentMonthStr = String(month + 1).padStart(2, '0');
+    const currentDayStr = String(day).padStart(2, '0');
+    const fullDateStr = `${year}-${currentMonthStr}-${currentDayStr}`;
+
+    const isSelected = fullDateStr === selectedDate;
+    const hasApp = appointmentDates.has(day);
+
+    cellsHtml += `
+      <div class="popover-day-cell ${isSelected ? 'selected' : ''}" onclick="selectDateFromPopover('${fullDateStr}')">
+        <span>${day}</span>
+        ${hasApp ? '<span class="dot-indicator"></span>' : ''}
+      </div>
+    `;
+  }
+
+  const totalCellsSoFar = firstDay + daysInMonth;
+  const trailingCells = (7 - (totalCellsSoFar % 7)) % 7;
+  for (let i = 1; i <= trailingCells; i++) {
+    cellsHtml += `<div class="popover-day-cell other-month">${i}</div>`;
+  }
+
+  popover.innerHTML = `
+    <div class="popover-month-header">
+      <span style="display:flex; align-items:center; gap:4px;">${monthLabel} ▾</span>
+      <div style="display:flex; align-items:center; gap:8px;">
+        <button class="btn-date-nav" onclick="navigatePopoverMonth(-1)">‹</button>
+        <button class="btn-date-nav" onclick="navigatePopoverMonth(1)">›</button>
+      </div>
+    </div>
+    <div class="popover-days-grid">
+      <div class="popover-weekday-label">D</div>
+      <div class="popover-weekday-label">S</div>
+      <div class="popover-weekday-label">T</div>
+      <div class="popover-weekday-label">Q</div>
+      <div class="popover-weekday-label">Q</div>
+      <div class="popover-weekday-label">S</div>
+      <div class="popover-weekday-label">S</div>
+      ${cellsHtml}
+    </div>
+  `;
+}
+
+window.navigatePopoverMonth = function(delta) {
+  let { year, month } = popoverMonthState;
+  month += delta;
+  if (month < 0) {
+    month = 11;
+    year--;
+  } else if (month > 11) {
+    month = 0;
+    year++;
+  }
+  popoverMonthState = { year, month };
+  const popover = document.getElementById('calendarPopover');
+  if (popover) renderPopoverCalendarContent(popover);
+};
+
+window.selectDateFromPopover = function(fullDateStr) {
+  selectedDate = fullDateStr;
+  const popover = document.getElementById('calendarPopover');
+  if (popover) popover.remove();
+
+  const container = document.getElementById('viewContainer');
+  const actions = document.getElementById('topBarActions');
+  renderAgenda(container, actions);
+};
+
 let agendaPollingInterval = null;
 
 window.changeAgendaDate = function(dayOffset) {
@@ -976,41 +1208,77 @@ window.changeAgendaDate = function(dayOffset) {
 };
 
 function renderAgenda(container, actions) {
+  const titleEl = document.getElementById('currentViewTitle');
+  if (titleEl) {
+    titleEl.style.display = 'block';
+  }
   const maxDays = state.settings.maxBookingDaysAhead || 30;
 
   actions.innerHTML = `
     <div class="agenda-actions-wrapper">
-      <button class="btn-falcon btn-secondary btn-date-arrow" onclick="changeAgendaDate(-1)" title="Dia Anterior">
-        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"></polyline></svg>
-      </button>
-      <div class="agenda-date-wrapper" title="Selecionar Data da Agenda">
-        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-        <input type="date" value="${selectedDate}" class="agenda-date-picker" id="agendaDateInput">
+      <div class="agenda-header-datepicker">
+        <button class="btn-date-nav" onclick="navigateAgendaDate(-1)" title="Dia anterior">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"></path></svg>
+        </button>
+
+        <button class="btn-date-picker-trigger" id="agendaDatePickerTrigger" onclick="toggleCalendarPopover(event)">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+          <span>${formatFormattedDateTitle(selectedDate)}</span>
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"></path></svg>
+        </button>
+
+        <button class="btn-date-nav" onclick="navigateAgendaDate(1)" title="Próximo dia">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"></path></svg>
+        </button>
       </div>
-      <button class="btn-falcon btn-secondary btn-date-arrow" onclick="changeAgendaDate(1)" title="Próximo Dia">
-        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"></polyline></svg>
-      </button>
-      <button class="btn-falcon btn-secondary" onclick="openBlockTimeModal()" title="Bloquear horários ou fechar mais cedo">
-        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg>
-        <span>Bloquear</span>
-      </button>
-      <button class="btn-falcon btn-secondary" onclick="openBookingRulesModal()" title="Configurar janela de dias futuros e regras de agendamento online">
-        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-        <span>Online: ${maxDays}d</span>
-      </button>
-      <button class="btn-falcon btn-secondary" onclick="refreshAgendaData()" title="Atualizar dados da grade">
-        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
-        <span>Atualizar</span>
-      </button>
+
+      <div class="desktop-topbar-actions" style="display:flex; align-items:center; gap:6px;">
+        <button class="btn-falcon btn-secondary" onclick="openAgendaViewModeModal()" title="Alternar modo de visualização (Calendário ou Lista)">
+          ${state.settings.agendaViewMode === 'list' ? `
+            <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+            <span>Modo: Lista</span>
+          ` : `
+            <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+            <span>Modo: Calendário</span>
+          `}
+        </button>
+
+        <button class="btn-falcon btn-secondary" onclick="openBlockTimeModal()" title="Bloquear horários ou fechar mais cedo">
+          <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg>
+          <span>Bloquear</span>
+        </button>
+
+        <button class="btn-falcon btn-secondary" onclick="openBookingRulesModal()" title="Configurar janela de dias futuros e regras de agendamento online">
+          <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+          <span>Online: ${maxDays}d</span>
+        </button>
+
+        <button class="btn-falcon btn-secondary" onclick="refreshAgendaData()" title="Atualizar dados da grade">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+          <span>Atualizar</span>
+        </button>
+      </div>
+
+      <div class="mobile-topbar-actions">
+        <button class="btn-falcon btn-secondary" id="mobileActionsTrigger" onclick="toggleMobileActionsDropdown(event)" title="Opções da Agenda">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+        </button>
+      </div>
     </div>
   `;
-  document.getElementById('agendaDateInput').addEventListener('change', (e) => {
-    selectedDate = e.target.value;
-    renderAgenda(container, actions);
-  });
+    </div>
+  `;
 
-  // Filtro de profissionais
-  let profsHtml = state.professionals.map(p => `
+  // Filtro de profissionais (com opção Todos inclusa)
+  const isAllSelected = selectedProfessionalId === 'all' || !selectedProfessionalId;
+  let profsHtml = `
+    <div class="prof-badge-card ${isAllSelected ? 'active' : ''}" data-prof-id="all" onclick="selectProfessional('all')">
+      <div style="width:36px; height:36px; border-radius:50%; background:#f1f5f9; display:flex; align-items:center; justify-content:center; font-weight:700; color:#334155; border: 2px solid var(--orange);">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+      </div>
+      <span>Todos</span>
+    </div>
+  ` + state.professionals.map(p => `
     <div class="prof-badge-card ${p.id === selectedProfessionalId ? 'active' : ''}" data-prof-id="${p.id}" onclick="selectProfessional('${p.id}')">
       <img src="${p.avatar}" alt="${p.name}">
       <span>${p.name.split(' ')[0]}</span>
@@ -1044,16 +1312,117 @@ function updateScheduleView() {
   const wrapper = document.getElementById('scheduleTableWrapper');
   if (!wrapper) return;
 
-  const times = [
-    "08:00", "08:30", "09:00", "09:30", "10:00", "10:30",
-    "11:00", "11:30", "12:00", "12:30", "13:00", "13:30",
-    "14:00", "14:30", "15:00", "15:30", "16:00", "16:30",
-    "17:00", "17:30", "18:00", "18:30", "19:00"
-  ];
+  const isListMode = state.settings.agendaViewMode === 'list';
+  const isAllProf = selectedProfessionalId === 'all' || !selectedProfessionalId;
 
-  const currentProfAppointments = state.appointments.filter(
-    a => a.professionalId === selectedProfessionalId && a.date === selectedDate && a.status !== 'cancelado'
+  const currentProfAppointments = (state.appointments || []).filter(
+    a => (isAllProf || a.professionalId === selectedProfessionalId) &&
+         a.date === selectedDate &&
+         a.status !== 'cancelado'
   );
+
+  if (isListMode) {
+    let listHtml = `
+      <div class="agenda-date-group-title">
+        ${formatFormattedDateTitle(selectedDate)}
+      </div>
+    `;
+
+    if (currentProfAppointments.length === 0) {
+      listHtml += `
+        <div style="text-align: center; padding: 40px 20px; background: #ffffff; border-radius: 16px; border: 1px dashed #cbd5e1; color: #64748b;">
+          <svg width="40" height="40" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" style="margin-bottom: 12px; color: #94a3b8;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+          <p style="font-weight: 600; font-size: 0.95rem; margin-bottom: 4px;">Nenhum agendamento para este dia</p>
+          <p style="font-size: 0.82rem; margin-bottom: 16px;">Clique no botão acima para adicionar um novo atendimento.</p>
+        </div>
+      `;
+    } else {
+      currentProfAppointments.sort((a, b) => (a.startTime || '').localeCompare(b.startTime || ''));
+
+      currentProfAppointments.forEach(app => {
+        const prof = (state.professionals || []).find(p => p.id === app.professionalId);
+        const profName = prof ? prof.name : (app.professionalName || '');
+        const profSubText = isAllProf && profName ? ` com ${profName}` : '';
+        const initial = (app.clientName || 'C').charAt(0).toUpperCase();
+
+        let statusClass = 'agendado';
+        let statusLabel = 'Agendado';
+        if (app.status === 'indisponivel') {
+          statusClass = 'cancelado';
+          statusLabel = 'Bloqueado';
+        } else if (app.status === 'concluido') {
+          statusClass = 'concluido';
+          statusLabel = 'Concluído';
+        } else if (app.status === 'faltou') {
+          statusClass = 'cancelado';
+          statusLabel = 'Faltou';
+        }
+
+        if (app.status === 'indisponivel') {
+          listHtml += `
+            <div class="agenda-list-item-card" style="background:#fef2f2; border-color:#fecaca;">
+              <div class="agenda-list-client-info">
+                <div class="agenda-list-client-avatar" style="background:#fee2e2; color:#b91c1c;">
+                  <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg>
+                </div>
+                <div>
+                  <div class="agenda-list-client-name" style="color:#b91c1c;">Horário Bloqueado</div>
+                  <div class="agenda-list-service-sub">${app.notes || 'Sem observações'}${profSubText}</div>
+                </div>
+              </div>
+              <div class="agenda-list-badge-time">
+                <span class="status-badge-pill cancelado">Bloqueado</span>
+                <span class="agenda-list-time-range">${app.startTime} - ${app.endTime}</span>
+                <button class="btn-delete-app" onclick="deleteAppointment('${app.id}', event)" style="margin-top:4px;">Desbloquear</button>
+              </div>
+            </div>
+          `;
+        } else {
+          listHtml += `
+            <div class="agenda-list-item-card">
+              <div class="agenda-list-client-info">
+                <div class="agenda-list-client-avatar">
+                  <span style="font-weight:700; font-size:1.1rem; color:var(--orange);">${initial}</span>
+                </div>
+                <div>
+                  <div class="agenda-list-client-name">${app.clientName || 'Cliente sem nome'}</div>
+                  <div class="agenda-list-service-sub">${app.serviceName || 'Serviço'}${profSubText} • R$ ${Number(app.price || 0).toFixed(2)}</div>
+                </div>
+              </div>
+              <div class="agenda-list-badge-time">
+                <span class="status-badge-pill ${statusClass}">${statusLabel}</span>
+                <span class="agenda-list-time-range">${app.startTime} - ${app.endTime}</span>
+                <div style="display:flex; gap:4px; margin-top:4px;">
+                  ${app.clientPhone ? `
+                    <button class="btn-remind-app" onclick="sendAppointmentReminder('${app.id}', event)" title="Lembrete WhatsApp">
+                      <svg width="12" height="12" fill="currentColor" viewBox="0 0 24 24"><path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.312.045-.694.062-2.18-.553-1.614-.668-2.673-2.316-2.753-2.423-.081-.107-.655-.873-.655-1.664 0-.792.414-1.182.56-1.341.144-.16.315-.2.42-.2.106 0 .211.002.304.006.098.005.23-.037.36.275.132.318.45 1.096.488 1.176.04.08.067.174.013.28-.053.106-.08.172-.158.264-.078.093-.164.208-.234.28-.08.082-.164.172-.07.334.093.16.417.689.896 1.116.617.55 1.137.72 1.298.8.16.08.254.07.35-.04.095-.11.408-.475.517-.638.11-.164.218-.137.368-.081.15.054.954.45 1.118.532.164.082.273.123.313.192.04.068.04.399-.104.804z"/></svg>
+                    </button>
+                  ` : ''}
+                  <button class="btn-delete-app" onclick="deleteAppointment('${app.id}', event)" title="Excluir">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18m-2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+          `;
+        }
+      });
+    }
+
+    wrapper.innerHTML = listHtml;
+    return;
+  }
+
+  const startHour = Math.max(4, Math.min(9, Number(state.settings.agendaStartHour) || 8));
+  const endHour = 20;
+  const times = [];
+  for (let h = startHour; h <= endHour; h++) {
+    const hStr = String(h).padStart(2, '0');
+    times.push(`${hStr}:00`);
+    if (h < endHour) {
+      times.push(`${hStr}:30`);
+    }
+  }
 
   let html = `<table class="salon-schedule-table"><tbody>`;
   let skipCount = 0;
@@ -1069,17 +1438,18 @@ function updateScheduleView() {
       continue;
     }
 
-    // Procura agendamento que inicia exatamente neste horário
     const appStartingHere = currentProfAppointments.find(a => a.startTime === time);
 
     if (appStartingHere) {
-      // Calcula quantos slots de 30 min ele ocupa
       const [sh, sm] = appStartingHere.startTime.split(':').map(Number);
       const [eh, em] = appStartingHere.endTime.split(':').map(Number);
       const spanMin = (eh * 60 + em) - (sh * 60 + sm);
       const rowSpan = Math.max(1, Math.round(spanMin / 30));
 
       skipCount = rowSpan - 1;
+
+      const prof = (state.professionals || []).find(p => p.id === appStartingHere.professionalId);
+      const profBadgeText = isAllProf && prof ? ` • ${prof.name}` : '';
 
       if (appStartingHere.status === 'indisponivel') {
         html += `
@@ -1104,7 +1474,7 @@ function updateScheduleView() {
               <div class="app-top-row">
                 <div class="app-info">
                   <strong>${appStartingHere.clientName}</strong>
-                  <span>${appStartingHere.serviceName}</span>
+                  <span>${appStartingHere.serviceName}${profBadgeText}</span>
                   <small>${appStartingHere.clientPhone || 'Sem telefone'} • Duração: ${spanMin} min</small>
                   ${appStartingHere.notes ? `<small style="color:#666; display:block; margin-top:4px;">Obs: ${appStartingHere.notes}</small>` : ''}
                 </div>
@@ -1141,7 +1511,6 @@ function updateScheduleView() {
         `;
       }
     } else {
-      // Slot vazio disponível para clique
       html += `
         <td class="salon-empty-cell" onclick="openNewAppointmentModal('${time}')" title="Clique para agendar às ${time}"></td>
       `;
@@ -1241,9 +1610,7 @@ window.sendAppointmentReminder = async function(appId, event) {
 
 // 2. Render Comissões & Vales
 function renderCommissions(container, actions) {
-  actions.innerHTML = isManager ? `
-    <button class="btn-falcon btn-primary" onclick="openNewCommissionModal()">+ Lançar Comissão / Vale</button>
-  ` : '';
+  actions.innerHTML = '';
 
   const toPay = (state.commissions || []).filter(c => c.status === 'a_pagar');
   const paid = (state.commissions || []).filter(c => c.status === 'paga');
@@ -1348,7 +1715,6 @@ function renderProfessionals(container, actions) {
     <span style="font-size:0.84rem; font-weight:500; color:var(--muted); background:rgba(255,255,255,0.85); padding:6px 14px; border-radius:999px; border:1px solid rgba(0,0,0,0.06); height:38px; display:inline-flex; align-items:center; box-sizing:border-box;">
       <strong style="color:var(--ink); margin-right:4px;">${profCount} / 10</strong> Profissionais
     </span>
-    <button class="btn-falcon btn-primary" onclick="openNewProfessionalModal()">+ Adicionar Profissional</button>
   ` : '';
 
   const profsHtml = state.professionals.map(p => `
@@ -1382,9 +1748,9 @@ function renderProfessionals(container, actions) {
   `).join('');
 
   container.innerHTML = `
-    <div style="background: rgba(255, 105, 0, 0.05); border: 1px solid rgba(255, 105, 0, 0.18); border-radius: 16px; padding: 14px 18px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
-      <div style="display: flex; align-items: center; gap: 12px; flex: 1; min-width: 260px;">
-        <div style="background: rgba(255, 105, 0, 0.12); width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+    <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 14px 18px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.03);">
+      <div style="display: flex; align-items: center; gap: 12px; flex: 1; min-width: 240px;">
+        <div style="background: rgba(255, 105, 0, 0.1); width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
           <svg width="22" height="22" fill="none" stroke="var(--orange)" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
         </div>
         <div>
@@ -1394,7 +1760,7 @@ function renderProfessionals(container, actions) {
           </p>
         </div>
       </div>
-      <div style="text-align: right; background: #ffffff; padding: 8px 16px; border-radius: 12px; border: 1px solid rgba(0,0,0,0.06); box-shadow: 0 2px 8px rgba(0,0,0,0.03);">
+      <div style="text-align: right; background: #f8fafc; padding: 8px 16px; border-radius: 12px; border: 1px solid #e2e8f0;">
         <small style="display: block; font-size: 0.72rem; color: var(--muted); font-weight: 500;">Mensalidade do Salão (${profCount}/10 profs)</small>
         <strong style="font-size: 1.05rem; color: var(--orange); font-weight: 800;">R$ ${totalMonthly.toFixed(2).replace('.', ',')} <span style="font-size: 0.75rem; font-weight: normal; color: var(--muted);">/ mês</span></strong>
       </div>
@@ -1409,7 +1775,6 @@ function renderClients(container, actions) {
     <span style="font-size:0.84rem; font-weight:500; color:var(--muted); background:rgba(255,255,255,0.7); padding:6px 14px; border-radius:999px; border:1px solid rgba(0,0,0,0.06); height:38px; display:inline-flex; align-items:center; box-sizing:border-box;">
       <strong style="color:var(--ink); margin-right:4px;">${state.clients.length}</strong> clientes
     </span>
-    <button class="btn-falcon btn-primary" onclick="openNewClientModal()">+ Adicionar Cliente</button>
   `;
 
   const clientsHtml = state.clients.map(c => `
@@ -1445,9 +1810,7 @@ function renderClients(container, actions) {
 
 // 5. Render Serviços
 function renderServices(container, actions) {
-  actions.innerHTML = isManager ? `
-    <button class="btn-falcon btn-primary" onclick="openNewServiceModal()">+ Adicionar Serviço</button>
-  ` : '';
+  actions.innerHTML = '';
 
   const servsHtml = state.services.map(s => `
     <div class="data-item-card">
@@ -1478,9 +1841,7 @@ function renderServices(container, actions) {
 
 // 5.5 Render Pacotes de Serviços (Check-list / Tickagem por Sessões)
 function renderPackages(container, actions) {
-  actions.innerHTML = isManager ? `
-    <button class="btn-falcon btn-primary" onclick="openNewPackageModal()">+ Criar / Vender Pacote</button>
-  ` : '';
+  actions.innerHTML = '';
 
   if (!state.packages || state.packages.length === 0) {
     container.innerHTML = `
@@ -1662,9 +2023,7 @@ window.deletePackage = async function(pkgId) {
 
 // 6. Render Produtos
 function renderProducts(container, actions) {
-  actions.innerHTML = isManager ? `
-    <button class="btn-falcon btn-primary" onclick="openNewProductModal()">+ Adicionar Produto</button>
-  ` : '';
+  actions.innerHTML = '';
 
   const prodsHtml = state.products.map(p => `
     <div class="data-item-card">
@@ -1695,9 +2054,7 @@ function renderProducts(container, actions) {
 
 // 7. Render Despesas
 function renderExpenses(container, actions) {
-  actions.innerHTML = isManager ? `
-    <button class="btn-falcon btn-primary" onclick="openNewExpenseModal()">+ Adicionar Despesa</button>
-  ` : '';
+  actions.innerHTML = '';
 
   const total = state.expenses.reduce((acc, e) => acc + e.amount, 0);
   const paid = state.expenses.filter(e => e.status === 'pago').reduce((acc, e) => acc + e.amount, 0);
@@ -1837,11 +2194,21 @@ function renderBalanco(container, actions) {
 
   const estimatedNetProfit = totalGrossRevenue - totalExpenses - totalCommissions;
 
-  // Render Seletor de Mês nas actions superiores
-  actions.innerHTML = `
-    <div style="display: flex; align-items: center; gap: 8px;">
-      <label style="font-size: 0.85rem; font-weight: 600; color: var(--muted); margin: 0;">Mês de Referência:</label>
-      <select class="form-control" id="balancoMonthSelect" style="width: auto; padding: 6px 12px; font-weight: 600;" onchange="changeBalancoMonth(this.value)">
+  // Limpa actions superiores para evitar overflow no mobile
+  actions.innerHTML = '';
+
+  const monthSelectorCardHtml = `
+    <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 20px; background: #ffffff; padding: 14px 18px; border-radius: 16px; border: 1px solid rgba(226, 232, 240, 0.8); box-shadow: 0 2px 8px rgba(0,0,0,0.02);">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(255, 105, 0, 0.1); display: flex; align-items: center; justify-content: center; color: var(--orange, #ff6900);">
+          <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+        </div>
+        <div>
+          <div style="font-weight: 700; color: var(--ink, #0f172a); font-size: 0.95rem;">Mês de Referência</div>
+          <div style="font-size: 0.78rem; color: var(--muted, #64748b);">Filtrar faturamento, despesas e comissões</div>
+        </div>
+      </div>
+      <select class="form-control" id="balancoMonthSelect" style="width: auto; min-width: 180px; padding: 7px 14px; font-weight: 600; cursor: pointer; border-radius: 10px;" onchange="changeBalancoMonth(this.value)">
         ${monthOptions.map(m => `<option value="${m.ym}" ${m.ym === selectedBalancoMonth ? 'selected' : ''}>${m.label}</option>`).join('')}
       </select>
     </div>
@@ -1888,12 +2255,12 @@ function renderBalanco(container, actions) {
     const isMe = myProfId && prof.id === myProfId;
 
     return `
-      <div class="prof-goal-card" style="${isMe ? 'border: 2px solid var(--orange, #ff6900); background: rgba(255, 105, 0, 0.02);' : ''}">
+      <div class="prof-goal-card ${isMe ? 'is-me-card' : ''}" style="${isMe ? 'background: #ffffff !important; border: 2px solid #ff6900 !important; box-shadow: 0 4px 18px rgba(255, 105, 0, 0.14) !important;' : ''}">
         <div class="prof-goal-header">
           <div class="prof-goal-info">
             <img src="${prof.avatar || getButterflyAvatar(prof.name)}" class="prof-goal-avatar" alt="${prof.name}">
-            <div>
-              <h4 class="prof-goal-title">${prof.name} ${isMe ? '<span style="font-size:0.75rem; background: var(--orange, #ff6900); color:#fff; padding:2px 6px; border-radius:10px; margin-left:4px;">Você</span>' : ''}</h4>
+            <div style="min-width:0; flex:1; overflow:hidden;">
+              <h4 class="prof-goal-title" title="${prof.name}">${prof.name} ${isMe ? '<span style="font-size:0.75rem; background: var(--orange, #ff6900); color:#fff; padding:2px 6px; border-radius:10px; margin-left:4px;">Você</span>' : ''}</h4>
               <span class="prof-goal-role">${prof.role || 'Profissional'} • Comissão (${prof.commissionDefault || 50}%)</span>
             </div>
           </div>
@@ -1941,6 +2308,7 @@ function renderBalanco(container, actions) {
   }
 
   container.innerHTML = `
+    ${monthSelectorCardHtml}
     ${overallSummaryHtml}
     <div style="margin-top: 24px;">
       <h3 style="margin-bottom: 16px; font-size: 1.1rem; font-weight: 700; color: var(--ink);">🎯 Desempenho e Metas Individuais</h3>
@@ -2051,6 +2419,38 @@ function renderSettings(container, actions) {
     </div>
   `;
 
+  const currentViewModeLabel = state.settings.agendaViewMode === 'list' ? 'Lista' : 'Calendário';
+  const currentStartHour = Number(state.settings.agendaStartHour) || 8;
+
+  const agendaCardHtml = `
+    <div class="card-shell" style="margin-bottom: 20px;">
+      <h3 style="margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
+        <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+        Visualização da Agenda
+      </h3>
+
+      <div class="setting-menu-item" onclick="openAgendaViewModeModal()">
+        <div>
+          <div style="font-weight: 700; color: var(--ink); font-size: 0.95rem;">Modo de visualização</div>
+          <div style="font-size: 0.82rem; color: var(--muted);">${currentViewModeLabel}</div>
+        </div>
+        <div style="display:flex; align-items:center; gap: 6px; color: var(--muted); font-weight: 600; font-size: 0.9rem;">
+          <span>${currentViewModeLabel}</span>
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"></path></svg>
+        </div>
+      </div>
+
+      <div style="margin-top: 16px;">
+        <label style="font-weight: 700; color: var(--ink); font-size: 0.92rem; display: block; margin-bottom: 8px;">Horário de início da agenda</label>
+        <div class="start-hour-pills">
+          ${[4, 5, 6, 7, 8, 9].map(h => `
+            <button type="button" class="start-hour-pill ${h === currentStartHour ? 'selected' : ''}" onclick="setAgendaStartHour(${h})">${h}:00</button>
+          `).join('')}
+        </div>
+      </div>
+    </div>
+  `;
+
   const notificationCardHtml = `
     <div class="card-shell" style="margin-bottom: 20px;">
       <h3 style="margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
@@ -2116,6 +2516,7 @@ function renderSettings(container, actions) {
 
   container.innerHTML = `
     ${salonCardHtml}
+    ${agendaCardHtml}
     ${notificationCardHtml}
     <div style="margin-top: 20px;">
       <button class="btn-falcon btn-primary" onclick="saveSettings()">Salvar Configurações</button>
@@ -2123,21 +2524,100 @@ function renderSettings(container, actions) {
   `;
 }
 
+window.openAgendaViewModeModal = function() {
+  let selectedMode = state.settings.agendaViewMode || 'calendar';
+  window._tempViewMode = selectedMode;
+
+  const bodyHtml = `
+    <div style="padding: 4px 0;">
+      <p style="font-size: 0.88rem; color: var(--muted); margin-bottom: 16px;">
+        Escolha como você prefere visualizar os agendamentos na sua tela de agenda.
+      </p>
+
+      <div class="view-mode-card-option ${selectedMode === 'calendar' ? 'selected' : ''}" id="modeOptCalendar" onclick="selectViewModeOption('calendar')">
+        <div style="display:flex; align-items:center; gap: 14px;">
+          <div style="width: 44px; height: 44px; border-radius: 12px; background: rgba(255,105,0,0.1); display:flex; align-items:center; justify-content:center; color: var(--orange);">
+            <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+          </div>
+          <div>
+            <div style="font-weight: 700; color: var(--ink); font-size: 1rem; margin-bottom: 2px;">Calendário</div>
+            <div style="font-size: 0.82rem; color: var(--muted);">Exibe os agendamentos em uma grade de horários dia a dia.</div>
+          </div>
+        </div>
+        <div class="view-mode-radio-circle"></div>
+      </div>
+
+      <div class="view-mode-card-option ${selectedMode === 'list' ? 'selected' : ''}" id="modeOptList" onclick="selectViewModeOption('list')">
+        <div style="display:flex; align-items:center; gap: 14px;">
+          <div style="width: 44px; height: 44px; border-radius: 12px; background: rgba(59,130,246,0.1); display:flex; align-items:center; justify-content:center; color: #3b82f6;">
+            <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+          </div>
+          <div>
+            <div style="font-weight: 700; color: var(--ink); font-size: 1rem; margin-bottom: 2px;">Lista</div>
+            <div style="font-size: 0.82rem; color: var(--muted);">Exibe os agendamentos em uma lista sequencial por profissional e dia.</div>
+          </div>
+        </div>
+        <div class="view-mode-radio-circle"></div>
+      </div>
+    </div>
+  `;
+
+  openModal('Modo de visualização', bodyHtml, async () => {
+    state.settings.agendaViewMode = window._tempViewMode || selectedMode;
+    await saveSettings();
+    closeModal();
+    if (currentView === 'agenda') {
+      const container = document.getElementById('viewContainer');
+      const actions = document.getElementById('topBarActions');
+      renderAgenda(container, actions);
+    }
+  });
+};
+
+window.selectViewModeOption = function(mode) {
+  window._tempViewMode = mode;
+  const optCal = document.getElementById('modeOptCalendar');
+  const optList = document.getElementById('modeOptList');
+  if (optCal) optCal.classList.toggle('selected', mode === 'calendar');
+  if (optList) optList.classList.toggle('selected', mode === 'list');
+};
+
+window.setAgendaStartHour = async function(h) {
+  state.settings.agendaStartHour = h;
+  document.querySelectorAll('.start-hour-pill').forEach(btn => {
+    btn.classList.toggle('selected', btn.innerText.startsWith(`${h}:`));
+  });
+  await saveSettings();
+  if (currentView === 'agenda') {
+    updateScheduleView();
+  }
+};
+
 window.saveSettings = async function() {
   const logoVal = document.getElementById('settingSalonLogoValue')?.value || state.settings.logo || state.settings.photo || '';
 
+  const getVal = (id, fallback) => {
+    const el = document.getElementById(id);
+    return el ? el.value : (fallback || '');
+  };
+
+  const getCheck = (id, fallback) => {
+    const el = document.getElementById(id);
+    return el ? el.checked : (fallback !== false);
+  };
+
   const updated = {
     ...state.settings,
-    salonName: isManager ? document.getElementById('cfgName').value : (state.settings.salonName || ''),
-    phone: isManager ? document.getElementById('cfgPhone').value : (state.settings.phone || ''),
-    address: isManager ? document.getElementById('cfgAddress').value : (state.settings.address || ''),
+    salonName: isManager ? getVal('cfgName', state.settings.salonName) : (state.settings.salonName || ''),
+    phone: isManager ? getVal('cfgPhone', state.settings.phone) : (state.settings.phone || ''),
+    address: isManager ? getVal('cfgAddress', state.settings.address) : (state.settings.address || ''),
     logo: isManager ? logoVal : (state.settings.logo || ''),
     photo: isManager ? logoVal : (state.settings.photo || ''),
-    intervalMinutes: isManager ? Number(document.getElementById('cfgInterval').value) : (state.settings.intervalMinutes || 30),
-    notifyNewAppointments: document.getElementById('cfgNotifyNewAppointments').checked,
-    notifyReminders: document.getElementById('cfgNotifyReminders').checked,
-    notifyBirthdays: document.getElementById('cfgNotifyBirthdays').checked,
-    notifySound: document.getElementById('cfgNotifySound').checked
+    intervalMinutes: isManager ? Number(getVal('cfgInterval', state.settings.intervalMinutes || 30)) : (state.settings.intervalMinutes || 30),
+    notifyNewAppointments: getCheck('cfgNotifyNewAppointments', state.settings.notifyNewAppointments),
+    notifyReminders: getCheck('cfgNotifyReminders', state.settings.notifyReminders),
+    notifyBirthdays: getCheck('cfgNotifyBirthdays', state.settings.notifyBirthdays),
+    notifySound: getCheck('cfgNotifySound', state.settings.notifySound)
   };
 
   const res = await tenantFetch('/api/settings', {
@@ -2161,7 +2641,9 @@ window.saveSettings = async function() {
     const sLogoEl = document.getElementById('sidebarSalonLogo');
     if (sLogoEl) sLogoEl.src = updated.logo || updated.photo;
   }
-  asyncAlert('Configurações atualizadas com sucesso!');
+  if (document.getElementById('cfgName')) {
+    asyncAlert('Configurações atualizadas com sucesso!');
+  }
 };
 
 
@@ -2927,7 +3409,7 @@ window.openNewProfessionalModal = function() {
     </div>
     <div class="form-group">
       <label>Nome Completo</label>
-      <input type="text" class="form-control" id="mProfName" placeholder="Ex: Juliana Castro">
+      <input type="text" class="form-control" id="mProfName" maxlength="25" placeholder="Ex: Juliana Castro">
     </div>
     <div class="form-group">
       <label>Especialidade / Cargo</label>
@@ -3185,7 +3667,7 @@ window.openEditProfessionalModal = function(profId) {
     </div>
     <div class="form-group">
       <label>Nome Completo</label>
-      <input type="text" class="form-control" id="mEditProfName" value="${prof.name || ''}">
+      <input type="text" class="form-control" id="mEditProfName" value="${prof.name || ''}" maxlength="25">
     </div>
     <div class="form-group">
       <label>Especialidade / Cargo</label>
@@ -4400,7 +4882,7 @@ window.closeProfileModal = function() {
 
 window.saveUserProfile = async function() {
   if (!currentUser) return;
-  const name = document.getElementById('profileNameInput').value.trim();
+  const name = document.getElementById('profileNameInput').value.trim().slice(0, 25);
   const password = document.getElementById('profilePasswordInput').value.trim();
   const avatar = document.getElementById('profileAvatarValue').value;
 
