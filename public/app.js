@@ -269,17 +269,31 @@ let knownAppointmentIds = new Set();
 let notificationsInitialized = false;
 let notificationHistory = [];
 
-// Carrega histórico salvo em localStorage
+// Carrega histórico salvo em localStorage com deduplicação
 try {
   const savedNotifs = localStorage.getItem('salon_notif_history');
   if (savedNotifs) {
-    notificationHistory = JSON.parse(savedNotifs);
+    const rawList = JSON.parse(savedNotifs);
+    if (Array.isArray(rawList)) {
+      const seenIds = new Set();
+      notificationHistory = rawList.filter(item => {
+        if (!item || !item.id) return false;
+        if (seenIds.has(item.id)) return false;
+        seenIds.add(item.id);
+        return true;
+      });
+    }
   }
 } catch (e) {
   notificationHistory = [];
 }
 
 function saveNotificationToHistory(notifItem) {
+  if (!notifItem || !notifItem.id) return;
+  // Se já existe no histórico, não adiciona novamente
+  if (notificationHistory.some(item => item.id === notifItem.id)) {
+    return;
+  }
   notificationHistory.unshift(notifItem);
   if (notificationHistory.length > 20) {
     notificationHistory = notificationHistory.slice(0, 20);
@@ -626,9 +640,7 @@ function isBirthdayInMonth(bdayStr, targetMonth) {
 }
 window.isBirthdayInMonth = isBirthdayInMonth;
 
-let birthdayNotificationsChecked = false;
 function checkAndNotifyBirthdays() {
-  if (birthdayNotificationsChecked) return;
   if (!state.clients || !Array.isArray(state.clients)) return;
   if (state.settings && state.settings.notifyBirthdays === false) return;
 
@@ -640,27 +652,40 @@ function checkAndNotifyBirthdays() {
 
   const todayBirthdays = state.clients.filter(c => c.birthday && isBirthdayToday(c.birthday, month, day));
 
-  if (todayBirthdays.length > 0) {
-    birthdayNotificationsChecked = true;
-    todayBirthdays.forEach(cli => {
-      const notifId = `bday_${todayStr}_${cli.id}`;
-      saveNotificationToHistory({
-        id: notifId,
-        title: '🎂 Aniversariante do Dia!',
-        body: `Hoje é aniversário de ${cli.name}! Envie os parabéns ou ofereça um mimo especial.`,
-        timeStr: '08:00',
-        date: todayStr
-      });
+  todayBirthdays.forEach(cli => {
+    const notifId = `bday_${todayStr}_${cli.id}`;
+    const sentKey = `salon_bday_notified_${todayStr}_${cli.id}`;
 
-      showSystemOrSwNotification('🎂 Aniversariante do Dia!', {
-        body: `Hoje é aniversário de ${cli.name}! Envie os parabéns ou ofereça um mimo especial.`,
-        icon: '/images/logo.png',
-        badge: '/images/logo.png',
-        tag: notifId,
-        data: { url: '/' }
-      });
+    // 1. Garante que o item esteja no histórico visual do sino (se ainda não estiver)
+    saveNotificationToHistory({
+      id: notifId,
+      title: '🎂 Aniversariante do Dia!',
+      body: `Hoje é aniversário de ${cli.name}! Envie os parabéns ou ofereça um mimo especial.`,
+      timeStr: '08:00',
+      date: todayStr
     });
-  }
+
+    // 2. Verifica se a notificação popup/push já foi disparada hoje para este cliente
+    try {
+      if (localStorage.getItem(sentKey)) {
+        return; // Já foi notificado hoje! Não dispara novamente ao recarregar a página
+      }
+    } catch (e) {}
+
+    // Marca como notificado hoje no localStorage imediatamente
+    try {
+      localStorage.setItem(sentKey, 'true');
+    } catch (e) {}
+
+    // Dispara a notificação de sistema/push apenas UMA vez
+    showSystemOrSwNotification('🎂 Aniversariante do Dia!', {
+      body: `Hoje é aniversário de ${cli.name}! Envie os parabéns ou ofereça um mimo especial.`,
+      icon: '/images/logo.png',
+      badge: '/images/logo.png',
+      tag: notifId,
+      data: { url: '/' }
+    });
+  });
 }
 
 

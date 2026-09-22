@@ -470,9 +470,96 @@ function sanitizeDb(data) {
   return data;
 }
 
+const BACKUPS_DIR = path.join(__dirname, 'backups');
+
+function ensureBackupsDir() {
+  if (!fs.existsSync(BACKUPS_DIR)) {
+    try {
+      fs.mkdirSync(BACKUPS_DIR, { recursive: true });
+    } catch (e) {
+      console.error("[Backup] Erro ao criar pasta de backups:", e);
+    }
+  }
+}
+
+let lastBackupDateStr = '';
+
+function cleanupOldBackups() {
+  try {
+    if (!fs.existsSync(BACKUPS_DIR)) return;
+    const files = fs.readdirSync(BACKUPS_DIR)
+      .filter(f => f.startsWith('db_backup_') && f.endsWith('.json'))
+      .sort();
+    
+    // Mantém no máximo 30 backups diários
+    if (files.length > 30) {
+      const toDelete = files.slice(0, files.length - 30);
+      for (const file of toDelete) {
+        try {
+          fs.unlinkSync(path.join(BACKUPS_DIR, file));
+        } catch (e) {}
+      }
+    }
+  } catch (e) {
+    console.error("[Backup] Erro ao limpar backups antigos:", e);
+  }
+}
+
+export function createPeriodicBackup(data) {
+  try {
+    ensureBackupsDir();
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const dateStr = `${year}-${month}-${day}`;
+    
+    const backupFile = path.join(BACKUPS_DIR, `db_backup_${dateStr}.json`);
+    if (lastBackupDateStr !== dateStr || !fs.existsSync(backupFile)) {
+      lastBackupDateStr = dateStr;
+      fs.writeFileSync(backupFile, JSON.stringify(data, null, 2), 'utf8');
+      console.log(`[Backup] Snapshot automático criado: db_backup_${dateStr}.json`);
+      cleanupOldBackups();
+    }
+  } catch (err) {
+    console.error("[Backup] Erro ao criar backup automático:", err);
+  }
+}
+
+function tryRestoreFromLatestBackup() {
+  try {
+    if (!fs.existsSync(BACKUPS_DIR)) return null;
+    const files = fs.readdirSync(BACKUPS_DIR)
+      .filter(f => f.startsWith('db_backup_') && f.endsWith('.json'))
+      .sort();
+    if (files.length > 0) {
+      const latest = files[files.length - 1];
+      console.warn(`[Auto-Recovery] Tentando restaurar banco de dados a partir do backup ${latest}...`);
+      const raw = fs.readFileSync(path.join(BACKUPS_DIR, latest), 'utf8');
+      const data = JSON.parse(raw);
+      fs.writeFileSync(DB_FILE, raw, 'utf8');
+      console.log(`[Auto-Recovery] Banco restaurado com sucesso a partir de ${latest}!`);
+      return data;
+    }
+  } catch (e) {
+    console.error("[Auto-Recovery] Falha ao tentar restaurar do backup:", e);
+  }
+  return null;
+}
+
 export function getDb() {
   if (!fs.existsSync(DB_FILE)) {
-    fs.writeFileSync(DB_FILE, JSON.stringify(initialData, null, 2), 'utf8');
+    const templateFile = path.join(__dirname, 'database.template.json');
+    if (fs.existsSync(templateFile)) {
+      try {
+        fs.copyFileSync(templateFile, DB_FILE);
+        console.log("[DB] Banco de dados inicializado a partir de database.template.json");
+      } catch (e) {
+        fs.writeFileSync(DB_FILE, JSON.stringify(initialData, null, 2), 'utf8');
+      }
+    } else {
+      fs.writeFileSync(DB_FILE, JSON.stringify(initialData, null, 2), 'utf8');
+    }
     return initialData;
   }
   try {
@@ -483,12 +570,30 @@ export function getDb() {
     const data = JSON.parse(raw);
     return sanitizeDb(data);
   } catch (err) {
-    console.error("Erro ao ler banco:", err);
+    console.error("[DB] Erro ao ler banco principal:", err);
+    const restored = tryRestoreFromLatestBackup();
+    if (restored) return sanitizeDb(restored);
     return initialData;
   }
 }
 
 export function saveDb(data) {
-  fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2), 'utf8');
+  try {
+    // 1. Escrita atômica para evitar corrupção em caso de reinicialização
+    const tmpFile = DB_FILE + '.tmp';
+    fs.writeFileSync(tmpFile, JSON.stringify(data, null, 2), 'utf8');
+    fs.renameSync(tmpFile, DB_FILE);
+
+    // 2. Snapshot de backup diário
+    createPeriodicBackup(data);
+  } catch (err) {
+    console.error("[DB] Erro ao salvar banco atomicamente, tentando escrita direta:", err);
+    try {
+      fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2), 'utf8');
+      createPeriodicBackup(data);
+    } catch (e2) {
+      console.error("[DB CRÍTICO] Falha total ao gravar banco:", e2);
+    }
+  }
 }
 

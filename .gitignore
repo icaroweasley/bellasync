@@ -2,3 +2,8 @@ node_modules/
 .env
 *.log
 .DS_Store
+
+# Banco de dados e backups - NUNCA devem ser sobrescritos pelo Git
+server/db/database.json
+server/db/database.json.tmp
+server/db/backups/
