@@ -1277,9 +1277,9 @@ function renderAgenda(container, actions) {
       <span>Todos</span>
     </div>
   ` + state.professionals.map(p => `
-    <div class="prof-badge-card ${p.id === selectedProfessionalId ? 'active' : ''}" data-prof-id="${p.id}" onclick="selectProfessional('${p.id}')">
+    <div class="prof-badge-card ${p.id === selectedProfessionalId ? 'active' : ''}" data-prof-id="${p.id}" onclick="selectProfessional('${p.id}')" title="${p.name}">
       <img src="${p.avatar}" alt="${p.name}">
-      <span>${p.name.split(' ')[0]}</span>
+      <span title="${p.name}">${p.name.split(' ')[0]}</span>
     </div>
   `).join('');
 
