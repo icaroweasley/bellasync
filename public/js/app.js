@@ -957,17 +957,185 @@ function renderView(view) {
 }
 
 // 1. Render Agenda
+// Helper de Formatação da Data (ex: "seg, 21/09/2026")
+function formatFormattedDateTitle(dateStr) {
+  if (!dateStr) return '';
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const dt = new Date(y, m - 1, d);
+  const weekDays = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'];
+  const dayName = weekDays[dt.getDay()];
+  const dd = String(d).padStart(2, '0');
+  const mm = String(m).padStart(2, '0');
+  return `${dayName}, ${dd}/${mm}/${y}`;
+}
+
+window.navigateAgendaDate = function(daysDelta) {
+  const [y, m, d] = selectedDate.split('-').map(Number);
+  const dt = new Date(y, m - 1, d);
+  dt.setDate(dt.getDate() + daysDelta);
+  const newY = dt.getFullYear();
+  const newM = String(dt.getMonth() + 1).padStart(2, '0');
+  const newD = String(dt.getDate()).padStart(2, '0');
+  selectedDate = `${newY}-${newM}-${newD}`;
+  
+  const container = document.getElementById('viewContainer');
+  const actions = document.getElementById('topBarActions');
+  renderAgenda(container, actions);
+};
+
+let popoverMonthState = null;
+
+window.toggleCalendarPopover = function(e) {
+  if (e) e.stopPropagation();
+  let existing = document.getElementById('calendarPopover');
+  if (existing) {
+    existing.remove();
+    return;
+  }
+
+  const [y, m] = selectedDate.split('-').map(Number);
+  popoverMonthState = { year: y, month: m - 1 };
+
+  const triggerBtn = document.getElementById('agendaDatePickerTrigger');
+  if (!triggerBtn) return;
+
+  const popover = document.createElement('div');
+  popover.className = 'calendar-popover';
+  popover.id = 'calendarPopover';
+
+  renderPopoverCalendarContent(popover);
+
+  const wrapper = triggerBtn.closest('.agenda-header-datepicker') || triggerBtn.parentElement;
+  wrapper.appendChild(popover);
+
+  setTimeout(() => {
+    const closeListener = (evt) => {
+      if (popover && !popover.contains(evt.target) && evt.target !== triggerBtn && !triggerBtn.contains(evt.target)) {
+        popover.remove();
+        document.removeEventListener('click', closeListener);
+      }
+    };
+    document.addEventListener('click', closeListener);
+  }, 50);
+};
+
+function renderPopoverCalendarContent(popover) {
+  const { year, month } = popoverMonthState;
+  const monthNames = ['JANEIRO', 'FEVEREIRO', 'MARÇO', 'ABRIL', 'MAIO', 'JUNHO', 'JULHO', 'AGOSTO', 'SETEMBRO', 'OUTUBRO', 'NOVEMBRO', 'DEZEMBRO'];
+  const monthLabel = `${monthNames[month].slice(0, 4)}. DE ${year}`;
+
+  const firstDay = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const prevMonthDays = new Date(year, month, 0).getDate();
+
+  const appointmentDates = new Set();
+  (state.appointments || []).forEach(a => {
+    if (a.status !== 'cancelado' && a.date) {
+      const [ay, am, ad] = a.date.split('-').map(Number);
+      if (ay === year && am === month + 1) {
+        appointmentDates.add(ad);
+      }
+    }
+  });
+
+  let cellsHtml = '';
+
+  for (let i = firstDay - 1; i >= 0; i--) {
+    const dayNum = prevMonthDays - i;
+    cellsHtml += `<div class="popover-day-cell other-month">${dayNum}</div>`;
+  }
+
+  for (let day = 1; day <= daysInMonth; day++) {
+    const currentMonthStr = String(month + 1).padStart(2, '0');
+    const currentDayStr = String(day).padStart(2, '0');
+    const fullDateStr = `${year}-${currentMonthStr}-${currentDayStr}`;
+
+    const isSelected = fullDateStr === selectedDate;
+    const hasApp = appointmentDates.has(day);
+
+    cellsHtml += `
+      <div class="popover-day-cell ${isSelected ? 'selected' : ''}" onclick="selectDateFromPopover('${fullDateStr}')">
+        <span>${day}</span>
+        ${hasApp ? '<span class="dot-indicator"></span>' : ''}
+      </div>
+    `;
+  }
+
+  const totalCellsSoFar = firstDay + daysInMonth;
+  const trailingCells = (7 - (totalCellsSoFar % 7)) % 7;
+  for (let i = 1; i <= trailingCells; i++) {
+    cellsHtml += `<div class="popover-day-cell other-month">${i}</div>`;
+  }
+
+  popover.innerHTML = `
+    <div class="popover-month-header">
+      <span style="display:flex; align-items:center; gap:4px;">${monthLabel} ▾</span>
+      <div style="display:flex; align-items:center; gap:8px;">
+        <button class="btn-date-nav" onclick="navigatePopoverMonth(-1)">‹</button>
+        <button class="btn-date-nav" onclick="navigatePopoverMonth(1)">›</button>
+      </div>
+    </div>
+    <div class="popover-days-grid">
+      <div class="popover-weekday-label">D</div>
+      <div class="popover-weekday-label">S</div>
+      <div class="popover-weekday-label">T</div>
+      <div class="popover-weekday-label">Q</div>
+      <div class="popover-weekday-label">Q</div>
+      <div class="popover-weekday-label">S</div>
+      <div class="popover-weekday-label">S</div>
+      ${cellsHtml}
+    </div>
+  `;
+}
+
+window.navigatePopoverMonth = function(delta) {
+  let { year, month } = popoverMonthState;
+  month += delta;
+  if (month < 0) {
+    month = 11;
+    year--;
+  } else if (month > 11) {
+    month = 0;
+    year++;
+  }
+  popoverMonthState = { year, month };
+  const popover = document.getElementById('calendarPopover');
+  if (popover) renderPopoverCalendarContent(popover);
+};
+
+window.selectDateFromPopover = function(fullDateStr) {
+  selectedDate = fullDateStr;
+  const popover = document.getElementById('calendarPopover');
+  if (popover) popover.remove();
+
+  const container = document.getElementById('viewContainer');
+  const actions = document.getElementById('topBarActions');
+  renderAgenda(container, actions);
+};
+
 let agendaPollingInterval = null;
 
 function renderAgenda(container, actions) {
   const maxDays = state.settings.maxBookingDaysAhead || 30;
 
   actions.innerHTML = `
-    <div class="agenda-actions-wrapper" style="display:flex; align-items:center; gap:8px;">
-      <div class="agenda-date-wrapper" title="Selecionar Data da Agenda">
-        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-        <input type="date" value="${selectedDate}" class="agenda-date-picker" id="agendaDateInput">
+    <div class="agenda-actions-wrapper" style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+      <div class="agenda-header-datepicker">
+        <button class="btn-date-nav" onclick="navigateAgendaDate(-1)" title="Dia anterior">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"></path></svg>
+        </button>
+
+        <button class="btn-date-picker-trigger" id="agendaDatePickerTrigger" onclick="toggleCalendarPopover(event)">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+          <span>${formatFormattedDateTitle(selectedDate)}</span>
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"></path></svg>
+        </button>
+
+        <button class="btn-date-nav" onclick="navigateAgendaDate(1)" title="Próximo dia">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"></path></svg>
+        </button>
       </div>
+
       <button class="btn-falcon btn-secondary" onclick="openBlockTimeModal()" title="Bloquear horários ou fechar mais cedo">
         <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg>
         <span>Bloquear</span>
@@ -982,13 +1150,17 @@ function renderAgenda(container, actions) {
       </button>
     </div>
   `;
-  document.getElementById('agendaDateInput').addEventListener('change', (e) => {
-    selectedDate = e.target.value;
-    renderAgenda(container, actions);
-  });
 
-  // Filtro de profissionais
-  let profsHtml = state.professionals.map(p => `
+  // Filtro de profissionais (com opção Todos inclusa)
+  const isAllSelected = selectedProfessionalId === 'all' || !selectedProfessionalId;
+  let profsHtml = `
+    <div class="prof-badge-card ${isAllSelected ? 'active' : ''}" data-prof-id="all" onclick="selectProfessional('all')">
+      <div style="width:36px; height:36px; border-radius:50%; background:#f1f5f9; display:flex; align-items:center; justify-content:center; font-weight:700; color:#334155; border: 2px solid var(--orange);">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+      </div>
+      <span>Todos</span>
+    </div>
+  ` + state.professionals.map(p => `
     <div class="prof-badge-card ${p.id === selectedProfessionalId ? 'active' : ''}" data-prof-id="${p.id}" onclick="selectProfessional('${p.id}')">
       <img src="${p.avatar}" alt="${p.name}">
       <span>${p.name.split(' ')[0]}</span>
@@ -1022,16 +1194,122 @@ function updateScheduleView() {
   const wrapper = document.getElementById('scheduleTableWrapper');
   if (!wrapper) return;
 
-  const times = [
-    "08:00", "08:30", "09:00", "09:30", "10:00", "10:30",
-    "11:00", "11:30", "12:00", "12:30", "13:00", "13:30",
-    "14:00", "14:30", "15:00", "15:30", "16:00", "16:30",
-    "17:00", "17:30", "18:00", "18:30", "19:00"
-  ];
+  const isListMode = state.settings.agendaViewMode === 'list';
+  const isAllProf = selectedProfessionalId === 'all' || !selectedProfessionalId;
 
-  const currentProfAppointments = state.appointments.filter(
-    a => a.professionalId === selectedProfessionalId && a.date === selectedDate && a.status !== 'cancelado'
+  const currentProfAppointments = (state.appointments || []).filter(
+    a => (isAllProf || a.professionalId === selectedProfessionalId) &&
+         a.date === selectedDate &&
+         a.status !== 'cancelado'
   );
+
+  if (isListMode) {
+    let listHtml = `
+      <button class="btn-add-appointment-banner" onclick="openNewAppointmentModal()">
+        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+        <span>+ Adicionar agendamento</span>
+      </button>
+
+      <div class="agenda-date-group-title">
+        ${formatFormattedDateTitle(selectedDate)}
+      </div>
+    `;
+
+    if (currentProfAppointments.length === 0) {
+      listHtml += `
+        <div style="text-align: center; padding: 40px 20px; background: #ffffff; border-radius: 16px; border: 1px dashed #cbd5e1; color: #64748b;">
+          <svg width="40" height="40" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" style="margin-bottom: 12px; color: #94a3b8;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+          <p style="font-weight: 600; font-size: 0.95rem; margin-bottom: 4px;">Nenhum agendamento para este dia</p>
+          <p style="font-size: 0.82rem; margin-bottom: 16px;">Clique no botão acima para adicionar um novo atendimento.</p>
+        </div>
+      `;
+    } else {
+      currentProfAppointments.sort((a, b) => (a.startTime || '').localeCompare(b.startTime || ''));
+
+      currentProfAppointments.forEach(app => {
+        const prof = (state.professionals || []).find(p => p.id === app.professionalId);
+        const profName = prof ? prof.name : (app.professionalName || '');
+        const profSubText = isAllProf && profName ? ` com ${profName}` : '';
+        const initial = (app.clientName || 'C').charAt(0).toUpperCase();
+
+        let statusClass = 'agendado';
+        let statusLabel = 'Agendado';
+        if (app.status === 'indisponivel') {
+          statusClass = 'cancelado';
+          statusLabel = 'Bloqueado';
+        } else if (app.status === 'concluido') {
+          statusClass = 'concluido';
+          statusLabel = 'Concluído';
+        } else if (app.status === 'faltou') {
+          statusClass = 'cancelado';
+          statusLabel = 'Faltou';
+        }
+
+        if (app.status === 'indisponivel') {
+          listHtml += `
+            <div class="agenda-list-item-card" style="background:#fef2f2; border-color:#fecaca;">
+              <div class="agenda-list-client-info">
+                <div class="agenda-list-client-avatar" style="background:#fee2e2; color:#b91c1c;">
+                  <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg>
+                </div>
+                <div>
+                  <div class="agenda-list-client-name" style="color:#b91c1c;">Horário Bloqueado</div>
+                  <div class="agenda-list-service-sub">${app.notes || 'Sem observações'}${profSubText}</div>
+                </div>
+              </div>
+              <div class="agenda-list-badge-time">
+                <span class="status-badge-pill cancelado">Bloqueado</span>
+                <span class="agenda-list-time-range">${app.startTime} - ${app.endTime}</span>
+                <button class="btn-delete-app" onclick="deleteAppointment('${app.id}', event)" style="margin-top:4px;">Desbloquear</button>
+              </div>
+            </div>
+          `;
+        } else {
+          listHtml += `
+            <div class="agenda-list-item-card">
+              <div class="agenda-list-client-info">
+                <div class="agenda-list-client-avatar">
+                  <span style="font-weight:700; font-size:1.1rem; color:var(--orange);">${initial}</span>
+                </div>
+                <div>
+                  <div class="agenda-list-client-name">${app.clientName || 'Cliente sem nome'}</div>
+                  <div class="agenda-list-service-sub">${app.serviceName || 'Serviço'}${profSubText} • R$ ${Number(app.price || 0).toFixed(2)}</div>
+                </div>
+              </div>
+              <div class="agenda-list-badge-time">
+                <span class="status-badge-pill ${statusClass}">${statusLabel}</span>
+                <span class="agenda-list-time-range">${app.startTime} - ${app.endTime}</span>
+                <div style="display:flex; gap:4px; margin-top:4px;">
+                  ${app.clientPhone ? `
+                    <button class="btn-remind-app" onclick="sendAppointmentReminder('${app.id}', event)" title="Lembrete WhatsApp">
+                      <svg width="12" height="12" fill="currentColor" viewBox="0 0 24 24"><path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.312.045-.694.062-2.18-.553-1.614-.668-2.673-2.316-2.753-2.423-.081-.107-.655-.873-.655-1.664 0-.792.414-1.182.56-1.341.144-.16.315-.2.42-.2.106 0 .211.002.304.006.098.005.23-.037.36.275.132.318.45 1.096.488 1.176.04.08.067.174.013.28-.053.106-.08.172-.158.264-.078.093-.164.208-.234.28-.08.082-.164.172-.07.334.093.16.417.689.896 1.116.617.55 1.137.72 1.298.8.16.08.254.07.35-.04.095-.11.408-.475.517-.638.11-.164.218-.137.368-.081.15.054.954.45 1.118.532.164.082.273.123.313.192.04.068.04.399-.104.804z"/></svg>
+                    </button>
+                  ` : ''}
+                  <button class="btn-delete-app" onclick="deleteAppointment('${app.id}', event)" title="Excluir">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18m-2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+          `;
+        }
+      });
+    }
+
+    wrapper.innerHTML = listHtml;
+    return;
+  }
+
+  const startHour = Math.max(4, Math.min(9, Number(state.settings.agendaStartHour) || 8));
+  const endHour = 20;
+  const times = [];
+  for (let h = startHour; h <= endHour; h++) {
+    const hStr = String(h).padStart(2, '0');
+    times.push(`${hStr}:00`);
+    if (h < endHour) {
+      times.push(`${hStr}:30`);
+    }
+  }
 
   let html = `<table class="salon-schedule-table"><tbody>`;
   let skipCount = 0;
@@ -1047,17 +1325,18 @@ function updateScheduleView() {
       continue;
     }
 
-    // Procura agendamento que inicia exatamente neste horário
     const appStartingHere = currentProfAppointments.find(a => a.startTime === time);
 
     if (appStartingHere) {
-      // Calcula quantos slots de 30 min ele ocupa
       const [sh, sm] = appStartingHere.startTime.split(':').map(Number);
       const [eh, em] = appStartingHere.endTime.split(':').map(Number);
       const spanMin = (eh * 60 + em) - (sh * 60 + sm);
       const rowSpan = Math.max(1, Math.round(spanMin / 30));
 
       skipCount = rowSpan - 1;
+
+      const prof = (state.professionals || []).find(p => p.id === appStartingHere.professionalId);
+      const profBadgeText = isAllProf && prof ? ` • ${prof.name}` : '';
 
       if (appStartingHere.status === 'indisponivel') {
         html += `
@@ -1082,7 +1361,7 @@ function updateScheduleView() {
               <div class="app-top-row">
                 <div class="app-info">
                   <strong>${appStartingHere.clientName}</strong>
-                  <span>${appStartingHere.serviceName}</span>
+                  <span>${appStartingHere.serviceName}${profBadgeText}</span>
                   <small>${appStartingHere.clientPhone || 'Sem telefone'} • Duração: ${spanMin} min</small>
                   ${appStartingHere.notes ? `<small style="color:#666; display:block; margin-top:4px;">Obs: ${appStartingHere.notes}</small>` : ''}
                 </div>
@@ -1119,7 +1398,6 @@ function updateScheduleView() {
         `;
       }
     } else {
-      // Slot vazio disponível para clique
       html += `
         <td class="salon-empty-cell" onclick="openNewAppointmentModal('${time}')" title="Clique para agendar às ${time}"></td>
       `;
@@ -2029,6 +2307,38 @@ function renderSettings(container, actions) {
     </div>
   `;
 
+  const currentViewModeLabel = state.settings.agendaViewMode === 'list' ? 'Lista' : 'Calendário';
+  const currentStartHour = Number(state.settings.agendaStartHour) || 8;
+
+  const agendaCardHtml = `
+    <div class="card-shell" style="margin-bottom: 20px;">
+      <h3 style="margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
+        <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+        Visualização da Agenda
+      </h3>
+
+      <div class="setting-menu-item" onclick="openAgendaViewModeModal()">
+        <div>
+          <div style="font-weight: 700; color: var(--ink); font-size: 0.95rem;">Modo de visualização</div>
+          <div style="font-size: 0.82rem; color: var(--muted);">${currentViewModeLabel}</div>
+        </div>
+        <div style="display:flex; align-items:center; gap: 6px; color: var(--muted); font-weight: 600; font-size: 0.9rem;">
+          <span>${currentViewModeLabel}</span>
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"></path></svg>
+        </div>
+      </div>
+
+      <div style="margin-top: 16px;">
+        <label style="font-weight: 700; color: var(--ink); font-size: 0.92rem; display: block; margin-bottom: 8px;">Horário de início da agenda</label>
+        <div class="start-hour-pills">
+          ${[4, 5, 6, 7, 8, 9].map(h => `
+            <button type="button" class="start-hour-pill ${h === currentStartHour ? 'selected' : ''}" onclick="setAgendaStartHour(${h})">${h}:00</button>
+          `).join('')}
+        </div>
+      </div>
+    </div>
+  `;
+
   const notificationCardHtml = `
     <div class="card-shell" style="margin-bottom: 20px;">
       <h3 style="margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
@@ -2084,6 +2394,7 @@ function renderSettings(container, actions) {
 
   if (!isManager) {
     container.innerHTML = `
+      ${agendaCardHtml}
       ${notificationCardHtml}
       <div style="margin-top: 20px;">
         <button class="btn-falcon btn-primary" onclick="saveSettings()">Salvar Preferências de Notificação</button>
@@ -2094,12 +2405,82 @@ function renderSettings(container, actions) {
 
   container.innerHTML = `
     ${salonCardHtml}
+    ${agendaCardHtml}
     ${notificationCardHtml}
     <div style="margin-top: 20px;">
       <button class="btn-falcon btn-primary" onclick="saveSettings()">Salvar Configurações</button>
     </div>
   `;
 }
+
+window.openAgendaViewModeModal = function() {
+  let selectedMode = state.settings.agendaViewMode || 'calendar';
+  window._tempViewMode = selectedMode;
+
+  const bodyHtml = `
+    <div style="padding: 4px 0;">
+      <p style="font-size: 0.88rem; color: var(--muted); margin-bottom: 16px;">
+        Escolha como você prefere visualizar os agendamentos na sua tela de agenda.
+      </p>
+
+      <div class="view-mode-card-option ${selectedMode === 'calendar' ? 'selected' : ''}" id="modeOptCalendar" onclick="selectViewModeOption('calendar')">
+        <div style="display:flex; align-items:center; gap: 14px;">
+          <div style="width: 44px; height: 44px; border-radius: 12px; background: rgba(255,105,0,0.1); display:flex; align-items:center; justify-content:center; color: var(--orange);">
+            <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+          </div>
+          <div>
+            <div style="font-weight: 700; color: var(--ink); font-size: 1rem; margin-bottom: 2px;">Calendário</div>
+            <div style="font-size: 0.82rem; color: var(--muted);">Exibe os agendamentos em uma grade de horários dia a dia.</div>
+          </div>
+        </div>
+        <div class="view-mode-radio-circle"></div>
+      </div>
+
+      <div class="view-mode-card-option ${selectedMode === 'list' ? 'selected' : ''}" id="modeOptList" onclick="selectViewModeOption('list')">
+        <div style="display:flex; align-items:center; gap: 14px;">
+          <div style="width: 44px; height: 44px; border-radius: 12px; background: rgba(59,130,246,0.1); display:flex; align-items:center; justify-content:center; color: #3b82f6;">
+            <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+          </div>
+          <div>
+            <div style="font-weight: 700; color: var(--ink); font-size: 1rem; margin-bottom: 2px;">Lista</div>
+            <div style="font-size: 0.82rem; color: var(--muted);">Exibe os agendamentos em uma lista sequencial por profissional e dia.</div>
+          </div>
+        </div>
+        <div class="view-mode-radio-circle"></div>
+      </div>
+    </div>
+  `;
+
+  openModal('Modo de visualização', bodyHtml, async () => {
+    state.settings.agendaViewMode = window._tempViewMode || selectedMode;
+    await saveSettings();
+    closeModal();
+    if (currentView === 'agenda') {
+      const container = document.getElementById('viewContainer');
+      const actions = document.getElementById('topBarActions');
+      renderAgenda(container, actions);
+    }
+  });
+};
+
+window.selectViewModeOption = function(mode) {
+  window._tempViewMode = mode;
+  const optCal = document.getElementById('modeOptCalendar');
+  const optList = document.getElementById('modeOptList');
+  if (optCal) optCal.classList.toggle('selected', mode === 'calendar');
+  if (optList) optList.classList.toggle('selected', mode === 'list');
+};
+
+window.setAgendaStartHour = async function(h) {
+  state.settings.agendaStartHour = h;
+  document.querySelectorAll('.start-hour-pill').forEach(btn => {
+    btn.classList.toggle('selected', btn.innerText.startsWith(`${h}:`));
+  });
+  await saveSettings();
+  if (currentView === 'agenda') {
+    updateScheduleView();
+  }
+};
 
 window.saveSettings = async function() {
   const logoVal = document.getElementById('settingSalonLogoValue')?.value || state.settings.logo || state.settings.photo || '';
