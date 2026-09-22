@@ -27,16 +27,41 @@ function getButterflyAvatar(name) {
 
 const VALID_VIEWS = ['agenda', 'comissões', 'profissionais', 'clientes', 'servicos', 'pacotes', 'produtos', 'despesas', 'aniversarios', 'balanco', 'configuracoes', 'superadmin'];
 
+const VIEW_ALIASES = {
+  'comissoes': 'comissões',
+  'comissão': 'comissões',
+  'serviços': 'servicos',
+  'servico': 'servicos',
+  'balanço': 'balanco',
+  'configurações': 'configuracoes',
+  'aniversários': 'aniversarios',
+  'aniversario': 'aniversarios',
+  'profissional': 'profissionais',
+  'cliente': 'clientes',
+  'produto': 'produtos',
+  'despesa': 'despesas',
+  'pacote': 'pacotes'
+};
+
+function normalizeView(v) {
+  if (!v) return 'agenda';
+  const clean = String(v).trim().toLowerCase();
+  const aliased = VIEW_ALIASES[clean] || clean;
+  return VALID_VIEWS.includes(aliased) ? aliased : 'agenda';
+}
+
 function getInitialView() {
   try {
-    const hash = decodeURIComponent(window.location.hash.replace('#', '')).trim();
-    if (hash && VALID_VIEWS.includes(hash)) {
-      return hash;
+    const raw = decodeURIComponent(window.location.hash.replace('#', '')).trim();
+    if (raw) {
+      const normalized = normalizeView(raw);
+      if (normalized) return normalized;
     }
   } catch (e) {}
   const saved = localStorage.getItem('bellasync_current_view');
-  if (saved && VALID_VIEWS.includes(saved)) {
-    return saved;
+  if (saved) {
+    const normalized = normalizeView(saved);
+    if (normalized) return normalized;
   }
   return 'agenda';
 }
@@ -45,9 +70,10 @@ let currentView = getInitialView();
 
 window.addEventListener('hashchange', () => {
   try {
-    const hash = decodeURIComponent(window.location.hash.replace('#', '')).trim();
-    if (hash && VALID_VIEWS.includes(hash) && hash !== currentView) {
-      renderView(hash);
+    const raw = decodeURIComponent(window.location.hash.replace('#', '')).trim();
+    const target = normalizeView(raw);
+    if (target && target !== currentView) {
+      renderView(target);
     }
   } catch (e) {}
 });
@@ -736,8 +762,26 @@ async function loadInitialData() {
     checkAndNotifyBirthdays();
     updateNotificationBadge();
 
+    // Vincula profissional ao usuário logado caso não esteja preenchido
+    if (currentUser) {
+      if (!currentUser.professionalId) {
+        const match = (state.professionals || []).find(p => 
+          (p.email && currentUser.email && p.email.toLowerCase() === currentUser.email.toLowerCase()) ||
+          (p.name && currentUser.name && p.name.trim().toLowerCase() === currentUser.name.trim().toLowerCase())
+        );
+        if (match) {
+          currentUser.professionalId = match.id;
+          try { localStorage.setItem('salon_user', JSON.stringify(currentUser)); } catch (e) {}
+        }
+      }
+
+      if (!isManager && currentUser.professionalId) {
+        selectedProfessionalId = currentUser.professionalId;
+      }
+    }
+
     if (state.professionals.length > 0 && !selectedProfessionalId) {
-      selectedProfessionalId = state.professionals[0].id;
+      selectedProfessionalId = isManager ? 'all' : state.professionals[0].id;
     }
   } catch (err) {
     console.error("Erro ao carregar dados da API:", err);
@@ -747,11 +791,15 @@ async function loadInitialData() {
 function setupNavigation() {
   const navItems = document.querySelectorAll('.nav-item');
   navItems.forEach(item => {
-    item.addEventListener('click', () => {
+    item.addEventListener('click', (e) => {
+      e.preventDefault();
+      const rawView = item.dataset.view;
+      if (!rawView) return;
+      const targetView = normalizeView(rawView);
+
       navItems.forEach(n => n.classList.remove('active'));
       item.classList.add('active');
-      currentView = item.dataset.view;
-      renderView(currentView);
+      renderView(targetView);
 
       // Fecha sidebar no mobile
       const sidebar = document.getElementById('sidebar');
@@ -870,9 +918,30 @@ window.handleFabClick = function() {
   }
 };
 
+function renderEmptyStateHtml({ icon, title, description, buttonText, buttonOnClick }) {
+  return `
+    <div class="card-shell" style="text-align: center; padding: 44px 24px; max-width: 520px; margin: 20px auto; border-radius: 20px; background: #ffffff; box-shadow: 0 4px 20px rgba(0,0,0,0.04);">
+      <div style="background: rgba(255, 105, 0, 0.1); width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; border: 1px solid rgba(255, 105, 0, 0.2);">
+        ${icon || ''}
+      </div>
+      <h3 style="margin: 0 0 8px 0; color: var(--ink, #0f172a); font-weight: 700; font-size: 1.15rem;">${title || ''}</h3>
+      <p style="color: var(--muted, #64748b); font-size: 0.88rem; line-height: 1.5; margin: 0 0 20px 0;">
+        ${description || ''}
+      </p>
+      ${buttonText && buttonOnClick ? `
+        <button class="btn-falcon btn-primary" onclick="${buttonOnClick}" style="margin: 0 auto; display: inline-flex; align-items: center; gap: 8px;">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+          <span>${buttonText}</span>
+        </button>
+      ` : ''}
+    </div>
+  `;
+}
+window.renderEmptyStateHtml = renderEmptyStateHtml;
+
 // Router simples das Views
 function renderView(view) {
-  if (!VALID_VIEWS.includes(view)) view = 'agenda';
+  view = normalizeView(view);
   currentView = view;
 
   try {
@@ -885,7 +954,8 @@ function renderView(view) {
   // Sincroniza classe active nos botões do menu lateral
   const navItems = document.querySelectorAll('.nav-item');
   navItems.forEach(item => {
-    item.classList.toggle('active', item.dataset.view === view);
+    const itemTarget = normalizeView(item.dataset.view);
+    item.classList.toggle('active', itemTarget === view);
   });
 
   // Sempre fecha a sidebar no mobile ao trocar de view
@@ -895,85 +965,79 @@ function renderView(view) {
   if (overlayEl) overlayEl.classList.remove('active');
 
   const container = document.getElementById('viewContainer');
+  if (!container) return;
+  // Limpa o container imediatamente para que nenhuma seção anterior fique presa na tela
+  container.innerHTML = '';
+
   const title = document.getElementById('currentViewTitle');
   if (title) title.style.display = 'block';
   const actions = document.getElementById('topBarActions');
-  actions.innerHTML = '';
+  if (actions) actions.innerHTML = '';
 
   updateFabButton(view);
 
-
-function renderEmptyStateHtml({ icon, title, description, buttonText, buttonOnClick }) {
-  return `
-    <div class="card-shell" style="text-align: center; padding: 44px 24px; max-width: 520px; margin: 20px auto; border-radius: 20px; background: #ffffff; box-shadow: 0 4px 20px rgba(0,0,0,0.04);">
-      <div style="background: rgba(255, 105, 0, 0.1); width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; border: 1px solid rgba(255, 105, 0, 0.2);">
-        ${icon}
-      </div>
-      <h3 style="margin: 0 0 8px 0; color: var(--ink, #0f172a); font-weight: 700; font-size: 1.15rem;">${title}</h3>
-      <p style="color: var(--muted, #64748b); font-size: 0.88rem; line-height: 1.5; margin: 0 0 20px 0;">
-        ${description}
-      </p>
-      ${buttonText && buttonOnClick ? `
-        <button class="btn-falcon btn-primary" onclick="${buttonOnClick}" style="margin: 0 auto; display: inline-flex; align-items: center; gap: 8px;">
-          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-          <span>${buttonText}</span>
-        </button>
-      ` : ''}
-    </div>
-  `;
-}
-
-  switch (view) {
-    case 'agenda':
-      title.innerText = 'Agenda do Salão';
-      renderAgenda(container, actions);
-      break;
-    case 'comissões':
-      title.innerText = 'Comissões & Vales';
-      renderCommissions(container, actions);
-      break;
-    case 'profissionais':
-      title.innerText = 'Profissionais Cadastrados';
-      renderProfessionals(container, actions);
-      break;
-    case 'clientes':
-      title.innerText = 'Clientes';
-      renderClients(container, actions);
-      break;
-    case 'servicos':
-      title.innerText = 'Serviços';
-      renderServices(container, actions);
-      break;
-    case 'pacotes':
-      title.innerText = 'Pacotes';
-      renderPackages(container, actions);
-      break;
-    case 'produtos':
-      title.innerText = 'Produtos & Estoque';
-      renderProducts(container, actions);
-      break;
-    case 'despesas':
-      title.innerText = 'Controle de Despesas';
-      renderExpenses(container, actions);
-      break;
-    case 'aniversarios':
-      title.innerText = 'Aniversariantes';
-      renderBirthdays(container, actions);
-      break;
-    case 'balanco':
-      title.innerText = 'Balanço Mensal & Metas';
-      renderBalanco(container, actions);
-      break;
-    case 'configuracoes':
-      title.innerText = isManager ? 'Configurações do Salão' : 'Notificações & Preferências';
-      renderSettings(container, actions);
-      break;
-    case 'superadmin':
-      title.innerText = 'Gestão Master — BellaSync SaaS';
-      renderSuperAdmin(container, actions);
-      break;
-    default:
-      container.innerHTML = `<div class="card-shell"><h3>Em desenvolvimento...</h3></div>`;
+  try {
+    switch (view) {
+      case 'agenda':
+        if (title) title.innerText = 'Agenda do Salão';
+        renderAgenda(container, actions);
+        break;
+      case 'comissões':
+        if (title) title.innerText = 'Comissões & Vales';
+        renderCommissions(container, actions);
+        break;
+      case 'profissionais':
+        if (title) title.innerText = 'Profissionais Cadastrados';
+        renderProfessionals(container, actions);
+        break;
+      case 'clientes':
+        if (title) title.innerText = 'Clientes';
+        renderClients(container, actions);
+        break;
+      case 'servicos':
+        if (title) title.innerText = 'Serviços';
+        renderServices(container, actions);
+        break;
+      case 'pacotes':
+        if (title) title.innerText = 'Pacotes';
+        renderPackages(container, actions);
+        break;
+      case 'produtos':
+        if (title) title.innerText = 'Produtos & Estoque';
+        renderProducts(container, actions);
+        break;
+      case 'despesas':
+        if (title) title.innerText = 'Controle de Despesas';
+        renderExpenses(container, actions);
+        break;
+      case 'aniversarios':
+        if (title) title.innerText = 'Aniversariantes';
+        renderBirthdays(container, actions);
+        break;
+      case 'balanco':
+        if (title) title.innerText = 'Balanço Mensal & Metas';
+        renderBalanco(container, actions);
+        break;
+      case 'configuracoes':
+        if (title) title.innerText = isManager ? 'Configurações do Salão' : 'Notificações & Preferências';
+        renderSettings(container, actions);
+        break;
+      case 'superadmin':
+        if (title) title.innerText = 'Gestão Master — BellaSync SaaS';
+        renderSuperAdmin(container, actions);
+        break;
+      default:
+        container.innerHTML = `<div class="card-shell"><h3>Em desenvolvimento...</h3></div>`;
+    }
+  } catch (err) {
+    console.error(`Erro ao renderizar a seção "${view}":`, err);
+    container.innerHTML = renderEmptyStateHtml({
+      icon: `<svg width="30" height="30" fill="none" stroke="#dc2626" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>`,
+      title: "Erro ao Carregar Seção",
+      description: "Ocorreu uma falha ao exibir os dados desta seção. Recarregue a página para tentar novamente.",
+      buttonText: "Recarregar Página",
+      buttonOnClick: "location.reload()"
+    });
   }
 }
 
@@ -1293,19 +1357,25 @@ function renderAgenda(container, actions) {
     </div>
   `;
 
-  // Filtro de profissionais (com opção Todos inclusa)
-  const isAllSelected = selectedProfessionalId === 'all' || !selectedProfessionalId;
-  let profsHtml = `
-    <div class="prof-badge-card ${isAllSelected ? 'active' : ''}" data-prof-id="all" onclick="selectProfessional('all')">
-      <div style="width:36px; height:36px; border-radius:50%; background:#f1f5f9; display:flex; align-items:center; justify-content:center; font-weight:700; color:#334155; border: 2px solid var(--orange);">
-        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+  // Filtro de profissionais (com opção Todos inclusa apenas para gestores)
+  const isAllSelected = selectedProfessionalId === 'all' || (!selectedProfessionalId && isManager);
+  let profsHtml = '';
+
+  if (isManager) {
+    profsHtml += `
+      <div class="prof-badge-card ${isAllSelected ? 'active' : ''}" data-prof-id="all" onclick="selectProfessional('all')">
+        <div style="width:36px; height:36px; border-radius:50%; background:#f1f5f9; display:flex; align-items:center; justify-content:center; font-weight:700; color:#334155; border: 2px solid var(--orange);">
+          <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+        </div>
+        <span>Todos</span>
       </div>
-      <span>Todos</span>
-    </div>
-  ` + state.professionals.map(p => `
+    `;
+  }
+
+  profsHtml += (state.professionals || []).map(p => `
     <div class="prof-badge-card ${p.id === selectedProfessionalId ? 'active' : ''}" data-prof-id="${p.id}" onclick="selectProfessional('${p.id}')" title="${p.name}">
-      <img src="${p.avatar}" alt="${p.name}">
-      <span title="${p.name}">${p.name.split(' ')[0]}</span>
+      <img src="${p.avatar || getButterflyAvatar(p.name)}" alt="${p.name}">
+      <span title="${p.name}">${p.name ? p.name.split(' ')[0] : 'Prof'}</span>
     </div>
   `).join('');
 
@@ -1636,8 +1706,21 @@ window.sendAppointmentReminder = async function(appId, event) {
 function renderCommissions(container, actions) {
   actions.innerHTML = '';
 
-  const toPay = (state.commissions || []).filter(c => c.status === 'a_pagar');
-  const paid = (state.commissions || []).filter(c => c.status === 'paga');
+  const myProf = (state.professionals || []).find(p => 
+    (currentUser?.professionalId && p.id === currentUser.professionalId) ||
+    (p.email && currentUser?.email && p.email.toLowerCase() === currentUser.email.toLowerCase()) ||
+    (p.name && currentUser?.name && p.name.trim().toLowerCase() === currentUser.name.trim().toLowerCase())
+  );
+  const myProfId = myProf ? myProf.id : currentUser?.professionalId;
+  const myProfName = myProf ? myProf.name : currentUser?.name;
+
+  let listComms = state.commissions || [];
+  if (!isManager && myProfId) {
+    listComms = listComms.filter(c => c.professionalId === myProfId || (c.professionalName && c.professionalName === myProfName));
+  }
+
+  const toPay = listComms.filter(c => c.status === 'a_pagar');
+  const paid = listComms.filter(c => c.status === 'paga');
 
   container.innerHTML = `
     <div class="tabs-header" style="margin-bottom: 16px;">
@@ -1645,7 +1728,7 @@ function renderCommissions(container, actions) {
       <button class="tab-btn" id="tabPaid" onclick="switchCommissionTab('paid')">Pagas (${paid.length})</button>
     </div>
     <div id="commissionsList" class="data-list">
-      ${renderCommissionsList(toPay, true)}
+      ${renderCommissionsList(toPay, isManager)}
     </div>
   `;
 }
@@ -1654,8 +1737,10 @@ function renderCommissionsList(list, canPay) {
   if (!list || list.length === 0) {
     return renderEmptyStateHtml({
       icon: `<svg width="30" height="30" fill="none" stroke="var(--orange)" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>`,
-      title: "Nenhuma Comissão Registrada",
-      description: "As comissões e vales dos profissionais serão exibidos aqui conforme os atendimentos forem realizados.",
+      title: isManager ? "Nenhuma Comissão Registrada" : "Nenhuma Comissão ou Vale Encontrado",
+      description: isManager 
+        ? "As comissões e vales dos profissionais serão exibidos aqui conforme os atendimentos forem realizados."
+        : "Suas comissões e vales serão exibidos aqui conforme seus atendimentos forem realizados no salão.",
       buttonText: isManager ? "Lançar Vale / Adiantamento" : "",
       buttonOnClick: "openCommissionModal()"
     });
@@ -1688,22 +1773,24 @@ function renderCommissionsList(list, canPay) {
             ${isVale ? '- ' : ''}R$ ${amountAbs.toFixed(2)}
           </span>
 
-          <div class="item-actions-group">
-            ${canPay ? `
-              <button class="btn-card-action pay" onclick="payCommission('${c.id}')" title="Marcar comissão como paga">
-                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                Pagar
+          ${isManager ? `
+            <div class="item-actions-group">
+              ${canPay ? `
+                <button class="btn-card-action pay" onclick="payCommission('${c.id}')" title="Marcar comissão como paga">
+                  <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                  Pagar
+                </button>
+              ` : ''}
+              <button class="btn-card-action edit" onclick="openEditCommissionModal('${c.id}')" title="Editar Lançamento">
+                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                Editar
               </button>
-            ` : ''}
-            <button class="btn-card-action edit" onclick="openEditCommissionModal('${c.id}')" title="Editar Lançamento">
-              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-              Editar
-            </button>
-            <button class="btn-card-action delete" onclick="deleteCommission('${c.id}')" title="Excluir Lançamento">
-              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-              Excluir
-            </button>
-          </div>
+              <button class="btn-card-action delete" onclick="deleteCommission('${c.id}')" title="Excluir Lançamento">
+                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                Excluir
+              </button>
+            </div>
+          ` : ''}
         </div>
       </div>
     `;
@@ -1711,17 +1798,35 @@ function renderCommissionsList(list, canPay) {
 }
 
 window.switchCommissionTab = function(type) {
-  const toPay = (state.commissions || []).filter(c => c.status === 'a_pagar');
-  const paid = (state.commissions || []).filter(c => c.status === 'paga');
+  const myProf = (state.professionals || []).find(p => 
+    (currentUser?.professionalId && p.id === currentUser.professionalId) ||
+    (p.email && currentUser?.email && p.email.toLowerCase() === currentUser.email.toLowerCase()) ||
+    (p.name && currentUser?.name && p.name.trim().toLowerCase() === currentUser.name.trim().toLowerCase())
+  );
+  const myProfId = myProf ? myProf.id : currentUser?.professionalId;
+  const myProfName = myProf ? myProf.name : currentUser?.name;
+
+  let listComms = state.commissions || [];
+  if (!isManager && myProfId) {
+    listComms = listComms.filter(c => c.professionalId === myProfId || (c.professionalName && c.professionalName === myProfName));
+  }
+
+  const toPay = listComms.filter(c => c.status === 'a_pagar');
+  const paid = listComms.filter(c => c.status === 'paga');
   const listEl = document.getElementById('commissionsList');
+  if (!listEl) return;
 
   if (type === 'toPay') {
-    document.getElementById('tabToPay').classList.add('active');
-    document.getElementById('tabPaid').classList.remove('active');
-    listEl.innerHTML = renderCommissionsList(toPay, true);
+    const tabToPay = document.getElementById('tabToPay');
+    const tabPaid = document.getElementById('tabPaid');
+    if (tabToPay) tabToPay.classList.add('active');
+    if (tabPaid) tabPaid.classList.remove('active');
+    listEl.innerHTML = renderCommissionsList(toPay, isManager);
   } else {
-    document.getElementById('tabPaid').classList.add('active');
-    document.getElementById('tabToPay').classList.remove('active');
+    const tabToPay = document.getElementById('tabToPay');
+    const tabPaid = document.getElementById('tabPaid');
+    if (tabPaid) tabPaid.classList.add('active');
+    if (tabToPay) tabToPay.classList.remove('active');
     listEl.innerHTML = renderCommissionsList(paid, false);
   }
 };
@@ -1751,7 +1856,9 @@ function renderProfessionals(container, actions) {
     container.innerHTML = renderEmptyStateHtml({
       icon: `<svg width="30" height="30" fill="none" stroke="var(--orange)" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>`,
       title: "Nenhum Profissional Cadastrado",
-      description: "Adicione os membros da sua equipe para gerenciar a agenda, comissões e visibilidade no link de agendamento.",
+      description: isManager 
+        ? "Adicione os membros da sua equipe para gerenciar a agenda, comissões e visibilidade no link de agendamento."
+        : "Nenhum profissional cadastrado na equipe do salão no momento.",
       buttonText: isManager ? "Cadastrar Primeiro Profissional" : "",
       buttonOnClick: "openProfessionalModal()"
     });
@@ -1761,34 +1868,40 @@ function renderProfessionals(container, actions) {
   const profsHtml = state.professionals.map(p => `
     <div class="data-item-card">
       <div style="display: flex; align-items: center; gap: 14px;">
-        <img src="${p.avatar}" alt="${p.name}" style="width: 48px; height: 48px; border-radius: 50%;">
+        <img src="${p.avatar || getButterflyAvatar(p.name)}" alt="${p.name}" style="width: 48px; height: 48px; border-radius: 50%;">
         <div class="item-main-info">
           <h4>${p.name}</h4>
-          <p>${p.role} • ${p.phone} • Acesso: <strong>${p.access}</strong></p>
+          <p>${p.role || 'Profissional'} • ${p.phone || 'Sem telefone'} • Acesso: <strong>${p.access || 'Profissional'}</strong></p>
         </div>
       </div>
       <div class="item-actions-group">
-        ${p.requireDeposit ? `
-          <button class="btn-card-action edit" onclick="openEditProfessionalModal('${p.id}')" style="margin-right: 4px; font-size: 0.76rem; padding: 4px 10px;" title="Chave Pix: ${p.pixKey || 'Não informada'}">
-            Sinal ${p.depositPercent || 30}% (${p.pixBank || 'InfinitePay'})
+        ${isManager ? `
+          ${p.requireDeposit ? `
+            <button class="btn-card-action edit" onclick="openEditProfessionalModal('${p.id}')" style="margin-right: 4px; font-size: 0.76rem; padding: 4px 10px;" title="Chave Pix: ${p.pixKey || 'Não informada'}">
+              Sinal ${p.depositPercent || 30}% (${p.pixBank || 'InfinitePay'})
+            </button>
+          ` : ''}
+          <button class="btn-card-action ${p.showInBooking ? 'pay' : 'edit'}" onclick="toggleProfBookingVisibility('${p.id}')" style="margin-right: 4px;" title="Clique para alternar visibilidade no agendamento online">
+            ${p.showInBooking ? 'Visível no Link' : 'Oculto'}
           </button>
-        ` : ''}
-        <button class="btn-card-action ${p.showInBooking ? 'pay' : 'edit'}" onclick="toggleProfBookingVisibility('${p.id}')" style="margin-right: 4px;" title="Clique para alternar visibilidade no agendamento online">
-          ${p.showInBooking ? 'Visível no Link' : 'Oculto'}
-        </button>
-        <button class="btn-card-action edit" onclick="openEditProfessionalModal('${p.id}')" title="Editar Profissional">
-          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-          Editar
-        </button>
-        <button class="btn-card-action delete" onclick="deleteProfessional('${p.id}')" title="Excluir Profissional">
-          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-          Excluir
-        </button>
+          <button class="btn-card-action edit" onclick="openEditProfessionalModal('${p.id}')" title="Editar Profissional">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+            Editar
+          </button>
+          <button class="btn-card-action delete" onclick="deleteProfessional('${p.id}')" title="Excluir Profissional">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+            Excluir
+          </button>
+        ` : `
+          <span style="font-size:0.8rem; font-weight:600; color:var(--muted); padding:4px 10px; background:#f1f5f9; border-radius:8px;">
+            ${p.showInBooking ? 'Visível na Agenda' : 'Oculto na Agenda'}
+          </span>
+        `}
       </div>
     </div>
   `).join('');
 
-  container.innerHTML = `
+  const subscriptionBannerHtml = isManager ? `
     <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 14px 18px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.03);">
       <div style="display: flex; align-items: center; gap: 12px; flex: 1; min-width: 240px;">
         <div style="background: rgba(255, 105, 0, 0.1); width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
@@ -1806,6 +1919,10 @@ function renderProfessionals(container, actions) {
         <strong style="font-size: 1.05rem; color: var(--orange); font-weight: 800;">R$ ${totalMonthly.toFixed(2).replace('.', ',')} <span style="font-size: 0.75rem; font-weight: normal; color: var(--muted);">/ mês</span></strong>
       </div>
     </div>
+  ` : '';
+
+  container.innerHTML = `
+    ${subscriptionBannerHtml}
     <div class="data-list">${profsHtml}</div>
   `;
 }
@@ -1868,7 +1985,9 @@ function renderServices(container, actions) {
     container.innerHTML = renderEmptyStateHtml({
       icon: `<svg width="30" height="30" fill="none" stroke="var(--orange)" stroke-width="2" viewBox="0 0 24 24"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg>`,
       title: "Nenhum Serviço Cadastrado",
-      description: "Adicione os serviços prestados pelo seu salão (ex: Corte, Escova, Coloração, Manicure) para liberar os agendamentos online e a grade da agenda.",
+      description: isManager 
+        ? "Adicione os serviços prestados pelo seu salão (ex: Corte, Escova, Coloração, Manicure) para liberar os agendamentos online e a grade da agenda."
+        : "Nenhum serviço cadastrado no salão ainda. Entre em contato com a gerência para inclusão.",
       buttonText: isManager ? "Cadastrar Primeiro Serviço" : "",
       buttonOnClick: "openServiceModal()"
     });
@@ -1907,18 +2026,15 @@ function renderPackages(container, actions) {
   actions.innerHTML = '';
 
   if (!state.packages || state.packages.length === 0) {
-    container.innerHTML = `
-      <div class="card-shell" style="text-align: center; padding: 36px 20px;">
-        <div style="background: rgba(255,105,0,0.1); width: 56px; height: 56px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 14px;">
-          <svg width="28" height="28" fill="none" stroke="var(--orange)" stroke-width="2" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
-        </div>
-        <h4 style="margin-bottom: 6px; color: var(--ink); font-weight:700;">Nenhum Pacote de Serviços Ativo</h4>
-        <p style="color: var(--muted); font-size: 0.88rem; max-width: 420px; margin: 0 auto 18px;">
-          Venda pacotes com múltiplas sessões (ex: Alisamento em 5 dias, Tratamento semanal) e acompanhe o check-list de OKs de cada sessão realizada!
-        </p>
-        ${isManager ? `<button class="btn-falcon btn-primary" onclick="openNewPackageModal()">Criar Primeiro Pacote</button>` : ''}
-      </div>
-    `;
+    container.innerHTML = renderEmptyStateHtml({
+      icon: `<svg width="30" height="30" fill="none" stroke="var(--orange)" stroke-width="2" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>`,
+      title: "Nenhum Pacote de Serviços Ativo",
+      description: isManager
+        ? "Venda pacotes com múltiplas sessões (ex: Alisamento em 5 dias, Tratamento semanal) e acompanhe o check-list de OKs de cada sessão realizada!"
+        : "Nenhum pacote de serviços ativo para acompanhamento no momento.",
+      buttonText: isManager ? "Criar Primeiro Pacote" : "",
+      buttonOnClick: "openNewPackageModal()"
+    });
     return;
   }
 
@@ -2092,7 +2208,9 @@ function renderProducts(container, actions) {
     container.innerHTML = renderEmptyStateHtml({
       icon: `<svg width="30" height="30" fill="none" stroke="var(--orange)" stroke-width="2" viewBox="0 0 24 24"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></svg>`,
       title: "Nenhum Produto no Estoque",
-      description: "Cadastre produtos de revenda ou lavatório para controlar as quantidades em estoque e registrar vendas.",
+      description: isManager 
+        ? "Cadastre produtos de revenda ou lavatório para controlar as quantidades em estoque e registrar vendas."
+        : "Nenhum produto cadastrado no estoque ainda. Entre em contato com a gerência para inclusão.",
       buttonText: isManager ? "Cadastrar Primeiro Produto" : "",
       buttonOnClick: "openProductModal()"
     });
@@ -2130,12 +2248,21 @@ function renderProducts(container, actions) {
 function renderExpenses(container, actions) {
   actions.innerHTML = '';
 
+  if (!isManager) {
+    container.innerHTML = renderEmptyStateHtml({
+      icon: `<svg width="30" height="30" fill="none" stroke="var(--orange)" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>`,
+      title: "Acesso Restrito à Gestão",
+      description: "O controle de despesas e custos operacionais é restrito aos gestores do salão."
+    });
+    return;
+  }
+
   if (!state.expenses || state.expenses.length === 0) {
     container.innerHTML = renderEmptyStateHtml({
       icon: `<svg width="30" height="30" fill="none" stroke="var(--orange)" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"></rect><line x1="2" y1="10" x2="22" y2="10"></line></svg>`,
       title: "Nenhuma Despesa Registrada",
       description: "Registre os custos fixos e variáveis do salão (aluguel, água, luz, produtos) para ter total controle do seu fluxo de caixa.",
-      buttonText: isManager ? "Registrar Primeira Despesa" : "",
+      buttonText: "Registrar Primeira Despesa",
       buttonOnClick: "openExpenseModal()"
     });
     return;
@@ -2303,7 +2430,102 @@ function renderBalanco(container, actions) {
     </div>
   `;
 
-  // Cards de Resumo Financeiro
+  const myProf = (state.professionals || []).find(p => 
+    (currentUser?.professionalId && p.id === currentUser.professionalId) ||
+    (p.email && currentUser?.email && p.email.toLowerCase() === currentUser.email.toLowerCase()) ||
+    (p.name && currentUser?.name && p.name.trim().toLowerCase() === currentUser.name.trim().toLowerCase())
+  );
+  const myProfId = myProf ? myProf.id : currentUser?.professionalId;
+
+  if (!isManager) {
+    // VISÃO INDIVIDUAL DO PROFISSIONAL
+    const myApps = myProfId ? monthApps.filter(a => a.professionalId === myProfId) : [];
+    const myGross = myApps.reduce((acc, a) => acc + (Number(a.price) || 0), 0);
+    const commRate = myProf ? ((Number(myProf.commissionDefault) || 50) / 100) : 0.5;
+    const myComm = myGross * commRate;
+    const myGoal = myProf ? (Number(myProf.monthlyGoal) || 3000) : 3000;
+    const myPct = myGoal > 0 ? Math.min(100, Math.round((myGross / myGoal) * 100)) : 0;
+
+    const summaryHtml = `
+      <div class="balanco-summary-cards">
+        <div class="balanco-card">
+          <div class="balanco-card-title">💰 Seu Faturamento</div>
+          <div class="balanco-card-value" style="color: #16a34a;">R$ ${myGross.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+          <div class="balanco-card-sub">${myApps.length} atendimentos no mês</div>
+        </div>
+        <div class="balanco-card">
+          <div class="balanco-card-title">🤝 Sua Comissão Prevista</div>
+          <div class="balanco-card-value" style="color: #d97706;">R$ ${myComm.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+          <div class="balanco-card-sub">Base de comissão: ${myProf ? (myProf.commissionDefault || 50) : 50}%</div>
+        </div>
+        <div class="balanco-card">
+          <div class="balanco-card-title">🎯 Sua Meta Mensal</div>
+          <div class="balanco-card-value" style="color: var(--orange, #ff6900);">R$ ${myGoal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+          <div class="balanco-card-sub">${myPct}% atingido este mês</div>
+        </div>
+      </div>
+    `;
+
+    const myCardHtml = myProf ? `
+      <div class="prof-goal-card is-me-card" style="background: #ffffff !important; border: 2px solid #ff6900 !important; box-shadow: 0 4px 18px rgba(255, 105, 0, 0.14) !important;">
+        <div class="prof-goal-header">
+          <div class="prof-goal-info">
+            <img src="${myProf.avatar || getButterflyAvatar(myProf.name)}" class="prof-goal-avatar" alt="${myProf.name}">
+            <div style="min-width:0; flex:1; overflow:hidden;">
+              <h4 class="prof-goal-title" title="${myProf.name}">${myProf.name} <span style="font-size:0.75rem; background: var(--orange, #ff6900); color:#fff; padding:2px 6px; border-radius:10px; margin-left:4px;">Você</span></h4>
+              <span class="prof-goal-role">${myProf.role || 'Profissional'} • Comissão (${myProf.commissionDefault || 50}%)</span>
+            </div>
+          </div>
+          <div>
+            <button class="btn-falcon btn-secondary" style="padding: 6px 12px; font-size: 0.8rem;" onclick="openEditGoalModal('${myProf.id}', '${myProf.name}', ${myGoal})">
+              🎯 Alterar Meta
+            </button>
+          </div>
+        </div>
+
+        <div class="prof-goal-stats">
+          <div class="prof-stat-item">
+            <label>Faturamento Bruto</label>
+            <span style="color: #16a34a;">R$ ${myGross.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+          </div>
+          <div class="prof-stat-item">
+            <label>Atendimentos</label>
+            <span>${myApps.length}</span>
+          </div>
+          <div class="prof-stat-item">
+            <label>Comissão a Receber</label>
+            <span style="color: #d97706;">R$ ${myComm.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+          </div>
+          <div class="prof-stat-item">
+            <label>Meta Mensal</label>
+            <span>R$ ${myGoal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+          </div>
+        </div>
+
+        <div class="goal-bar-wrapper">
+          <div class="goal-bar-header">
+            <span>Progresso da Meta Mensal</span>
+            <span style="color: ${myPct >= 100 ? '#16a34a' : 'var(--orange, #ff6900)'};">${myPct}% Atingido ${myPct >= 100 ? '🎉 (Meta Batida!)' : ''}</span>
+          </div>
+          <div class="goal-bar-track">
+            <div class="goal-bar-fill" style="width: ${myPct}%; background: ${myPct >= 100 ? 'linear-gradient(90deg, #16a34a 0%, #22c55e 100%)' : 'linear-gradient(90deg, #ff6900 0%, #ff8c00 100%)'};"></div>
+          </div>
+        </div>
+      </div>
+    ` : `<div class="card-shell" style="text-align:center; color:var(--muted);">Perfil de profissional não associado.</div>`;
+
+    container.innerHTML = `
+      ${monthSelectorCardHtml}
+      ${summaryHtml}
+      <div style="margin-top: 24px;">
+        <h3 style="margin-bottom: 16px; font-size: 1.1rem; font-weight: 700; color: var(--ink);">🎯 Sua Meta Individual</h3>
+        ${myCardHtml}
+      </div>
+    `;
+    return;
+  }
+
+  // Cards de Resumo Financeiro (Visão do Gestor)
   const overallSummaryHtml = `
     <div class="balanco-summary-cards">
       <div class="balanco-card">
@@ -2328,9 +2550,6 @@ function renderBalanco(container, actions) {
       </div>
     </div>
   `;
-
-  // Balanço e Metas por Profissional
-  const myProfId = currentUser?.professionalId;
 
   let profCardsHtml = (state.professionals || []).map(prof => {
     const profApps = monthApps.filter(a => a.professionalId === prof.id);
@@ -2765,13 +2984,33 @@ function closeModal() {
 }
 
 window.openNewAppointmentModal = function(defaultTime = "10:00") {
-  const profOptions = state.professionals.map(p => `<option value="${p.id}" ${p.id === selectedProfessionalId ? 'selected' : ''}>${p.name} (${p.role})</option>`).join('');
+  if (!state.professionals || state.professionals.length === 0) {
+    asyncAlert('Cadastre ao menos um profissional antes de realizar agendamentos.', 'Aviso', 'warning');
+    return;
+  }
+  if (!state.services || state.services.length === 0) {
+    asyncAlert('Cadastre ao menos um serviço antes de realizar agendamentos.', 'Aviso', 'warning');
+    return;
+  }
+
+  let profOptions;
+  if (!isManager && currentUser && currentUser.professionalId) {
+    const myP = state.professionals.find(p => p.id === currentUser.professionalId);
+    if (myP) {
+      profOptions = `<option value="${myP.id}" selected>${myP.name} (${myP.role || 'Profissional'})</option>`;
+    } else {
+      profOptions = state.professionals.map(p => `<option value="${p.id}" ${p.id === selectedProfessionalId ? 'selected' : ''}>${p.name} (${p.role || 'Profissional'})</option>`).join('');
+    }
+  } else {
+    profOptions = state.professionals.map(p => `<option value="${p.id}" ${p.id === selectedProfessionalId ? 'selected' : ''}>${p.name} (${p.role || 'Profissional'})</option>`).join('');
+  }
+
   const servOptions = state.services.map(s => `<option value="${s.id}" data-price="${s.price}" data-duration="${s.durationMinutes}">${s.name} (${s.durationMinutes} min) - R$ ${s.price.toFixed(2)}</option>`).join('');
 
   const html = `
     <div class="form-group">
       <label>Profissional</label>
-      <select class="form-control" id="modalAppProf">${profOptions}</select>
+      <select class="form-control" id="modalAppProf" ${(!isManager && currentUser?.professionalId) ? 'disabled style="background:#f1f5f9; cursor:not-allowed;"' : ''}>${profOptions}</select>
     </div>
     <div class="form-group">
       <label>Nome do Cliente</label>
