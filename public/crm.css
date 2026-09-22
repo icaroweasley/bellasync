@@ -362,14 +362,14 @@ body {
   display: none !important;
 }
 
-.top-bar-actions > div,
-.agenda-actions-wrapper {
+.desktop-topbar-actions {
   display: flex !important;
   align-items: center !important;
-  gap: 10px !important;
-  height: 100% !important;
-  flex-wrap: nowrap !important;
-  flex-shrink: 0 !important;
+  gap: 8px !important;
+}
+
+.mobile-topbar-actions {
+  display: none !important;
 }
 
 /* Container pílula elegante do Datepicker no top-bar */
