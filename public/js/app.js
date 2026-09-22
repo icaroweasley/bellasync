@@ -1005,8 +1005,15 @@ window.toggleCalendarPopover = function(e) {
 
   renderPopoverCalendarContent(popover);
 
-  const wrapper = triggerBtn.closest('.agenda-header-datepicker') || triggerBtn.parentElement;
-  wrapper.appendChild(popover);
+  const rect = triggerBtn.getBoundingClientRect();
+  const leftPos = Math.min(window.innerWidth - 175, Math.max(175, rect.left + rect.width / 2));
+  popover.style.position = 'fixed';
+  popover.style.top = `${rect.bottom + 8}px`;
+  popover.style.left = `${leftPos}px`;
+  popover.style.transform = 'translateX(-50%)';
+  popover.style.zIndex = '999999';
+
+  document.body.appendChild(popover);
 
   setTimeout(() => {
     const closeListener = (evt) => {

@@ -2037,16 +2037,14 @@ input[type="date"].form-control {
 
 /* Popover Calendário (Screenshot 2) */
 .calendar-popover {
-  position: absolute;
-  top: calc(100% + 8px);
-  left: 50%;
-  transform: translateX(-50%);
+  position: fixed !important;
   width: 320px;
+  max-width: 92vw;
   background: #ffffff;
-  border: 1px solid #e2e8f0;
+  border: 1px solid #cbd5e1;
   border-radius: 18px;
-  box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.18), 0 0 0 1px rgba(0,0,0,0.03);
-  z-index: 1050;
+  box-shadow: 0 20px 45px -10px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(0,0,0,0.05);
+  z-index: 999999 !important;
   padding: 16px;
   animation: calendarPopIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
