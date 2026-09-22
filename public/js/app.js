@@ -1627,17 +1627,21 @@ function updateScheduleView() {
         html += `
           <td class="cell-agendado" rowspan="${rowSpan}">
             <div class="salon-block-agendado">
-              <div class="app-top-row">
-                <div class="app-info">
-                  <strong>${appStartingHere.clientName}</strong>
-                  <span>${appStartingHere.serviceName}${profBadgeText}</span>
-                  <small>${appStartingHere.clientPhone || 'Sem telefone'} • Duração: ${spanMin} min</small>
-                  ${appStartingHere.notes ? `<small style="color:#666; display:block; margin-top:4px;">Obs: ${appStartingHere.notes}</small>` : ''}
-                </div>
-                <div class="app-actions">
+              <div class="app-main-content">
+                <div class="app-top-row">
+                  <strong class="app-client-title">${appStartingHere.clientName}</strong>
                   <div class="app-price">
                     R$ ${Number(appStartingHere.price).toFixed(2)}
                   </div>
+                </div>
+
+                <div class="app-info">
+                  <span class="app-service-title">${appStartingHere.serviceName}${profBadgeText}</span>
+                  <small class="app-sub-meta">${appStartingHere.clientPhone || 'Sem telefone'} • Duração: ${spanMin} min</small>
+                  ${appStartingHere.notes ? `<small class="app-notes-meta">Obs: ${appStartingHere.notes}</small>` : ''}
+                </div>
+
+                <div class="app-actions">
                   ${appStartingHere.clientPhone ? `
                     <button class="btn-remind-app" onclick="sendAppointmentReminder('${appStartingHere.id}', event)" title="Enviar lembrete via WhatsApp (${appStartingHere.clientPhone})">
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91C2.13 13.66 2.59 15.36 3.45 16.86L2.05 22L7.3 20.62C8.75 21.41 10.38 21.83 12.04 21.83C17.5 21.83 21.95 17.38 21.95 11.92C21.95 9.27 20.92 6.78 19.05 4.91C17.18 3.03 14.69 2 12.04 2ZM12.05 20.16C10.57 20.16 9.12 19.76 7.85 19.01L7.55 18.83L4.43 19.65L5.26 16.61L5.06 16.29C4.24 14.99 3.81 13.47 3.81 11.91C3.81 7.37 7.5 3.68 12.05 3.68C14.25 3.68 16.31 4.54 17.87 6.1C19.42 7.66 20.28 9.72 20.27 11.92C20.28 16.46 16.59 20.16 12.05 20.16ZM16.56 14.46C16.31 14.33 15.09 13.73 14.86 13.65C14.63 13.56 14.47 13.52 14.3 13.77C14.14 14.02 13.66 14.58 13.52 14.75C13.37 14.92 13.23 14.94 12.98 14.81C12.73 14.69 11.93 14.42 10.98 13.58C10.24 12.92 9.74 12.11 9.6 11.86C9.45 11.61 9.58 11.48 9.71 11.35C9.82 11.24 9.96 11.06 10.08 10.91C10.21 10.77 10.25 10.66 10.33 10.5C10.41 10.33 10.37 10.19 10.31 10.06C10.25 9.94 9.76 8.73 9.55 8.24C9.35 7.75 9.15 7.82 8.99 7.81C8.85 7.8 8.68 7.8 8.52 7.8C8.35 7.8 8.08 7.86 7.85 8.11C7.62 8.36 6.98 8.96 6.98 10.18C6.98 11.4 7.87 12.58 7.99 12.74C8.11 12.91 9.74 15.42 12.23 16.5C12.82 16.76 13.28 16.91 13.64 17.03C14.23 17.22 14.77 17.19 15.2 17.13C15.68 17.06 16.67 16.53 16.88 15.95C17.08 15.37 17.08 14.88 17.02 14.77C16.96 14.67 16.81 14.59 16.56 14.46Z"/></svg>
@@ -1645,16 +1649,16 @@ function updateScheduleView() {
                     </button>
                   ` : ''}
                   ${appStartingHere.status !== 'faltou' ? `
-                    <button class="btn-delete-app" style="background:#fef2f2; color:#b91c1c; border-color:#fecaca;" onclick="markAppointmentNoShow('${appStartingHere.id}', event)" title="Registrar que o cliente faltou (Gera histórico para taxa de 50% de remarcação)">
+                    <button class="btn-delete-app btn-noshow-app" style="background:#fef2f2; color:#b91c1c; border-color:#fecaca;" onclick="markAppointmentNoShow('${appStartingHere.id}', event)" title="Registrar que o cliente faltou (Gera histórico para taxa de 50% de remarcação)">
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>
-                      Faltou
+                      <span>Faltou</span>
                     </button>
                   ` : `
                     <span style="font-size:0.72rem; font-weight:bold; color:#b91c1c; background:#fee2e2; padding:3px 6px; border-radius:6px;">Faltou</span>
                   `}
-                  <button class="btn-delete-app" onclick="deleteAppointment('${appStartingHere.id}', event)" title="Excluir / Cancelar este agendamento">
+                  <button class="btn-delete-app btn-cancel-app" onclick="deleteAppointment('${appStartingHere.id}', event)" title="Excluir / Cancelar este agendamento">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18m-2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-                    Cancelar
+                    <span>Cancelar</span>
                   </button>
                 </div>
               </div>
