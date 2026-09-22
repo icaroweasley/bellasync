@@ -891,6 +891,7 @@ function renderView(view) {
 
   const container = document.getElementById('viewContainer');
   const title = document.getElementById('currentViewTitle');
+  if (title) title.style.display = 'block';
   const actions = document.getElementById('topBarActions');
   actions.innerHTML = '';
 
@@ -1195,6 +1196,10 @@ window.selectDateFromPopover = function(fullDateStr) {
 let agendaPollingInterval = null;
 
 function renderAgenda(container, actions) {
+  const titleEl = document.getElementById('currentViewTitle');
+  if (titleEl) {
+    titleEl.style.display = window.innerWidth <= 768 ? 'none' : 'block';
+  }
   const maxDays = state.settings.maxBookingDaysAhead || 30;
 
   actions.innerHTML = `

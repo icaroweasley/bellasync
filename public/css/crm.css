@@ -1209,7 +1209,7 @@ input[type="date"].form-control {
 
   /* 2. Top-bar adaptativa no mobile */
   .top-bar {
-    padding: 0 8px !important;
+    padding: 0 4px !important;
     height: 60px !important;
     min-height: 60px !important;
     max-height: 60px !important;
@@ -1223,7 +1223,7 @@ input[type="date"].form-control {
     border-bottom: 1px solid rgba(0, 0, 0, 0.08) !important;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04) !important;
     z-index: 50 !important;
-    overflow: hidden !important;
+    overflow: visible !important;
   }
 
   .top-bar-container {
@@ -1235,16 +1235,15 @@ input[type="date"].form-control {
     padding: 0 2px !important;
     gap: 4px !important;
     box-sizing: border-box !important;
-    overflow: hidden !important;
+    overflow: visible !important;
   }
 
   .top-bar-title {
     display: flex !important;
     align-items: center !important;
-    gap: 6px !important;
-    flex-shrink: 1 !important;
-    min-width: 0 !important;
-    overflow: hidden !important;
+    gap: 4px !important;
+    flex-shrink: 0 !important;
+    min-width: auto !important;
   }
 
   .top-bar-title h2 {
@@ -1260,10 +1259,12 @@ input[type="date"].form-control {
     display: inline-flex !important;
     align-items: center;
     justify-content: center;
-    padding: 4px;
+    padding: 6px;
+    min-width: 36px;
+    height: 36px;
     border-radius: 8px;
     background: rgba(0, 0, 0, 0.04);
-    flex-shrink: 0;
+    flex-shrink: 0 !important;
   }
 
   .notif-wrapper {
@@ -1304,6 +1305,48 @@ input[type="date"].form-control {
   .mobile-topbar-actions {
     display: flex !important;
     align-items: center !important;
+    flex-shrink: 0 !important;
+  }
+
+  .agenda-actions-wrapper {
+    gap: 4px !important;
+    flex-shrink: 0 !important;
+  }
+
+  .agenda-header-datepicker {
+    gap: 2px !important;
+  }
+
+  .btn-date-nav {
+    padding: 4px 6px !important;
+    min-width: 28px !important;
+    height: 32px !important;
+  }
+
+  .btn-date-picker-trigger {
+    padding: 4px 8px !important;
+    font-size: 0.8rem !important;
+    gap: 4px !important;
+    height: 34px !important;
+  }
+
+  .btn-date-picker-trigger svg {
+    width: 14px !important;
+    height: 14px !important;
+  }
+
+  #mobileActionsTrigger {
+    padding: 5px 9px !important;
+    font-size: 0.8rem !important;
+    gap: 4px !important;
+    height: 34px !important;
+    white-space: nowrap !important;
+    flex-shrink: 0 !important;
+  }
+
+  #mobileActionsTrigger svg {
+    width: 14px !important;
+    height: 14px !important;
   }
 
   .mobile-actions-dropdown {
