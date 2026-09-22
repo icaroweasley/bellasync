@@ -1026,6 +1026,78 @@ window.toggleCalendarPopover = function(e) {
   }, 50);
 };
 
+window.toggleMobileActionsDropdown = function(e) {
+  if (e) e.stopPropagation();
+  let existing = document.getElementById('mobileActionsDropdown');
+  if (existing) {
+    existing.remove();
+    return;
+  }
+
+  const triggerBtn = document.getElementById('mobileActionsTrigger');
+  if (!triggerBtn) return;
+
+  const drop = document.createElement('div');
+  drop.id = 'mobileActionsDropdown';
+  drop.className = 'mobile-actions-dropdown';
+
+  const isList = state.settings.agendaViewMode === 'list';
+  const maxDays = state.settings.maxBookingDaysAhead || 30;
+
+  drop.innerHTML = `
+    <div class="mobile-action-menu-item" onclick="openAgendaViewModeModal(); document.getElementById('mobileActionsDropdown')?.remove();">
+      <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">${isList ? '<line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line>' : '<rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line>'}</svg>
+      <div>
+        <div style="font-weight:700; color:#0f172a;">Modo: ${isList ? 'Lista' : 'Calendário'}</div>
+        <div style="font-size:0.75rem; color:#64748b;">Alternar exibição da agenda</div>
+      </div>
+    </div>
+
+    <div class="mobile-action-menu-item" onclick="openBlockTimeModal(); document.getElementById('mobileActionsDropdown')?.remove();">
+      <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg>
+      <div>
+        <div style="font-weight:700; color:#0f172a;">Bloquear Horários</div>
+        <div style="font-size:0.75rem; color:#64748b;">Fechar horários / folgas</div>
+      </div>
+    </div>
+
+    <div class="mobile-action-menu-item" onclick="openBookingRulesModal(); document.getElementById('mobileActionsDropdown')?.remove();">
+      <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line></svg>
+      <div>
+        <div style="font-weight:700; color:#0f172a;">Agendamento Online (${maxDays}d)</div>
+        <div style="font-size:0.75rem; color:#64748b;">Janela de dias futuros</div>
+      </div>
+    </div>
+
+    <div class="mobile-action-menu-item" onclick="refreshAgendaData(); document.getElementById('mobileActionsDropdown')?.remove();">
+      <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+      <div>
+        <div style="font-weight:700; color:#0f172a;">Atualizar Dados</div>
+        <div style="font-size:0.75rem; color:#64748b;">Recarregar informações</div>
+      </div>
+    </div>
+  `;
+
+  const rect = triggerBtn.getBoundingClientRect();
+  drop.style.position = 'fixed';
+  drop.style.top = `${rect.bottom + 8}px`;
+  drop.style.left = `${Math.min(window.innerWidth - 130, Math.max(130, rect.left + rect.width / 2))}px`;
+  drop.style.transform = 'translateX(-50%)';
+  drop.style.zIndex = '999999';
+
+  document.body.appendChild(drop);
+
+  setTimeout(() => {
+    const closeListener = (evt) => {
+      if (drop && !drop.contains(evt.target) && evt.target !== triggerBtn && !triggerBtn.contains(evt.target)) {
+        drop.remove();
+        document.removeEventListener('click', closeListener);
+      }
+    };
+    document.addEventListener('click', closeListener);
+  }, 50);
+};
+
 function renderPopoverCalendarContent(popover) {
   const { year, month } = popoverMonthState;
   const monthNames = ['JANEIRO', 'FEVEREIRO', 'MARÇO', 'ABRIL', 'MAIO', 'JUNHO', 'JULHO', 'AGOSTO', 'SETEMBRO', 'OUTUBRO', 'NOVEMBRO', 'DEZEMBRO'];
@@ -1126,7 +1198,7 @@ function renderAgenda(container, actions) {
   const maxDays = state.settings.maxBookingDaysAhead || 30;
 
   actions.innerHTML = `
-    <div class="agenda-actions-wrapper" style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+    <div class="agenda-actions-wrapper" style="display:flex; align-items:center; gap:8px;">
       <div class="agenda-header-datepicker">
         <button class="btn-date-nav" onclick="navigateAgendaDate(-1)" title="Dia anterior">
           <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"></path></svg>
@@ -1143,28 +1215,40 @@ function renderAgenda(container, actions) {
         </button>
       </div>
 
-      <button class="btn-falcon btn-secondary" onclick="openAgendaViewModeModal()" title="Alternar modo de visualização (Calendário ou Lista)">
-        ${state.settings.agendaViewMode === 'list' ? `
-          <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
-          <span>Modo: Lista</span>
-        ` : `
-          <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-          <span>Modo: Calendário</span>
-        `}
-      </button>
+      <div class="desktop-topbar-actions">
+        <button class="btn-falcon btn-secondary" onclick="openAgendaViewModeModal()" title="Alternar modo de visualização (Calendário ou Lista)">
+          ${state.settings.agendaViewMode === 'list' ? `
+            <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+            <span>Modo: Lista</span>
+          ` : `
+            <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+            <span>Modo: Calendário</span>
+          `}
+        </button>
 
-      <button class="btn-falcon btn-secondary" onclick="openBlockTimeModal()" title="Bloquear horários ou fechar mais cedo">
-        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg>
-        <span>Bloquear</span>
-      </button>
-      <button class="btn-falcon btn-secondary" onclick="openBookingRulesModal()" title="Configurar janela de dias futuros e regras de agendamento online">
-        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-        <span>Online: ${maxDays}d</span>
-      </button>
-      <button class="btn-falcon btn-secondary" onclick="refreshAgendaData()" title="Atualizar dados da grade">
-        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
-        <span>Atualizar</span>
-      </button>
+        <button class="btn-falcon btn-secondary" onclick="openBlockTimeModal()" title="Bloquear horários ou fechar mais cedo">
+          <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg>
+          <span>Bloquear</span>
+        </button>
+
+        <button class="btn-falcon btn-secondary" onclick="openBookingRulesModal()" title="Configurar janela de dias futuros e regras de agendamento online">
+          <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+          <span>Online: ${maxDays}d</span>
+        </button>
+
+        <button class="btn-falcon btn-secondary" onclick="refreshAgendaData()" title="Atualizar dados da grade">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+          <span>Atualizar</span>
+        </button>
+      </div>
+
+      <div class="mobile-topbar-actions">
+        <button class="btn-falcon btn-secondary" id="mobileActionsTrigger" onclick="toggleMobileActionsDropdown(event)" title="Abrir opções da agenda">
+          <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><line x1="4" y1="12" x2="20" y2="12"></line><line x1="4" y1="6" x2="20" y2="6"></line><line x1="4" y1="18" x2="20" y2="18"></line></svg>
+          <span>Opções</span>
+          <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"></path></svg>
+        </button>
+      </div>
     </div>
   `;
 
@@ -1222,11 +1306,6 @@ function updateScheduleView() {
 
   if (isListMode) {
     let listHtml = `
-      <button class="btn-add-appointment-banner" onclick="openNewAppointmentModal()">
-        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-        <span>+ Adicionar agendamento</span>
-      </button>
-
       <div class="agenda-date-group-title">
         ${formatFormattedDateTitle(selectedDate)}
       </div>
@@ -1621,7 +1700,6 @@ function renderProfessionals(container, actions) {
     <span style="font-size:0.84rem; font-weight:500; color:var(--muted); background:rgba(255,255,255,0.85); padding:6px 14px; border-radius:999px; border:1px solid rgba(0,0,0,0.06); height:38px; display:inline-flex; align-items:center; box-sizing:border-box;">
       <strong style="color:var(--ink); margin-right:4px;">${profCount} / 10</strong> Profissionais
     </span>
-    <button class="btn-falcon btn-primary" onclick="openNewProfessionalModal()">+ Adicionar Profissional</button>
   ` : '';
 
   const profsHtml = state.professionals.map(p => `
@@ -1682,7 +1760,6 @@ function renderClients(container, actions) {
     <span style="font-size:0.84rem; font-weight:500; color:var(--muted); background:rgba(255,255,255,0.7); padding:6px 14px; border-radius:999px; border:1px solid rgba(0,0,0,0.06); height:38px; display:inline-flex; align-items:center; box-sizing:border-box;">
       <strong style="color:var(--ink); margin-right:4px;">${state.clients.length}</strong> clientes
     </span>
-    <button class="btn-falcon btn-primary" onclick="openNewClientModal()">+ Adicionar Cliente</button>
   `;
 
   const clientsHtml = state.clients.map(c => `
@@ -1718,9 +1795,7 @@ function renderClients(container, actions) {
 
 // 5. Render Serviços
 function renderServices(container, actions) {
-  actions.innerHTML = isManager ? `
-    <button class="btn-falcon btn-primary" onclick="openNewServiceModal()">+ Adicionar Serviço</button>
-  ` : '';
+  actions.innerHTML = '';
 
   const servsHtml = state.services.map(s => `
     <div class="data-item-card">
@@ -1751,9 +1826,7 @@ function renderServices(container, actions) {
 
 // 5.5 Render Pacotes de Serviços (Check-list / Tickagem por Sessões)
 function renderPackages(container, actions) {
-  actions.innerHTML = isManager ? `
-    <button class="btn-falcon btn-primary" onclick="openNewPackageModal()">+ Criar / Vender Pacote</button>
-  ` : '';
+  actions.innerHTML = '';
 
   if (!state.packages || state.packages.length === 0) {
     container.innerHTML = `
@@ -1935,9 +2008,7 @@ window.deletePackage = async function(pkgId) {
 
 // 6. Render Produtos
 function renderProducts(container, actions) {
-  actions.innerHTML = isManager ? `
-    <button class="btn-falcon btn-primary" onclick="openNewProductModal()">+ Adicionar Produto</button>
-  ` : '';
+  actions.innerHTML = '';
 
   const prodsHtml = state.products.map(p => `
     <div class="data-item-card">
@@ -1968,9 +2039,7 @@ function renderProducts(container, actions) {
 
 // 7. Render Despesas
 function renderExpenses(container, actions) {
-  actions.innerHTML = isManager ? `
-    <button class="btn-falcon btn-primary" onclick="openNewExpenseModal()">+ Adicionar Despesa</button>
-  ` : '';
+  actions.innerHTML = '';
 
   const total = state.expenses.reduce((acc, e) => acc + e.amount, 0);
   const paid = state.expenses.filter(e => e.status === 'pago').reduce((acc, e) => acc + e.amount, 0);
