@@ -2004,6 +2004,12 @@ input[type="date"].form-control {
   box-shadow: 0 2px 8px rgba(0,0,0,0.02);
 }
 
+.prof-goal-card.is-me-card {
+  background: #ffffff !important;
+  border: 2px solid #ff6900 !important;
+  box-shadow: 0 4px 18px rgba(255, 105, 0, 0.14) !important;
+}
+
 .prof-goal-header {
   display: flex;
   align-items: center;

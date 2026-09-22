@@ -67,7 +67,7 @@ let state = {
 };
 
 const isSuperAdmin = currentUser && (currentUser.role === 'superadmin' || currentUser.username === 'karuadmin');
-const isManager = true; // Permite gestão completa para os usuários do salão
+const isManager = Boolean(!currentUser || currentUser.role === 'admin' || currentUser.role === 'superadmin' || currentUser.role === 'gestor' || currentUser.isManager === true);
 window.isSuperAdmin = isSuperAdmin;
 window.isManager = isManager;
 
@@ -2233,7 +2233,7 @@ function renderBalanco(container, actions) {
     const isMe = myProfId && prof.id === myProfId;
 
     return `
-      <div class="prof-goal-card" style="${isMe ? 'border: 2px solid var(--orange, #ff6900); background: rgba(255, 105, 0, 0.02);' : ''}">
+      <div class="prof-goal-card ${isMe ? 'is-me-card' : ''}" style="${isMe ? 'background: #ffffff !important; border: 2px solid #ff6900 !important; box-shadow: 0 4px 18px rgba(255, 105, 0, 0.14) !important;' : ''}">
         <div class="prof-goal-header">
           <div class="prof-goal-info">
             <img src="${prof.avatar || getButterflyAvatar(prof.name)}" class="prof-goal-avatar" alt="${prof.name}">
