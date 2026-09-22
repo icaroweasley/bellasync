@@ -1209,13 +1209,14 @@ input[type="date"].form-control {
 
   /* 2. Top-bar adaptativa no mobile */
   .top-bar {
-    padding: 0 8px !important;
-    height: 68px !important;
-    min-height: 68px !important;
-    max-height: 68px !important;
+    padding: 0 !important;
+    height: auto !important;
+    min-height: 56px !important;
+    max-height: none !important;
     display: flex !important;
-    align-items: center !important;
-    justify-content: space-between !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    justify-content: flex-start !important;
     position: sticky !important;
     top: 0 !important;
     background: #ffffff !important;
@@ -1225,20 +1226,33 @@ input[type="date"].form-control {
   }
 
   .top-bar-container {
-    padding: 0 4px !important;
+    height: 56px !important;
+    min-height: 56px !important;
+    max-height: 56px !important;
+    padding: 0 12px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
     gap: 8px !important;
-    position: relative !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
   }
 
   .top-bar-title {
     display: flex !important;
     align-items: center !important;
     gap: 10px !important;
+    overflow: hidden !important;
+    flex: 1 !important;
   }
 
   .top-bar-title h2 {
-    font-size: 1.1rem !important;
+    font-size: 1.05rem !important;
     font-weight: 700 !important;
+    color: var(--ink, #0f172a) !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
   }
 
   .menu-toggle-btn {
@@ -1248,21 +1262,21 @@ input[type="date"].form-control {
     padding: 6px;
     border-radius: 8px;
     background: rgba(0, 0, 0, 0.04);
+    flex-shrink: 0;
   }
 
   .notif-wrapper {
-    position: static !important;
+    position: relative !important;
+    flex-shrink: 0;
   }
 
   /* Centraliza o menu de notificações no meio da tela no mobile */
   .notif-dropdown {
     position: absolute !important;
-    top: 68px !important;
-    left: 12px !important;
-    right: 12px !important;
-    width: auto !important;
-    max-width: 360px !important;
-    margin: 0 auto !important;
+    top: 56px !important;
+    right: 0 !important;
+    width: 320px !important;
+    max-width: 90vw !important;
     background: #ffffff !important;
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
@@ -1272,9 +1286,66 @@ input[type="date"].form-control {
     z-index: 1000 !important;
   }
 
-  /* Oculta botões de topo extras no mobile (usamos FAB e banners) */
+  /* Barra de Ações/Calendário disposta embaixo da top-bar no mobile */
   .top-bar-actions {
+    display: flex !important;
+    width: 100% !important;
+    padding: 8px 12px !important;
+    background: #f8fafc !important;
+    border-top: 1px solid rgba(0, 0, 0, 0.06) !important;
+    box-sizing: border-box !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    gap: 8px !important;
+    align-items: center !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+
+  .top-bar-actions:empty {
     display: none !important;
+  }
+
+  .agenda-actions-wrapper {
+    width: 100% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 6px !important;
+    flex-shrink: 0 !important;
+  }
+
+  .agenda-date-wrapper {
+    flex: 1 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    justify-content: center !important;
+    height: 40px !important;
+    min-height: 40px !important;
+    background: #ffffff !important;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 12px !important;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04) !important;
+  }
+
+  .agenda-date-picker {
+    width: 100% !important;
+    text-align: center !important;
+    font-weight: 600 !important;
+    font-size: 0.9rem !important;
+  }
+
+  .btn-date-arrow {
+    height: 40px !important;
+    min-height: 40px !important;
+    padding: 0 10px !important;
+    border-radius: 12px !important;
+    background: #ffffff !important;
+    border: 1px solid #cbd5e1 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    cursor: pointer !important;
+    flex-shrink: 0 !important;
   }
 
   /* Sidebar Flutuante (Drawer) */
