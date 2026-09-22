@@ -888,6 +888,12 @@ function renderView(view) {
     item.classList.toggle('active', item.dataset.view === view);
   });
 
+  // Sempre fecha a sidebar no mobile ao trocar de view
+  const sidebarEl = document.getElementById('sidebar');
+  const overlayEl = document.getElementById('sidebarOverlay');
+  if (sidebarEl) sidebarEl.classList.remove('open');
+  if (overlayEl) overlayEl.classList.remove('active');
+
   const container = document.getElementById('viewContainer');
   const title = document.getElementById('currentViewTitle');
   if (title) title.style.display = 'block';
