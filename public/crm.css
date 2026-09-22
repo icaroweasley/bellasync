@@ -575,6 +575,56 @@ body {
   margin-bottom: 24px;
 }
 
+/* Abas centralizadas da seção Pacotes */
+.packages-tabs-wrapper {
+  width: 100%;
+  max-width: 100%;
+  margin-bottom: 22px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center; /* Centralizado horizontalmente no Desktop */
+  text-align: center;
+}
+
+.packages-segmented-control {
+  display: flex;
+  gap: 6px;
+  background: rgba(0, 0, 0, 0.05);
+  padding: 4px;
+  border-radius: 14px;
+  width: 100%;
+  max-width: 440px;
+  box-sizing: border-box;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.packages-tabs-subtitle {
+  font-size: 0.84rem;
+  color: var(--muted);
+  margin: 10px auto 0 auto;
+  line-height: 1.45;
+  text-align: center; /* Centralizado horizontalmente no Desktop */
+  max-width: 550px;
+  word-break: break-word;
+}
+
+@media (max-width: 768px) {
+  .packages-tabs-wrapper {
+    align-items: stretch;
+    text-align: left;
+    margin-bottom: 16px;
+  }
+  .packages-segmented-control {
+    max-width: 100%;
+  }
+  .packages-tabs-subtitle {
+    text-align: left;
+    font-size: 0.78rem;
+    margin: 6px 0 0 0;
+  }
+}
+
 /* Abas de Navegação interna */
 .tabs-header {
   display: flex;

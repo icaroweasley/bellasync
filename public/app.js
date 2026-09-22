@@ -2101,33 +2101,18 @@ function renderPackages(container, actions) {
 
   const activeTab = window.currentPackageTab;
 
-  // Barra de Abas interna da seção Pacotes (100% responsiva para mobile e desktop)
+  // Barra de Abas interna da seção Pacotes (centralizada no desktop, 100% responsiva)
   const tabsHeaderHtml = `
-    <div style="width: 100%; max-width: 100%; margin-bottom: 16px; box-sizing: border-box;">
-      <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center; justify-content: space-between; margin-bottom: 8px;">
-        <div style="display: flex; gap: 6px; background: rgba(0,0,0,0.06); padding: 4px; border-radius: 12px; width: 100%; max-width: 420px; box-sizing: border-box;">
-          <button type="button" class="btn-falcon ${activeTab === 'catalogo' ? 'btn-primary' : 'btn-secondary'}" onclick="switchPackageTab('catalogo')" style="flex: 1; min-width: 0; padding: 8px 6px; font-size: 0.82rem; font-weight: 600; border-radius: 8px; justify-content: center; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-            📦 Catálogo (${catalogPackages.length})
-          </button>
-          <button type="button" class="btn-falcon ${activeTab === 'checklist' ? 'btn-primary' : 'btn-secondary'}" onclick="switchPackageTab('checklist')" style="flex: 1; min-width: 0; padding: 8px 6px; font-size: 0.82rem; font-weight: 600; border-radius: 8px; justify-content: center; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-            📋 Check-list (${clientPackages.length})
-          </button>
-        </div>
-        ${isManager ? `
-          <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
-            <button class="btn-falcon btn-primary" onclick="openNewPackageModal()" style="padding: 7px 14px; font-size: 0.82rem; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">
-              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-              <span>Novo Pacote</span>
-            </button>
-            ${catalogPackages.length > 0 ? `
-              <button class="btn-falcon btn-secondary" onclick="openSellPackageModal()" style="padding: 7px 12px; font-size: 0.82rem; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">
-                <span>🏷️ Vender p/ Cliente</span>
-              </button>
-            ` : ''}
-          </div>
-        ` : ''}
+    <div class="packages-tabs-wrapper">
+      <div class="packages-segmented-control">
+        <button type="button" class="btn-falcon ${activeTab === 'catalogo' ? 'btn-primary' : 'btn-secondary'}" onclick="switchPackageTab('catalogo')" style="flex: 1; min-width: 0; padding: 8px 10px; font-size: 0.84rem; font-weight: 600; border-radius: 10px; justify-content: center; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+          📦 Catálogo (${catalogPackages.length})
+        </button>
+        <button type="button" class="btn-falcon ${activeTab === 'checklist' ? 'btn-primary' : 'btn-secondary'}" onclick="switchPackageTab('checklist')" style="flex: 1; min-width: 0; padding: 8px 10px; font-size: 0.84rem; font-weight: 600; border-radius: 10px; justify-content: center; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+          📋 Check-list (${clientPackages.length})
+        </button>
       </div>
-      <p style="font-size: 0.78rem; color: var(--muted); margin: 4px 0 0 0; line-height: 1.35; word-break: break-word;">
+      <p class="packages-tabs-subtitle">
         ${activeTab === 'catalogo' 
           ? 'Pacotes do salão disponíveis no agendamento online e no balcão' 
           : 'Controle de OKs das sessões realizadas pelas clientes'}
