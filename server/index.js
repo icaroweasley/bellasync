@@ -1479,6 +1479,7 @@ app.post('/api/appointments', (req, res) => {
         notes: `Comprado online em ${date}`,
         status: 'ativo',
         createdAt: date || new Date().toISOString().split('T')[0],
+        date: date || new Date().toISOString().split('T')[0],
         sessions
       });
     }
@@ -1909,7 +1910,8 @@ app.post('/api/packages', (req, res) => {
     price,
     notes,
     status: 'ativo',
-    createdAt: new Date().toISOString().split('T')[0],
+    createdAt: req.body.date || new Date().toISOString().split('T')[0],
+    date: req.body.date || new Date().toISOString().split('T')[0],
     sessions
   };
 

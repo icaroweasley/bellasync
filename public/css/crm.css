@@ -883,14 +883,57 @@ td.cell-agendado {
   font-weight: var(--weight-semibold);
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 4px;
   transition: all 0.2s ease;
+  min-width: 28px;
+  height: 26px;
+  box-sizing: border-box;
 }
 
 .btn-delete-app:hover {
   background: #d32f2f;
   color: #fff;
   border-color: #d32f2f;
+}
+
+.btn-delete-app svg {
+  flex-shrink: 0;
+}
+
+.btn-remind-app {
+  background: rgba(37, 211, 102, 0.12);
+  color: #15803d;
+  border: 1px solid rgba(37, 211, 102, 0.35);
+  border-radius: 8px;
+  padding: 4px 8px;
+  cursor: pointer;
+  font-size: 0.75rem;
+  font-weight: var(--weight-semibold);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  transition: all 0.2s ease;
+  min-width: 28px;
+  height: 26px;
+  box-sizing: border-box;
+}
+
+.btn-remind-app:hover {
+  background: #22c55e;
+  color: #fff;
+  border-color: #22c55e;
+}
+
+.btn-remind-app svg {
+  flex-shrink: 0;
+}
+
+.btn-remind-app.disabled,
+.btn-remind-app[disabled] {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .salon-block-agendado .app-bottom-bar {

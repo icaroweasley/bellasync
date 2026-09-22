@@ -1544,14 +1544,18 @@ function updateScheduleView() {
               <div class="agenda-list-badge-time">
                 <span class="status-badge-pill ${statusClass}">${statusLabel}</span>
                 <span class="agenda-list-time-range">${app.startTime} - ${app.endTime}</span>
-                <div style="display:flex; gap:4px; margin-top:4px;">
+                <div style="display:flex; gap:6px; margin-top:4px; align-items:center;">
                   ${app.clientPhone ? `
-                    <button class="btn-remind-app" onclick="sendAppointmentReminder('${app.id}', event)" title="Lembrete WhatsApp">
-                      <svg width="12" height="12" fill="currentColor" viewBox="0 0 24 24"><path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.312.045-.694.062-2.18-.553-1.614-.668-2.673-2.316-2.753-2.423-.081-.107-.655-.873-.655-1.664 0-.792.414-1.182.56-1.341.144-.16.315-.2.42-.2.106 0 .211.002.304.006.098.005.23-.037.36.275.132.318.45 1.096.488 1.176.04.08.067.174.013.28-.053.106-.08.172-.158.264-.078.093-.164.208-.234.28-.08.082-.164.172-.07.334.093.16.417.689.896 1.116.617.55 1.137.72 1.298.8.16.08.254.07.35-.04.095-.11.408-.475.517-.638.11-.164.218-.137.368-.081.15.054.954.45 1.118.532.164.082.273.123.313.192.04.068.04.399-.104.804z"/></svg>
+                    <button class="btn-remind-app" onclick="sendAppointmentReminder('${app.id}', event)" title="Lembrete WhatsApp (${app.clientPhone})">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91C2.13 13.66 2.59 15.36 3.45 16.86L2.05 22L7.3 20.62C8.75 21.41 10.38 21.83 12.04 21.83C17.5 21.83 21.95 17.38 21.95 11.92C21.95 9.27 20.92 6.78 19.05 4.91C17.18 3.03 14.69 2 12.04 2ZM12.05 20.16C10.57 20.16 9.12 19.76 7.85 19.01L7.55 18.83L4.43 19.65L5.26 16.61L5.06 16.29C4.24 14.99 3.81 13.47 3.81 11.91C3.81 7.37 7.5 3.68 12.05 3.68C14.25 3.68 16.31 4.54 17.87 6.1C19.42 7.66 20.28 9.72 20.27 11.92C20.28 16.46 16.59 20.16 12.05 20.16ZM16.56 14.46C16.31 14.33 15.09 13.73 14.86 13.65C14.63 13.56 14.47 13.52 14.3 13.77C14.14 14.02 13.66 14.58 13.52 14.75C13.37 14.92 13.23 14.94 12.98 14.81C12.73 14.69 11.93 14.42 10.98 13.58C10.24 12.92 9.74 12.11 9.6 11.86C9.45 11.61 9.58 11.48 9.71 11.35C9.82 11.24 9.96 11.06 10.08 10.91C10.21 10.77 10.25 10.66 10.33 10.5C10.41 10.33 10.37 10.19 10.31 10.06C10.25 9.94 9.76 8.73 9.55 8.24C9.35 7.75 9.15 7.82 8.99 7.81C8.85 7.8 8.68 7.8 8.52 7.8C8.35 7.8 8.08 7.86 7.85 8.11C7.62 8.36 6.98 8.96 6.98 10.18C6.98 11.4 7.87 12.58 7.99 12.74C8.11 12.91 9.74 15.42 12.23 16.5C12.82 16.76 13.28 16.91 13.64 17.03C14.23 17.22 14.77 17.19 15.2 17.13C15.68 17.06 16.67 16.53 16.88 15.95C17.08 15.37 17.08 14.88 17.02 14.77C16.96 14.67 16.81 14.59 16.56 14.46Z"/></svg>
                     </button>
-                  ` : ''}
+                  ` : `
+                    <button class="btn-remind-app disabled" title="Sem WhatsApp cadastrado">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91C2.13 13.66 2.59 15.36 3.45 16.86L2.05 22L7.3 20.62C8.75 21.41 10.38 21.83 12.04 21.83C17.5 21.83 21.95 17.38 21.95 11.92C21.95 9.27 20.92 6.78 19.05 4.91C17.18 3.03 14.69 2 12.04 2ZM12.05 20.16C10.57 20.16 9.12 19.76 7.85 19.01L7.55 18.83L4.43 19.65L5.26 16.61L5.06 16.29C4.24 14.99 3.81 13.47 3.81 11.91C3.81 7.37 7.5 3.68 12.05 3.68C14.25 3.68 16.31 4.54 17.87 6.1C19.42 7.66 20.28 9.72 20.27 11.92C20.28 16.46 16.59 20.16 12.05 20.16ZM16.56 14.46C16.31 14.33 15.09 13.73 14.86 13.65C14.63 13.56 14.47 13.52 14.3 13.77C14.14 14.02 13.66 14.58 13.52 14.75C13.37 14.92 13.23 14.94 12.98 14.81C12.73 14.69 11.93 14.42 10.98 13.58C10.24 12.92 9.74 12.11 9.6 11.86C9.45 11.61 9.58 11.48 9.71 11.35C9.82 11.24 9.96 11.06 10.08 10.91C10.21 10.77 10.25 10.66 10.33 10.5C10.41 10.33 10.37 10.19 10.31 10.06C10.25 9.94 9.76 8.73 9.55 8.24C9.35 7.75 9.15 7.82 8.99 7.81C8.85 7.8 8.68 7.8 8.52 7.8C8.35 7.8 8.08 7.86 7.85 8.11C7.62 8.36 6.98 8.96 6.98 10.18C6.98 11.4 7.87 12.58 7.99 12.74C8.11 12.91 9.74 15.42 12.23 16.5C12.82 16.76 13.28 16.91 13.64 17.03C14.23 17.22 14.77 17.19 15.2 17.13C15.68 17.06 16.67 16.53 16.88 15.95C17.08 15.37 17.08 14.88 17.02 14.77C16.96 14.67 16.81 14.59 16.56 14.46Z"/></svg>
+                    </button>
+                  `}
                   <button class="btn-delete-app" onclick="deleteAppointment('${app.id}', event)" title="Excluir">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18m-2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18m-2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
                   </button>
                 </div>
               </div>
@@ -1635,9 +1639,9 @@ function updateScheduleView() {
                     R$ ${Number(appStartingHere.price).toFixed(2)}
                   </div>
                   ${appStartingHere.clientPhone ? `
-                    <button class="btn-remind-app" onclick="sendAppointmentReminder('${appStartingHere.id}', event)" title="Enviar lembrete via WhatsApp">
-                      <svg width="13" height="13" fill="currentColor" viewBox="0 0 24 24"><path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.312.045-.694.062-2.18-.553-1.614-.668-2.673-2.316-2.753-2.423-.081-.107-.655-.873-.655-1.664 0-.792.414-1.182.56-1.341.144-.16.315-.2.42-.2.106 0 .211.002.304.006.098.005.23-.037.36.275.132.318.45 1.096.488 1.176.04.08.067.174.013.28-.053.106-.08.172-.158.264-.078.093-.164.208-.234.28-.08.082-.164.172-.07.334.093.16.417.689.896 1.116.617.55 1.137.72 1.298.8.16.08.254.07.35-.04.095-.11.408-.475.517-.638.11-.164.218-.137.368-.081.15.054.954.45 1.118.532.164.082.273.123.313.192.04.068.04.399-.104.804z"/></svg>
-                      Lembrete
+                    <button class="btn-remind-app" onclick="sendAppointmentReminder('${appStartingHere.id}', event)" title="Enviar lembrete via WhatsApp (${appStartingHere.clientPhone})">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91C2.13 13.66 2.59 15.36 3.45 16.86L2.05 22L7.3 20.62C8.75 21.41 10.38 21.83 12.04 21.83C17.5 21.83 21.95 17.38 21.95 11.92C21.95 9.27 20.92 6.78 19.05 4.91C17.18 3.03 14.69 2 12.04 2ZM12.05 20.16C10.57 20.16 9.12 19.76 7.85 19.01L7.55 18.83L4.43 19.65L5.26 16.61L5.06 16.29C4.24 14.99 3.81 13.47 3.81 11.91C3.81 7.37 7.5 3.68 12.05 3.68C14.25 3.68 16.31 4.54 17.87 6.1C19.42 7.66 20.28 9.72 20.27 11.92C20.28 16.46 16.59 20.16 12.05 20.16ZM16.56 14.46C16.31 14.33 15.09 13.73 14.86 13.65C14.63 13.56 14.47 13.52 14.3 13.77C14.14 14.02 13.66 14.58 13.52 14.75C13.37 14.92 13.23 14.94 12.98 14.81C12.73 14.69 11.93 14.42 10.98 13.58C10.24 12.92 9.74 12.11 9.6 11.86C9.45 11.61 9.58 11.48 9.71 11.35C9.82 11.24 9.96 11.06 10.08 10.91C10.21 10.77 10.25 10.66 10.33 10.5C10.41 10.33 10.37 10.19 10.31 10.06C10.25 9.94 9.76 8.73 9.55 8.24C9.35 7.75 9.15 7.82 8.99 7.81C8.85 7.8 8.68 7.8 8.52 7.8C8.35 7.8 8.08 7.86 7.85 8.11C7.62 8.36 6.98 8.96 6.98 10.18C6.98 11.4 7.87 12.58 7.99 12.74C8.11 12.91 9.74 15.42 12.23 16.5C12.82 16.76 13.28 16.91 13.64 17.03C14.23 17.22 14.77 17.19 15.2 17.13C15.68 17.06 16.67 16.53 16.88 15.95C17.08 15.37 17.08 14.88 17.02 14.77C16.96 14.67 16.81 14.59 16.56 14.46Z"/></svg>
+                      <span>Lembrete</span>
                     </button>
                   ` : ''}
                   ${appStartingHere.status !== 'faltou' ? `
@@ -1755,7 +1759,12 @@ window.sendAppointmentReminder = async function(appId, event) {
     `• *Horário:* ${app.startTime} às ${app.endTime}\n\n` +
     `Qualquer imprevisto, por favor nos avise com antecedência. Te aguardamos!`;
 
-  const waUrl = `https://wa.me/55${cleanPhone}?text=${encodeURIComponent(text)}`;
+  let targetPhone = cleanPhone;
+  if (!targetPhone.startsWith('55') || targetPhone.length <= 11) {
+    targetPhone = '55' + targetPhone;
+  }
+
+  const waUrl = `https://wa.me/${targetPhone}?text=${encodeURIComponent(text)}`;
   window.open(waUrl, '_blank');
 };
 
@@ -2081,6 +2090,199 @@ function renderServices(container, actions) {
 
 // 5.5 Render Pacotes de Serviços (Catálogo de Pacotes & Check-list das Clientes)
 window.currentPackageTab = window.currentPackageTab || 'catalogo';
+window.selectedPackageDate = window.selectedPackageDate || (typeof selectedDate !== 'undefined' ? selectedDate : new Date().toISOString().split('T')[0]);
+window.showAllPackages = false;
+
+window.getPackageBookingDate = function(pkg) {
+  if (!pkg) return '';
+  if (pkg.date) return pkg.date.slice(0, 10);
+  if (pkg.appointmentDate) return pkg.appointmentDate.slice(0, 10);
+  if (pkg.createdAt) return pkg.createdAt.slice(0, 10);
+  if (pkg.notes) {
+    const match = pkg.notes.match(/(\d{4}-\d{2}-\d{2})/);
+    if (match) return match[1];
+  }
+  if (pkg.sessions && pkg.sessions[0] && pkg.sessions[0].notes) {
+    const match = pkg.sessions[0].notes.match(/(\d{4}-\d{2}-\d{2})/);
+    if (match) return match[1];
+  }
+  return '';
+};
+
+let packagePopoverMonthState = null;
+
+window.togglePackageCalendarPopover = function(e) {
+  if (e) e.stopPropagation();
+  let existing = document.getElementById('packageCalendarPopover');
+  if (existing) {
+    existing.remove();
+    return;
+  }
+
+  const curDate = window.selectedPackageDate || new Date().toISOString().split('T')[0];
+  const [y, m] = curDate.split('-').map(Number);
+  packagePopoverMonthState = { year: y, month: m - 1 };
+
+  const triggerBtn = document.getElementById('packageDatePickerTrigger');
+  if (!triggerBtn) return;
+
+  const popover = document.createElement('div');
+  popover.className = 'calendar-popover';
+  popover.id = 'packageCalendarPopover';
+
+  renderPackagePopoverCalendarContent(popover);
+
+  const rect = triggerBtn.getBoundingClientRect();
+  const leftPos = Math.min(window.innerWidth - 175, Math.max(175, rect.left + rect.width / 2));
+  popover.style.position = 'fixed';
+  popover.style.top = `${rect.bottom + 8}px`;
+  popover.style.left = `${leftPos}px`;
+  popover.style.transform = 'translateX(-50%)';
+  popover.style.zIndex = '999999';
+
+  document.body.appendChild(popover);
+
+  setTimeout(() => {
+    const closeListener = (evt) => {
+      if (popover && !popover.contains(evt.target) && evt.target !== triggerBtn && !triggerBtn.contains(evt.target)) {
+        popover.remove();
+        document.removeEventListener('click', closeListener);
+      }
+    };
+    document.addEventListener('click', closeListener);
+  }, 50);
+};
+
+function renderPackagePopoverCalendarContent(popover) {
+  const { year, month } = packagePopoverMonthState;
+  const monthNames = ['JANEIRO', 'FEVEREIRO', 'MARÇO', 'ABRIL', 'MAIO', 'JUNHO', 'JULHO', 'AGOSTO', 'SETEMBRO', 'OUTUBRO', 'NOVEMBRO', 'DEZEMBRO'];
+  const monthLabel = `${monthNames[month].slice(0, 4)}. DE ${year}`;
+
+  const firstDay = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const prevMonthDays = new Date(year, month, 0).getDate();
+
+  const packageDates = new Set();
+  (state.packages || []).forEach(p => {
+    const pDate = window.getPackageBookingDate(p);
+    if (pDate) {
+      const [py, pm, pd] = pDate.split('-').map(Number);
+      if (py === year && pm === month + 1) {
+        packageDates.add(pd);
+      }
+    }
+  });
+
+  let cellsHtml = '';
+
+  for (let i = firstDay - 1; i >= 0; i--) {
+    const dayNum = prevMonthDays - i;
+    cellsHtml += `<div class="popover-day-cell other-month">${dayNum}</div>`;
+  }
+
+  const curSelected = window.selectedPackageDate || '';
+
+  for (let day = 1; day <= daysInMonth; day++) {
+    const currentMonthStr = String(month + 1).padStart(2, '0');
+    const currentDayStr = String(day).padStart(2, '0');
+    const fullDateStr = `${year}-${currentMonthStr}-${currentDayStr}`;
+
+    const isSelected = fullDateStr === curSelected && !window.showAllPackages;
+    const hasPkg = packageDates.has(day);
+
+    cellsHtml += `
+      <div class="popover-day-cell ${isSelected ? 'selected' : ''}" onclick="selectPackageDateFromPopover('${fullDateStr}')">
+        <span>${day}</span>
+        ${hasPkg ? '<span class="dot-indicator"></span>' : ''}
+      </div>
+    `;
+  }
+
+  const totalCellsSoFar = firstDay + daysInMonth;
+  const trailingCells = (7 - (totalCellsSoFar % 7)) % 7;
+  for (let i = 1; i <= trailingCells; i++) {
+    cellsHtml += `<div class="popover-day-cell other-month">${i}</div>`;
+  }
+
+  popover.innerHTML = `
+    <div class="popover-month-header">
+      <span style="display:flex; align-items:center; gap:4px;">${monthLabel} ▾</span>
+      <div style="display:flex; align-items:center; gap:8px;">
+        <button class="btn-date-nav" onclick="navigatePackagePopoverMonth(-1)">‹</button>
+        <button class="btn-date-nav" onclick="navigatePackagePopoverMonth(1)">›</button>
+      </div>
+    </div>
+    <div class="popover-days-grid">
+      <div class="popover-weekday-label">D</div>
+      <div class="popover-weekday-label">S</div>
+      <div class="popover-weekday-label">T</div>
+      <div class="popover-weekday-label">Q</div>
+      <div class="popover-weekday-label">Q</div>
+      <div class="popover-weekday-label">S</div>
+      <div class="popover-weekday-label">S</div>
+      ${cellsHtml}
+    </div>
+  `;
+}
+
+window.navigatePackagePopoverMonth = function(delta) {
+  let { year, month } = packagePopoverMonthState;
+  month += delta;
+  if (month < 0) {
+    month = 11;
+    year--;
+  } else if (month > 11) {
+    month = 0;
+    year++;
+  }
+  packagePopoverMonthState = { year, month };
+  const popover = document.getElementById('packageCalendarPopover');
+  if (popover) renderPackagePopoverCalendarContent(popover);
+};
+
+window.selectPackageDateFromPopover = function(fullDateStr) {
+  window.selectedPackageDate = fullDateStr;
+  window.showAllPackages = false;
+  const popover = document.getElementById('packageCalendarPopover');
+  if (popover) popover.remove();
+
+  const container = document.getElementById('viewContainer');
+  const actions = document.getElementById('topBarActions');
+  if (container) renderPackages(container, actions);
+};
+
+window.navigatePackageDate = function(daysDelta) {
+  if (!window.selectedPackageDate) {
+    window.selectedPackageDate = new Date().toISOString().split('T')[0];
+  }
+  const [y, m, d] = window.selectedPackageDate.split('-').map(Number);
+  const dt = new Date(y, m - 1, d);
+  dt.setDate(dt.getDate() + daysDelta);
+  const newY = dt.getFullYear();
+  const newM = String(dt.getMonth() + 1).padStart(2, '0');
+  const newD = String(dt.getDate()).padStart(2, '0');
+  window.selectedPackageDate = `${newY}-${newM}-${newD}`;
+  window.showAllPackages = false;
+
+  const container = document.getElementById('viewContainer');
+  const actions = document.getElementById('topBarActions');
+  if (container) renderPackages(container, actions);
+};
+
+window.goToTodayPackageDate = function() {
+  window.selectedPackageDate = new Date().toISOString().split('T')[0];
+  window.showAllPackages = false;
+  const container = document.getElementById('viewContainer');
+  const actions = document.getElementById('topBarActions');
+  if (container) renderPackages(container, actions);
+};
+
+window.toggleShowAllPackages = function() {
+  window.showAllPackages = !window.showAllPackages;
+  const container = document.getElementById('viewContainer');
+  const actions = document.getElementById('topBarActions');
+  if (container) renderPackages(container, actions);
+};
 
 window.switchPackageTab = function(tab) {
   window.currentPackageTab = tab;
@@ -2090,7 +2292,7 @@ window.switchPackageTab = function(tab) {
 };
 
 function renderPackages(container, actions) {
-  if (actions) actions.innerHTML = '';
+  const activeTab = window.currentPackageTab;
 
   const catalogPackages = (state.services || []).filter(s => 
     s.isPackage === true || 
@@ -2099,7 +2301,32 @@ function renderPackages(container, actions) {
   );
   const clientPackages = state.packages || [];
 
-  const activeTab = window.currentPackageTab;
+  if (actions) {
+    if (activeTab === 'checklist') {
+      const selectedPkgDate = window.selectedPackageDate || (window.selectedPackageDate = (typeof selectedDate !== 'undefined' ? selectedDate : new Date().toISOString().split('T')[0]));
+      actions.innerHTML = `
+        <div class="agenda-actions-wrapper">
+          <div class="agenda-header-datepicker">
+            <button class="btn-date-nav" onclick="navigatePackageDate(-1)" title="Dia anterior">
+              <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"></path></svg>
+            </button>
+
+            <button class="btn-date-picker-trigger" id="packageDatePickerTrigger" onclick="togglePackageCalendarPopover(event)">
+              <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+              <span>${formatFormattedDateTitle(selectedPkgDate)}</span>
+              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"></path></svg>
+            </button>
+
+            <button class="btn-date-nav" onclick="navigatePackageDate(1)" title="Próximo dia">
+              <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"></path></svg>
+            </button>
+          </div>
+        </div>
+      `;
+    } else {
+      actions.innerHTML = '';
+    }
+  }
 
   // Barra de Abas interna da seção Pacotes (centralizada no desktop, 100% responsiva)
   const tabsHeaderHtml = `
@@ -2201,58 +2428,113 @@ function renderPackages(container, actions) {
     return;
   }
 
-  const pkgCards = clientPackages.map(pkg => {
-    const pct = Math.round(((pkg.completedCount || 0) / (pkg.totalSessions || 1)) * 100);
-    const sessionsHtml = (pkg.sessions || []).map(s => `
-      <div style="background: ${s.completed ? '#f0fdf4' : '#ffffff'}; border: 1px solid ${s.completed ? '#bbf7d0' : '#e2e8f0'}; border-radius: 10px; padding: 8px 12px; display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 6px;">
-        <div style="display: flex; align-items: center; gap: 8px;">
-          <button class="btn-falcon ${s.completed ? 'btn-success' : 'btn-secondary'}" onclick="togglePackageSessionTick('${pkg.id}', ${s.sessionNum}, ${!s.completed})" style="padding: 4px 10px; font-size: 0.78rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;">
-            ${s.completed ? '✓ Concluído' : '○ Marcar OK'}
-          </button>
-          <span style="font-size: 0.85rem; font-weight: 600; color: var(--ink);">Sessão ${s.sessionNum} de ${pkg.totalSessions}</span>
-        </div>
-        <div style="font-size: 0.76rem; color: var(--muted); text-align: right;">
-          ${s.completed ? `Realizado ${s.completedAt ? 'em ' + new Date(s.completedAt).toLocaleDateString('pt-BR') : ''} ${s.professionalName ? 'por ' + s.professionalName : ''}` : (s.notes ? s.notes : 'Pendente')}
-        </div>
+  const selectedPkgDate = window.selectedPackageDate || (window.selectedPackageDate = (typeof selectedDate !== 'undefined' ? selectedDate : new Date().toISOString().split('T')[0]));
+
+  const filteredPackages = window.showAllPackages
+    ? clientPackages
+    : clientPackages.filter(pkg => {
+        const pDate = window.getPackageBookingDate(pkg);
+        return pDate === selectedPkgDate;
+      });
+
+  const checklistHeaderBar = `
+    <div style="display: flex; justify-content: space-between; align-items: center; margin: 16px 0 12px 0; flex-wrap: wrap; gap: 8px;">
+      <div class="agenda-date-group-title" style="margin: 0;">
+        ${window.showAllPackages ? 'TODOS OS PACOTES ATIVOS' : formatFormattedDateTitle(selectedPkgDate).toUpperCase()}
+        <span style="font-size: 0.8rem; font-weight: normal; color: var(--muted); margin-left: 6px;">
+          (${filteredPackages.length} ${filteredPackages.length === 1 ? 'pacote' : 'pacotes'})
+        </span>
       </div>
-    `).join('');
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <button class="btn-falcon btn-secondary" onclick="toggleShowAllPackages()" style="font-size: 0.78rem; padding: 5px 12px; font-weight: 600;">
+          ${window.showAllPackages ? '📅 Filtrar por Data' : '📋 Ver Todos (' + clientPackages.length + ')'}
+        </button>
+      </div>
+    </div>
+  `;
 
-    return `
-      <div class="card-shell" style="margin-bottom: 16px;">
-        <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 10px; margin-bottom: 10px;">
-          <div>
-            <h3 style="margin: 0; font-size: 1.05rem; color: var(--ink); font-weight: 700;">${pkg.packageName}</h3>
-            <p style="margin: 2px 0 0 0; font-size: 0.85rem; color: var(--muted);">Cliente: <strong>${pkg.clientName}</strong> ${pkg.clientPhone ? '(' + pkg.clientPhone + ')' : ''} ${pkg.price ? '• R$ ' + Number(pkg.price).toFixed(2).replace('.', ',') : ''} ${pkg.createdAt ? '• Início: ' + pkg.createdAt : ''}</p>
-          </div>
-          <div style="display: flex; align-items: center; gap: 8px;">
-            <span style="background: ${pkg.status === 'concluido' ? '#dcfce7' : '#fff7ed'}; color: ${pkg.status === 'concluido' ? '#15803d' : '#c2410c'}; font-size: 0.78rem; font-weight: 700; padding: 4px 10px; border-radius: 999px;">
-              ${pkg.status === 'concluido' ? '✓ Pacote Concluído' : `${pkg.completedCount || 0}/${pkg.totalSessions} Sessões`}
-            </span>
-            ${isManager ? `
-              <button class="btn-card-action delete" onclick="deletePackage('${pkg.id}')" title="Excluir Histórico deste Pacote">
-                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-              </button>
-            ` : ''}
-          </div>
-        </div>
-
-        <div style="background: #e2e8f0; height: 8px; border-radius: 999px; overflow: hidden; margin-bottom: 12px;">
-          <div style="background: var(--orange); height: 100%; width: ${pct}%; transition: width 0.3s;"></div>
-        </div>
-
-        ${pkg.notes ? `<p style="font-size: 0.8rem; color: var(--muted); margin-bottom: 8px; background: #f8fafc; padding: 6px 10px; border-radius: 8px;">📝 Obs: ${pkg.notes}</p>` : ''}
-
-        <div style="margin-top: 10px;">
-          <strong style="font-size: 0.82rem; color: var(--muted); display: block; margin-bottom: 4px;">Check-list por Sessão:</strong>
-          ${sessionsHtml}
+  let pkgCardsHtml = '';
+  if (filteredPackages.length === 0) {
+    pkgCardsHtml = `
+      <div class="card-shell" style="text-align: center; padding: 36px 16px; color: var(--muted); border-radius: 16px; background: rgba(255, 255, 255, 0.8); margin-top: 8px;">
+        <div style="font-size: 2.4rem; margin-bottom: 8px;">📅</div>
+        <div style="font-weight: 700; font-size: 1rem; color: var(--ink); margin-bottom: 4px;">Nenhum pacote agendado para ${formatFormattedDateTitle(selectedPkgDate)}</div>
+        <p style="font-size: 0.85rem; margin: 0 0 16px 0; color: var(--muted); max-width: 420px; margin-left: auto; margin-right: auto;">
+          Nenhum cliente agendou ou iniciou pacotes nesta data. Navegue pelas setas do calendário acima ou selecione outro dia.
+        </p>
+        <div style="display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;">
+          <button class="btn-falcon btn-secondary" onclick="navigatePackageDate(-1)" style="font-size: 0.82rem; padding: 6px 14px;">‹ Dia Anterior</button>
+          <button class="btn-falcon btn-secondary" onclick="goToTodayPackageDate()" style="font-size: 0.82rem; padding: 6px 14px;">Hoje</button>
+          <button class="btn-falcon btn-secondary" onclick="navigatePackageDate(1)" style="font-size: 0.82rem; padding: 6px 14px;">Próximo Dia ›</button>
+          <button class="btn-falcon btn-primary" onclick="toggleShowAllPackages()" style="font-size: 0.82rem; padding: 6px 14px;">Ver Todos os ${clientPackages.length} Pacotes</button>
         </div>
       </div>
     `;
-  }).join('');
+  } else {
+    pkgCardsHtml = filteredPackages.map(pkg => {
+      const pct = Math.round(((pkg.completedCount || 0) / (pkg.totalSessions || 1)) * 100);
+      const pkgDateStr = window.getPackageBookingDate(pkg);
+      const formattedDateBadge = pkgDateStr ? formatFormattedDateTitle(pkgDateStr) : '';
+
+      const sessionsHtml = (pkg.sessions || []).map(s => `
+        <div style="background: ${s.completed ? '#f0fdf4' : '#ffffff'}; border: 1px solid ${s.completed ? '#bbf7d0' : '#e2e8f0'}; border-radius: 10px; padding: 8px 12px; display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 6px;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <button class="btn-falcon ${s.completed ? 'btn-success' : 'btn-secondary'}" onclick="togglePackageSessionTick('${pkg.id}', ${s.sessionNum}, ${!s.completed})" style="padding: 4px 10px; font-size: 0.78rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;">
+              ${s.completed ? '✓ Concluído' : '○ Marcar OK'}
+            </button>
+            <span style="font-size: 0.85rem; font-weight: 600; color: var(--ink);">Sessão ${s.sessionNum} de ${pkg.totalSessions}</span>
+          </div>
+          <div style="font-size: 0.76rem; color: var(--muted); text-align: right;">
+            ${s.completed ? `Realizado ${s.completedAt ? 'em ' + new Date(s.completedAt).toLocaleDateString('pt-BR') : ''} ${s.professionalName ? 'por ' + s.professionalName : ''}` : (s.notes ? s.notes : 'Pendente')}
+          </div>
+        </div>
+      `).join('');
+
+      return `
+        <div class="card-shell" style="margin-bottom: 16px;">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 10px; margin-bottom: 10px;">
+            <div>
+              <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                <h3 style="margin: 0; font-size: 1.05rem; color: var(--ink); font-weight: 700;">${pkg.packageName}</h3>
+                ${formattedDateBadge ? `
+                  <span style="background: #f1f5f9; color: #475569; font-size: 0.72rem; font-weight: 600; padding: 2px 8px; border-radius: 12px; border: 1px solid #cbd5e1;">
+                    📅 ${formattedDateBadge}
+                  </span>
+                ` : ''}
+              </div>
+              <p style="margin: 2px 0 0 0; font-size: 0.85rem; color: var(--muted);">Cliente: <strong>${pkg.clientName}</strong> ${pkg.clientPhone ? '(' + pkg.clientPhone + ')' : ''} ${pkg.price ? '• R$ ' + Number(pkg.price).toFixed(2).replace('.', ',') : ''} ${pkg.createdAt ? '• Início: ' + pkg.createdAt : ''}</p>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="background: ${pkg.status === 'concluido' ? '#dcfce7' : '#fff7ed'}; color: ${pkg.status === 'concluido' ? '#15803d' : '#c2410c'}; font-size: 0.78rem; font-weight: 700; padding: 4px 10px; border-radius: 999px;">
+                ${pkg.status === 'concluido' ? '✓ Pacote Concluído' : `${pkg.completedCount || 0}/${pkg.totalSessions} Sessões`}
+              </span>
+              ${isManager ? `
+                <button class="btn-card-action delete" onclick="deletePackage('${pkg.id}')" title="Excluir Histórico deste Pacote">
+                  <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                </button>
+              ` : ''}
+            </div>
+          </div>
+
+          <div style="background: #e2e8f0; height: 8px; border-radius: 999px; overflow: hidden; margin-bottom: 12px;">
+            <div style="background: var(--orange); height: 100%; width: ${pct}%; transition: width 0.3s;"></div>
+          </div>
+
+          ${pkg.notes ? `<p style="font-size: 0.8rem; color: var(--muted); margin-bottom: 8px; background: #f8fafc; padding: 6px 10px; border-radius: 8px;">📝 Obs: ${pkg.notes}</p>` : ''}
+
+          <div style="margin-top: 10px;">
+            <strong style="font-size: 0.82rem; color: var(--muted); display: block; margin-bottom: 4px;">Check-list por Sessão:</strong>
+            ${sessionsHtml}
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
 
   container.innerHTML = `
     ${tabsHeaderHtml}
-    <div class="data-list">${pkgCards}</div>
+    ${checklistHeaderBar}
+    <div class="data-list">${pkgCardsHtml}</div>
   `;
 }
 
