@@ -313,26 +313,198 @@ function renderNotificationDropdown() {
     return;
   }
 
-  listEl.innerHTML = notificationHistory.map(item => `
-    <div class="notif-item" onclick="handleNotificationItemClick('${item.id}', '${item.date || ''}', '${item.profId || ''}')">
-      <div class="notif-item-icon">
-        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+  listEl.innerHTML = notificationHistory.map(item => {
+    const isBirthday = item.type === 'birthday' || (item.id && String(item.id).startsWith('bday_')) || (item.title && item.title.includes('Aniversariante'));
+    const iconHtml = isBirthday
+      ? `<div class="notif-item-icon bday-icon" title="Aniversariante">
+           <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-8a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8"></path><path d="M4 16s.5-1 2-1 2.5 2 4 2 2.5-2 4-2 2.5 2 4 2 2-1 2-1"></path><path d="M2 21h20"></path><line x1="12" y1="8" x2="12" y2="11"></line><path d="M12 5a1.5 1.5 0 0 1 1 1.5c0 .5-.5 1.5-1 1.5s-1-1-1-1.5A1.5 1.5 0 0 1 12 5z"></path></svg>
+         </div>`
+      : `<div class="notif-item-icon" title="Agendamento">
+           <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+         </div>`;
+
+    return `
+      <div class="notif-item" onclick="handleNotificationItemClick('${item.id}')">
+        ${iconHtml}
+        <div class="notif-item-content">
+          <div class="notif-item-title">${item.title}</div>
+          <div class="notif-item-desc">${item.body}</div>
+          <div class="notif-item-time">${item.timeStr || 'Hoje'}</div>
+        </div>
+        <button class="btn-notif-delete" onclick="deleteNotificationItem('${item.id}', event)" title="Excluir notificação">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+        </button>
       </div>
-      <div class="notif-item-content">
-        <div class="notif-item-title">${item.title}</div>
-        <div class="notif-item-desc">${item.body}</div>
-        <div class="notif-item-time">${item.timeStr || 'Agora'}</div>
-      </div>
-    </div>
-  `).join('');
+    `;
+  }).join('');
 }
 
-window.handleNotificationItemClick = function(id, date, profId) {
+window.deleteNotificationItem = function(id, event) {
+  if (event) {
+    event.stopPropagation();
+    event.preventDefault();
+  }
+  notificationHistory = notificationHistory.filter(item => item.id !== id);
+  try {
+    localStorage.setItem('salon_notif_history', JSON.stringify(notificationHistory));
+  } catch (e) {}
+  renderNotificationDropdown();
+};
+
+window.clearAllNotifications = function(event) {
+  if (event) {
+    event.stopPropagation();
+    event.preventDefault();
+  }
+  notificationHistory = [];
+  try {
+    localStorage.setItem('salon_notif_history', JSON.stringify(notificationHistory));
+  } catch (e) {}
+  renderNotificationDropdown();
+};
+
+let currentViewingAppointment = null;
+
+window.handleNotificationItemClick = function(id) {
   const drop = document.getElementById('notifDropdown');
   if (drop) drop.style.display = 'none';
 
-  if (date) selectedDate = date;
-  if (profId) selectedProfessionalId = profId;
+  const item = notificationHistory.find(n => n.id === id);
+  if (!item) return;
+
+  const isBirthday = item.type === 'birthday' || (item.id && String(item.id).startsWith('bday_')) || (item.title && item.title.includes('Aniversariante'));
+
+  if (isBirthday) {
+    if (typeof renderView === 'function') {
+      renderView('aniversarios');
+    }
+    return;
+  }
+
+  // É agendamento: busca o agendamento completo no state ou usa os dados salvos no histórico
+  let app = (state.appointments || []).find(a => a.id === item.id || a.id === item.appId);
+  if (!app) {
+    app = {
+      id: item.appId || item.id,
+      clientId: item.clientId,
+      clientName: item.clientName || 'Cliente',
+      clientPhone: item.clientPhone || '',
+      serviceName: item.serviceName || item.title || 'Serviço',
+      professionalId: item.profId,
+      date: item.date,
+      startTime: item.startTime,
+      endTime: item.endTime,
+      price: item.price,
+      notes: item.notes || ''
+    };
+  }
+
+  openAppointmentDetailsModal(app);
+};
+
+window.openAppointmentDetailsModal = function(app) {
+  if (!app) return;
+  currentViewingAppointment = app;
+
+  const modal = document.getElementById('appointmentDetailsModal');
+  if (!modal) return;
+
+  const avatarEl = document.getElementById('appDetailsClientAvatar');
+  const nameEl = document.getElementById('appDetailsClientName');
+  const phoneEl = document.getElementById('appDetailsClientPhone');
+  const waContainer = document.getElementById('appDetailsWaBtnContainer');
+  const servEl = document.getElementById('appDetailsService');
+  const priceEl = document.getElementById('appDetailsPrice');
+  const profEl = document.getElementById('appDetailsProf');
+  const dateEl = document.getElementById('appDetailsDate');
+  const timeEl = document.getElementById('appDetailsTime');
+  const notesContainer = document.getElementById('appDetailsNotesContainer');
+
+  const clientName = app.clientName || 'Cliente';
+  if (avatarEl) avatarEl.innerText = clientName.charAt(0).toUpperCase();
+  if (nameEl) nameEl.innerText = clientName;
+  if (phoneEl) phoneEl.innerText = app.clientPhone ? app.clientPhone : 'Telefone não cadastrado';
+
+  if (waContainer) {
+    if (app.clientPhone) {
+      const cleanPhone = String(app.clientPhone).replace(/\D/g, '');
+      let targetPhone = cleanPhone;
+      if (!targetPhone.startsWith('55') || targetPhone.length <= 11) {
+        targetPhone = '55' + targetPhone;
+      }
+      const salonName = state.settings?.salonName || currentTenant?.name || 'Salão';
+      const msg = encodeURIComponent(`Olá, ${clientName}! Tudo bem? Entramos em contato referente ao seu agendamento no ${salonName}.`);
+      waContainer.innerHTML = `
+        <a href="https://wa.me/${targetPhone}?text=${msg}" target="_blank" class="btn-card-action whatsapp" style="display: inline-flex; align-items: center; justify-content: center; gap: 7px; width: 100%; padding: 8px 14px; border-radius: 10px; text-decoration: none; font-size: 0.84rem; font-weight: 600; margin-top: 8px;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91C2.13 13.66 2.59 15.36 3.45 16.86L2.05 22L7.3 20.62C8.75 21.41 10.38 21.83 12.04 21.83C17.5 21.83 21.95 17.38 21.95 11.92C21.95 9.27 20.92 6.78 19.05 4.91C17.18 3.03 14.69 2 12.04 2ZM12.05 20.16C10.57 20.16 9.12 19.76 7.85 19.01L7.55 18.83L4.43 19.65L5.26 16.61L5.06 16.29C4.24 14.99 3.81 13.47 3.81 11.91C3.81 7.37 7.5 3.68 12.05 3.68C14.25 3.68 16.31 4.54 17.87 6.1C19.42 7.66 20.28 9.72 20.27 11.92C20.28 16.46 16.59 20.16 12.05 20.16ZM16.56 14.46C16.31 14.33 15.09 13.73 14.86 13.65C14.63 13.56 14.47 13.52 14.3 13.77C14.14 14.02 13.66 14.58 13.52 14.75C13.37 14.92 13.23 14.94 12.98 14.81C12.73 14.69 11.93 14.42 10.98 13.58C10.24 12.92 9.74 12.11 9.6 11.86C9.45 11.61 9.58 11.48 9.71 11.35C9.82 11.24 9.96 11.06 10.08 10.91C10.21 10.77 10.25 10.66 10.33 10.5C10.41 10.33 10.37 10.19 10.31 10.06C10.25 9.94 9.76 8.73 9.55 8.24C9.35 7.75 9.15 7.82 8.99 7.81C8.85 7.8 8.68 7.8 8.52 7.8C8.35 7.8 8.08 7.86 7.85 8.11C7.62 8.36 6.98 8.96 6.98 10.18C6.98 11.4 7.87 12.58 7.99 12.74C8.11 12.91 9.74 15.42 12.23 16.5C12.82 16.76 13.28 16.91 13.64 17.03C14.23 17.22 14.77 17.19 15.2 17.13C15.68 17.06 16.67 16.53 16.88 15.95C17.08 15.37 17.08 14.88 17.02 14.77C16.96 14.67 16.81 14.59 16.56 14.46Z"/></svg>
+          <span>Abrir WhatsApp do Cliente</span>
+        </a>
+      `;
+    } else {
+      waContainer.innerHTML = '';
+    }
+  }
+
+  if (servEl) servEl.innerText = app.serviceName || 'Serviço';
+  
+  if (priceEl) {
+    if (typeof app.price === 'number') {
+      priceEl.innerText = 'R$ ' + app.price.toFixed(2).replace('.', ',');
+    } else if (app.price) {
+      priceEl.innerText = 'R$ ' + app.price;
+    } else {
+      priceEl.innerText = 'R$ 0,00';
+    }
+  }
+
+  if (profEl) {
+    const prof = (state.professionals || []).find(p => p.id === (app.professionalId || app.profId));
+    profEl.innerText = prof ? prof.name : 'Salão';
+  }
+
+  if (dateEl) {
+    if (app.date && app.date.includes('-')) {
+      const parts = app.date.split('-');
+      dateEl.innerText = `${parts[2]}/${parts[1]}/${parts[0]}`;
+    } else {
+      dateEl.innerText = app.date || '--/--/----';
+    }
+  }
+
+  if (timeEl) {
+    timeEl.innerText = `${app.startTime || '--:--'} às ${app.endTime || '--:--'}`;
+  }
+
+  if (notesContainer) {
+    if (app.notes && app.notes.trim()) {
+      notesContainer.style.display = 'block';
+      notesContainer.innerHTML = `<strong>Observação:</strong> ${app.notes.trim()}`;
+    } else {
+      notesContainer.style.display = 'none';
+      notesContainer.innerHTML = '';
+    }
+  }
+
+  modal.style.display = 'flex';
+  modal.classList.add('open');
+};
+
+window.closeAppointmentDetailsModal = function() {
+  const modal = document.getElementById('appointmentDetailsModal');
+  if (modal) {
+    modal.style.display = 'none';
+    modal.classList.remove('open');
+  }
+};
+
+window.goToAppointmentInAgenda = function() {
+  closeAppointmentDetailsModal();
+  if (currentViewingAppointment) {
+    if (currentViewingAppointment.date) selectedDate = currentViewingAppointment.date;
+    if (currentViewingAppointment.professionalId || currentViewingAppointment.profId) {
+      selectedProfessionalId = currentViewingAppointment.professionalId || currentViewingAppointment.profId;
+    }
+  }
   if (typeof renderView === 'function') {
     renderView('agenda');
   }
@@ -574,11 +746,21 @@ function checkAndNotifyNewAppointments(appointmentsList) {
         // Salva no histórico do sino
         saveNotificationToHistory({
           id: app.id,
+          type: 'appointment',
+          appId: app.id,
           title: 'Novo Agendamento Confirmado! 📅',
           body: bodyText,
           timeStr: timeStr,
           date: app.date,
-          profId: app.professionalId
+          profId: app.professionalId,
+          clientId: app.clientId,
+          clientName: app.clientName,
+          clientPhone: app.clientPhone || '',
+          serviceName: app.serviceName,
+          startTime: app.startTime,
+          endTime: app.endTime,
+          price: app.price,
+          notes: app.notes || ''
         });
 
         // Dispara notificação push / nativa
@@ -659,6 +841,9 @@ function checkAndNotifyBirthdays() {
     // 1. Garante que o item esteja no histórico visual do sino (se ainda não estiver)
     saveNotificationToHistory({
       id: notifId,
+      type: 'birthday',
+      clientId: cli.id,
+      clientName: cli.name,
       title: '🎂 Aniversariante do Dia!',
       body: `Hoje é aniversário de ${cli.name}! Envie os parabéns ou ofereça um mimo especial.`,
       timeStr: '08:00',

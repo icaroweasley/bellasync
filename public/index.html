@@ -138,8 +138,11 @@
             <!-- Dropdown das Últimas Notificações -->
             <div class="notif-dropdown" id="notifDropdown" style="display:none;">
               <div class="notif-dropdown-header">
-                <h4>Notificações Recentes</h4>
-                <button onclick="requestPushPermissionManually()" class="notif-perm-link" id="notifPermBtn">Configurar Push</button>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <h4>Notificações</h4>
+                  <button onclick="clearAllNotifications(event)" class="notif-clear-all-btn" title="Excluir todas as notificações">Limpar todas</button>
+                </div>
+                <button onclick="requestPushPermissionManually()" class="notif-perm-link" id="notifPermBtn">Push</button>
               </div>
               <div class="notif-dropdown-list" id="notifDropdownList">
                 <div class="notif-empty">Nenhuma notificação recente.</div>
@@ -348,6 +351,76 @@
     </div>
   </div>
 
-  <script src="/js/app.js?v=20260922_v247"></script>
+  <!-- Modal Detalhes do Agendamento / Cliente (Notificação) -->
+  <div class="modal-backdrop" id="appointmentDetailsModal" style="z-index: 10002; display: none;" onclick="if(event.target===this) closeAppointmentDetailsModal()">
+    <div class="modal-dialog" style="max-width: 440px; border-radius: 20px; padding: 22px 20px;">
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <div style="width: 38px; height: 38px; border-radius: 12px; background: rgba(255, 105, 0, 0.12); color: var(--orange); display: flex; align-items: center; justify-content: center;">
+            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+          </div>
+          <div>
+            <h3 style="margin: 0; font-size: 1.05rem; font-weight: 700; color: var(--ink);">Novo Agendamento</h3>
+            <p style="margin: 0; font-size: 0.76rem; color: var(--muted);">Informações do Cliente</p>
+          </div>
+        </div>
+        <button onclick="closeAppointmentDetailsModal()" style="background:none; border:none; font-size:1.5rem; cursor:pointer; color:var(--muted); line-height:1;">&times;</button>
+      </div>
+
+      <!-- Card de Dados do Cliente -->
+      <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 14px; padding: 14px; margin-bottom: 14px;">
+        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 10px;">
+          <div id="appDetailsClientAvatar" style="width: 46px; height: 46px; border-radius: 50%; background: #ffedd5; color: var(--orange); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1.2rem; flex-shrink: 0;">
+            C
+          </div>
+          <div style="flex: 1; min-width: 0;">
+            <div id="appDetailsClientName" style="font-weight: 700; font-size: 1.05rem; color: var(--ink); word-break: break-word;">Cliente</div>
+            <div id="appDetailsClientPhone" style="font-size: 0.82rem; color: var(--muted);">Sem telefone</div>
+          </div>
+        </div>
+        <div id="appDetailsWaBtnContainer"></div>
+      </div>
+
+      <!-- Detalhes do Serviço & Horário -->
+      <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 14px; padding: 14px; margin-bottom: 18px;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+          <div>
+            <small style="color: var(--muted); font-size: 0.72rem; text-transform: uppercase; font-weight: 600;">Serviço</small>
+            <div id="appDetailsService" style="font-weight: 700; font-size: 0.95rem; color: var(--orange);">Serviço</div>
+          </div>
+          <div style="text-align: right;">
+            <small style="color: var(--muted); font-size: 0.72rem; text-transform: uppercase; font-weight: 600;">Valor</small>
+            <div id="appDetailsPrice" style="font-weight: 800; font-size: 1rem; color: #16a34a;">R$ 0,00</div>
+          </div>
+        </div>
+
+        <div style="border-top: 1px dashed #e2e8f0; padding-top: 8px; margin-top: 8px; display: flex; justify-content: space-between; font-size: 0.82rem;">
+          <div>
+            <span style="color: var(--muted);">Profissional:</span> <strong id="appDetailsProf">Salão</strong>
+          </div>
+          <div>
+            <span style="color: var(--muted);">Data:</span> <strong id="appDetailsDate">--/--/----</strong>
+          </div>
+        </div>
+
+        <div style="margin-top: 6px; font-size: 0.82rem;">
+          <span style="color: var(--muted);">Horário:</span> <strong id="appDetailsTime">--:-- às --:--</strong>
+        </div>
+
+        <div id="appDetailsNotesContainer" style="margin-top: 8px; padding-top: 6px; border-top: 1px dashed #e2e8f0; font-size: 0.78rem; color: #64748b; font-style: italic; display: none;">
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 8px;">
+        <button class="btn-falcon btn-secondary" onclick="closeAppointmentDetailsModal()" style="flex: 1; padding: 10px;">Fechar</button>
+        <button class="btn-falcon btn-primary" onclick="goToAppointmentInAgenda()" style="flex: 1; padding: 10px; display: flex; align-items: center; justify-content: center; gap: 6px;">
+          <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M15 3h6v6m0-6L10 14m-1 7H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h5"></path></svg>
+          <span>Ver na Agenda</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/app.js?v=20260922_v248"></script>
 </body>
 </html>

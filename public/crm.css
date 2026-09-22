@@ -2248,6 +2248,23 @@ input[type="date"].form-control {
   color: var(--ink, #0f172a);
 }
 
+.notif-clear-all-btn {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-size: 0.74rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 3px 7px;
+  border-radius: 6px;
+  transition: all 0.15s;
+}
+
+.notif-clear-all-btn:hover {
+  color: #ef4444;
+  background: #fee2e2;
+}
+
 .notif-perm-link {
   background: transparent;
   border: none;
@@ -2288,11 +2305,12 @@ input[type="date"].form-control {
 .notif-item {
   display: flex;
   align-items: flex-start;
-  gap: 12px;
-  padding: 12px 16px;
+  gap: 10px;
+  padding: 12px 14px;
   border-bottom: 1px solid #f1f5f9;
   cursor: pointer;
   transition: background 0.15s;
+  position: relative;
 }
 
 .notif-item:last-child {
@@ -2316,8 +2334,14 @@ input[type="date"].form-control {
   margin-top: 2px;
 }
 
+.notif-item-icon.bday-icon {
+  background: rgba(244, 63, 94, 0.12) !important;
+  color: #f43f5e !important;
+}
+
 .notif-item-content {
   flex: 1;
+  min-width: 0;
 }
 
 .notif-item-title {
@@ -2331,12 +2355,33 @@ input[type="date"].form-control {
   font-size: 0.78rem;
   color: #64748b;
   line-height: 1.35;
+  word-break: break-word;
 }
 
 .notif-item-time {
   font-size: 0.7rem;
   color: #94a3b8;
   margin-top: 4px;
+}
+
+.btn-notif-delete {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  padding: 6px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+  margin-left: 4px;
+  flex-shrink: 0;
+}
+
+.btn-notif-delete:hover {
+  background: #fee2e2;
+  color: #ef4444;
 }
 
 /* ==========================================================================
