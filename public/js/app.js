@@ -1593,9 +1593,7 @@ window.sendAppointmentReminder = async function(appId, event) {
 
 // 2. Render Comissões & Vales
 function renderCommissions(container, actions) {
-  actions.innerHTML = isManager ? `
-    <button class="btn-falcon btn-primary" onclick="openNewCommissionModal()">+ Lançar Comissão / Vale</button>
-  ` : '';
+  actions.innerHTML = '';
 
   const toPay = (state.commissions || []).filter(c => c.status === 'a_pagar');
   const paid = (state.commissions || []).filter(c => c.status === 'paga');
@@ -1733,9 +1731,9 @@ function renderProfessionals(container, actions) {
   `).join('');
 
   container.innerHTML = `
-    <div style="background: rgba(255, 105, 0, 0.05); border: 1px solid rgba(255, 105, 0, 0.18); border-radius: 16px; padding: 14px 18px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
-      <div style="display: flex; align-items: center; gap: 12px; flex: 1; min-width: 260px;">
-        <div style="background: rgba(255, 105, 0, 0.12); width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+    <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 14px 18px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.03);">
+      <div style="display: flex; align-items: center; gap: 12px; flex: 1; min-width: 240px;">
+        <div style="background: rgba(255, 105, 0, 0.1); width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
           <svg width="22" height="22" fill="none" stroke="var(--orange)" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
         </div>
         <div>
@@ -1745,7 +1743,7 @@ function renderProfessionals(container, actions) {
           </p>
         </div>
       </div>
-      <div style="text-align: right; background: #ffffff; padding: 8px 16px; border-radius: 12px; border: 1px solid rgba(0,0,0,0.06); box-shadow: 0 2px 8px rgba(0,0,0,0.03);">
+      <div style="text-align: right; background: #f8fafc; padding: 8px 16px; border-radius: 12px; border: 1px solid #e2e8f0;">
         <small style="display: block; font-size: 0.72rem; color: var(--muted); font-weight: 500;">Mensalidade do Salão (${profCount}/10 profs)</small>
         <strong style="font-size: 1.05rem; color: var(--orange); font-weight: 800;">R$ ${totalMonthly.toFixed(2).replace('.', ',')} <span style="font-size: 0.75rem; font-weight: normal; color: var(--muted);">/ mês</span></strong>
       </div>
