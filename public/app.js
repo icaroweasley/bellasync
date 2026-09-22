@@ -583,6 +583,49 @@ function checkAndNotifyNewAppointments(appointmentsList) {
   });
 }
 
+// Helpers para checagem de aniversariantes
+function isBirthdayToday(bdayStr, targetMonth, targetDay) {
+  if (!bdayStr) return false;
+  const clean = String(bdayStr).trim();
+  let m = '', d = '';
+  if (clean.includes('-')) {
+    const parts = clean.split('-');
+    if (parts[0].length === 4) {
+      m = parts[1];
+      d = parts[2];
+    } else {
+      m = parts[1];
+      d = parts[0];
+    }
+  } else if (clean.includes('/')) {
+    const parts = clean.split('/');
+    if (parts[2] && parts[2].length === 4) {
+      d = parts[0];
+      m = parts[1];
+    } else {
+      m = parts[0];
+      d = parts[1];
+    }
+  }
+  return (String(m).padStart(2, '0') === String(targetMonth).padStart(2, '0') && String(d).padStart(2, '0') === String(targetDay).padStart(2, '0'));
+}
+window.isBirthdayToday = isBirthdayToday;
+
+function isBirthdayInMonth(bdayStr, targetMonth) {
+  if (!bdayStr) return false;
+  const clean = String(bdayStr).trim();
+  let m = '';
+  if (clean.includes('-')) {
+    const parts = clean.split('-');
+    m = parts[0].length === 4 ? parts[1] : parts[1];
+  } else if (clean.includes('/')) {
+    const parts = clean.split('/');
+    m = parts[2] && parts[2].length === 4 ? parts[1] : parts[0];
+  }
+  return String(m).padStart(2, '0') === String(targetMonth).padStart(2, '0');
+}
+window.isBirthdayInMonth = isBirthdayInMonth;
+
 let birthdayNotificationsChecked = false;
 function checkAndNotifyBirthdays() {
   if (birthdayNotificationsChecked) return;
@@ -875,6 +918,10 @@ function updateFabButton(view) {
       title = 'Nova Despesa';
       show = isManager;
       break;
+    case 'pacotes':
+      title = 'Novo Pacote';
+      show = isManager;
+      break;
     case 'comissões':
       title = 'Lançar Comissão / Vale';
       show = isManager;
@@ -907,6 +954,9 @@ window.handleFabClick = function() {
     case 'servicos':
       if (isManager) openNewServiceModal();
       break;
+    case 'pacotes':
+      if (isManager) openNewPackageModal();
+      break;
     case 'produtos':
       if (isManager) openNewProductModal();
       break;
@@ -917,6 +967,14 @@ window.handleFabClick = function() {
       break;
   }
 };
+
+// Aliases para compatibilidade caso chamados por botões vazios
+window.openCommissionModal = () => window.openNewCommissionModal && window.openNewCommissionModal();
+window.openProfessionalModal = () => window.openNewProfessionalModal && window.openNewProfessionalModal();
+window.openClientModal = () => window.openNewClientModal && window.openNewClientModal();
+window.openServiceModal = () => window.openNewServiceModal && window.openNewServiceModal();
+window.openProductModal = () => window.openNewProductModal && window.openNewProductModal();
+window.openExpenseModal = () => window.openNewExpenseModal && window.openNewExpenseModal();
 
 function renderEmptyStateHtml({ icon, title, description, buttonText, buttonOnClick }) {
   return `
@@ -2021,25 +2079,147 @@ function renderServices(container, actions) {
   `;
 }
 
-// 5.5 Render Pacotes de Serviços (Check-list / Tickagem por Sessões)
-function renderPackages(container, actions) {
-  actions.innerHTML = '';
+// 5.5 Render Pacotes de Serviços (Catálogo de Pacotes & Check-list das Clientes)
+window.currentPackageTab = window.currentPackageTab || 'catalogo';
 
-  if (!state.packages || state.packages.length === 0) {
-    container.innerHTML = renderEmptyStateHtml({
-      icon: `<svg width="30" height="30" fill="none" stroke="var(--orange)" stroke-width="2" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>`,
-      title: "Nenhum Pacote de Serviços Ativo",
-      description: isManager
-        ? "Venda pacotes com múltiplas sessões (ex: Alisamento em 5 dias, Tratamento semanal) e acompanhe o check-list de OKs de cada sessão realizada!"
-        : "Nenhum pacote de serviços ativo para acompanhamento no momento.",
-      buttonText: isManager ? "Criar Primeiro Pacote" : "",
-      buttonOnClick: "openNewPackageModal()"
-    });
+window.switchPackageTab = function(tab) {
+  window.currentPackageTab = tab;
+  const container = document.getElementById('viewContainer');
+  const actions = document.getElementById('topBarActions');
+  if (container) renderPackages(container, actions);
+};
+
+function renderPackages(container, actions) {
+  if (actions) actions.innerHTML = '';
+
+  const catalogPackages = (state.services || []).filter(s => 
+    s.isPackage === true || 
+    (s.sessionsCount && s.sessionsCount > 1) || 
+    (s.category && s.category.toLowerCase().includes('pacote'))
+  );
+  const clientPackages = state.packages || [];
+
+  // Botões na barra superior
+  if (actions && isManager) {
+    actions.innerHTML = `
+      <div style="display:flex; align-items:center; gap:8px;">
+        <button class="btn-falcon btn-primary" onclick="openNewPackageModal()" style="height:38px; display:inline-flex; align-items:center; gap:6px; font-size:0.84rem; padding:0 14px;">
+          <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+          Novo Pacote
+        </button>
+        ${catalogPackages.length > 0 ? `
+          <button class="btn-falcon btn-secondary" onclick="openSellPackageModal()" title="Vender pacote para uma cliente no balcão" style="height:38px; display:inline-flex; align-items:center; gap:6px; font-size:0.84rem; padding:0 12px;">
+            🏷️ Vender p/ Cliente
+          </button>
+        ` : ''}
+      </div>
+    `;
+  }
+
+  const activeTab = window.currentPackageTab;
+
+  // Barra de Abas interna da seção Pacotes
+  const tabsHeaderHtml = `
+    <div style="display: flex; gap: 8px; margin-bottom: 18px; border-bottom: 1px solid var(--border-peach); padding-bottom: 12px; flex-wrap: wrap; align-items: center; justify-content: space-between;">
+      <div style="display: flex; gap: 6px; background: rgba(0,0,0,0.04); padding: 4px; border-radius: 12px;">
+        <button class="btn-falcon ${activeTab === 'catalogo' ? 'btn-primary' : 'btn-secondary'}" onclick="switchPackageTab('catalogo')" style="padding: 7px 16px; font-size: 0.84rem; font-weight: 600; border-radius: 8px;">
+          📦 Catálogo de Pacotes (${catalogPackages.length})
+        </button>
+        <button class="btn-falcon ${activeTab === 'checklist' ? 'btn-primary' : 'btn-secondary'}" onclick="switchPackageTab('checklist')" style="padding: 7px 16px; font-size: 0.84rem; font-weight: 600; border-radius: 8px;">
+          📋 Check-list das Clientes (${clientPackages.length})
+        </button>
+      </div>
+      <div style="font-size:0.8rem; color:var(--muted);">
+        ${activeTab === 'catalogo' 
+          ? 'Pacotes ofertados no link de agendamento online e no balcão' 
+          : 'Controle de OKs das sessões realizadas pelas clientes'}
+      </div>
+    </div>
+  `;
+
+  // ABA 1: CATÁLOGO DE PACOTES (PRODUTOS / SERVIÇOS DO SALÃO)
+  if (activeTab === 'catalogo') {
+    if (catalogPackages.length === 0) {
+      container.innerHTML = `
+        ${tabsHeaderHtml}
+        ${renderEmptyStateHtml({
+          icon: `<svg width="30" height="30" fill="none" stroke="var(--orange)" stroke-width="2" viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>`,
+          title: "Nenhum Pacote Cadastrado",
+          description: isManager
+            ? "Cadastre pacotes de serviços do seu salão (ex: Alisamento 5 Dias, Cronograma Capilar 4 Etapas, Pacote Manicure). Eles aparecerão automaticamente na página de agendamento online para as clientes comprarem e no balcão!"
+            : "Nenhum pacote cadastrado no salão ainda. Entre em contato com a gerência para inclusão.",
+          buttonText: isManager ? "Cadastrar Primeiro Pacote" : "",
+          buttonOnClick: "openNewPackageModal()"
+        })}
+      `;
+      return;
+    }
+
+    const catalogCardsHtml = catalogPackages.map(s => {
+      const sessionsNum = s.sessionsCount || 5;
+      return `
+        <div class="data-item-card">
+          <div class="item-main-info">
+            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:4px;">
+              <h4 style="margin:0; font-size:1.02rem;">${s.name}</h4>
+              <span style="background:#0f172a; color:#fff; font-size:0.72rem; font-weight:700; padding:2px 8px; border-radius:12px; letter-spacing:0.02em;">
+                ${sessionsNum}x Sessões
+              </span>
+              <span style="background:#dcfce7; color:#15803d; font-size:0.72rem; font-weight:700; padding:2px 8px; border-radius:12px;">
+                🌐 Disponível Online
+              </span>
+            </div>
+            <p style="margin:2px 0 0 0; font-size:0.85rem; color:var(--muted);">
+              Duração: <strong>${s.durationMinutes || 60} min por sessão</strong> • Comissão: <strong>${s.commissionPercent || 50}%</strong>
+            </p>
+            ${s.observation ? `<p style="font-size:0.78rem; color:var(--muted); margin-top:4px;">📝 ${s.observation}</p>` : ''}
+          </div>
+          <div class="item-actions-group">
+            <span class="item-badge-price" style="margin-right: 6px;">R$ ${Number(s.price).toFixed(2).replace('.', ',')}</span>
+            ${isManager ? `
+              <button class="btn-falcon btn-secondary" onclick="openSellPackageModal('${s.id}')" title="Vender este pacote para uma cliente agora" style="padding: 6px 12px; font-size:0.8rem; font-weight:600;">
+                🏷️ Vender p/ Cliente
+              </button>
+              <button class="btn-card-action edit" onclick="openEditPackageModal('${s.id}')" title="Editar Pacote">
+                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                Editar
+              </button>
+              <button class="btn-card-action delete" onclick="deletePackageService('${s.id}')" title="Excluir Pacote do Catálogo">
+                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                Excluir
+              </button>
+            ` : ''}
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    container.innerHTML = `
+      ${tabsHeaderHtml}
+      <div class="data-list">${catalogCardsHtml}</div>
+    `;
     return;
   }
 
-  const pkgCards = state.packages.map(pkg => {
-    const pct = Math.round((pkg.completedCount / pkg.totalSessions) * 100);
+  // ABA 2: CHECK-LIST DAS CLIENTES (SESSÕES E OKs)
+  if (clientPackages.length === 0) {
+    container.innerHTML = `
+      ${tabsHeaderHtml}
+      ${renderEmptyStateHtml({
+        icon: `<svg width="30" height="30" fill="none" stroke="var(--orange)" stroke-width="2" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>`,
+        title: "Nenhum Check-list de Cliente Ativo",
+        description: isManager
+          ? "Quando uma cliente adquirir um pacote (seja pelo link de agendamento online ou por venda no balcão), o check-list com a barra de progresso e as sessões para marcar OK aparecerá aqui!"
+          : "Nenhum pacote de cliente ativo no momento.",
+        buttonText: isManager && catalogPackages.length > 0 ? "Vender Pacote para Cliente" : (isManager ? "Cadastrar Pacote no Catálogo" : ""),
+        buttonOnClick: catalogPackages.length > 0 ? "openSellPackageModal()" : "openNewPackageModal()"
+      })}
+    `;
+    return;
+  }
+
+  const pkgCards = clientPackages.map(pkg => {
+    const pct = Math.round(((pkg.completedCount || 0) / (pkg.totalSessions || 1)) * 100);
     const sessionsHtml = (pkg.sessions || []).map(s => `
       <div style="background: ${s.completed ? '#f0fdf4' : '#ffffff'}; border: 1px solid ${s.completed ? '#bbf7d0' : '#e2e8f0'}; border-radius: 10px; padding: 8px 12px; display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 6px;">
         <div style="display: flex; align-items: center; gap: 8px;">
@@ -2049,7 +2229,7 @@ function renderPackages(container, actions) {
           <span style="font-size: 0.85rem; font-weight: 600; color: var(--ink);">Sessão ${s.sessionNum} de ${pkg.totalSessions}</span>
         </div>
         <div style="font-size: 0.76rem; color: var(--muted); text-align: right;">
-          ${s.completed ? `Realizado ${s.completedAt ? 'em ' + new Date(s.completedAt).toLocaleDateString('pt-BR') : ''} ${s.professionalName ? 'por ' + s.professionalName : ''}` : 'Pendente'}
+          ${s.completed ? `Realizado ${s.completedAt ? 'em ' + new Date(s.completedAt).toLocaleDateString('pt-BR') : ''} ${s.professionalName ? 'por ' + s.professionalName : ''}` : (s.notes ? s.notes : 'Pendente')}
         </div>
       </div>
     `).join('');
@@ -2059,14 +2239,14 @@ function renderPackages(container, actions) {
         <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 10px; margin-bottom: 10px;">
           <div>
             <h3 style="margin: 0; font-size: 1.05rem; color: var(--ink); font-weight: 700;">${pkg.packageName}</h3>
-            <p style="margin: 2px 0 0 0; font-size: 0.85rem; color: var(--muted);">Cliente: <strong>${pkg.clientName}</strong> ${pkg.price ? '• R$ ' + Number(pkg.price).toFixed(2).replace('.', ',') : ''}</p>
+            <p style="margin: 2px 0 0 0; font-size: 0.85rem; color: var(--muted);">Cliente: <strong>${pkg.clientName}</strong> ${pkg.clientPhone ? '(' + pkg.clientPhone + ')' : ''} ${pkg.price ? '• R$ ' + Number(pkg.price).toFixed(2).replace('.', ',') : ''} ${pkg.createdAt ? '• Início: ' + pkg.createdAt : ''}</p>
           </div>
           <div style="display: flex; align-items: center; gap: 8px;">
             <span style="background: ${pkg.status === 'concluido' ? '#dcfce7' : '#fff7ed'}; color: ${pkg.status === 'concluido' ? '#15803d' : '#c2410c'}; font-size: 0.78rem; font-weight: 700; padding: 4px 10px; border-radius: 999px;">
-              ${pkg.status === 'concluido' ? '✓ Pacote Concluído' : `${pkg.completedCount}/${pkg.totalSessions} Sessões`}
+              ${pkg.status === 'concluido' ? '✓ Pacote Concluído' : `${pkg.completedCount || 0}/${pkg.totalSessions} Sessões`}
             </span>
             ${isManager ? `
-              <button class="btn-card-action delete" onclick="deletePackage('${pkg.id}')" title="Excluir Pacote">
+              <button class="btn-card-action delete" onclick="deletePackage('${pkg.id}')" title="Excluir Histórico deste Pacote">
                 <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
               </button>
             ` : ''}
@@ -2080,66 +2260,294 @@ function renderPackages(container, actions) {
         ${pkg.notes ? `<p style="font-size: 0.8rem; color: var(--muted); margin-bottom: 8px; background: #f8fafc; padding: 6px 10px; border-radius: 8px;">📝 Obs: ${pkg.notes}</p>` : ''}
 
         <div style="margin-top: 10px;">
-          <strong style="font-size: 0.82rem; color: var(--muted); display: block; margin-bottom: 4px;">Tickagem de Sessões:</strong>
+          <strong style="font-size: 0.82rem; color: var(--muted); display: block; margin-bottom: 4px;">Check-list por Sessão:</strong>
           ${sessionsHtml}
         </div>
       </div>
     `;
   }).join('');
 
-  container.innerHTML = `<div class="data-list">${pkgCards}</div>`;
+  container.innerHTML = `
+    ${tabsHeaderHtml}
+    <div class="data-list">${pkgCards}</div>
+  `;
 }
 
+// Cadastra um novo Pacote de Serviços NO CATÁLOGO DO SALÃO (sem vincular a cliente)
 window.openNewPackageModal = function() {
-  const clientOptions = (state.clients || []).map(c => `<option value="${c.name}">${c.name} (${c.phone || 'Sem telefone'})</option>`).join('');
+  if (!isManager) {
+    asyncAlert('Apenas gestores têm permissão para cadastrar pacotes.');
+    return;
+  }
 
   const html = `
     <div class="form-group">
-      <label>Cliente</label>
-      <select class="form-control" id="mPkgClientSelect" onchange="document.getElementById('mPkgClientCustom').value = this.value">
-        <option value="">-- Selecione uma Cliente da Lista --</option>
-        ${clientOptions}
-      </select>
-      <input type="text" class="form-control" id="mPkgClientCustom" placeholder="Ou digite o nome da cliente" style="margin-top: 6px;">
-    </div>
-    <div class="form-group">
       <label>Nome do Pacote / Procedimento</label>
-      <input type="text" class="form-control" id="mPkgName" placeholder="Ex: Pacote Alisamento 5 Dias, Tratamento Cronograma">
+      <input type="text" class="form-control" id="mPkgName" placeholder="Ex: Pacote Alisamento 5 Sessões, Cronograma Capilar 4 Etapas">
+      <small style="color:var(--muted); font-size:0.75rem;">Esse nome aparecerá para as clientes escolherem na página de agendamento online.</small>
     </div>
     <div class="form-group">
       <label>Quantidade de Sessões / Etapas</label>
-      <input type="number" class="form-control" id="mPkgSessions" value="5" min="1" max="30">
+      <input type="number" class="form-control" id="mPkgSessions" value="5" min="1" max="50">
+      <small style="color:var(--muted); font-size:0.75rem;">Total de vezes que a cliente virá ao salão para este pacote.</small>
+    </div>
+    <div class="form-group">
+      <label>Duração por Sessão (minutos)</label>
+      <input type="number" class="form-control" id="mPkgDuration" value="60" min="10" step="5">
     </div>
     <div class="form-group">
       <label>Valor Total do Pacote (R$)</label>
       <input type="number" class="form-control" id="mPkgPrice" placeholder="Ex: 350.00" step="0.50">
     </div>
     <div class="form-group">
-      <label>Observações / Recomendações Técnicas</label>
-      <textarea class="form-control" id="mPkgNotes" rows="2" placeholder="Instruções para os profissionais durante as sessões"></textarea>
+      <label>Comissão do Profissional (%)</label>
+      <input type="number" class="form-control" id="mPkgComm" value="50" min="0" max="100">
+    </div>
+    <div class="form-group">
+      <label>Observações / Descrição para a Cliente</label>
+      <textarea class="form-control" id="mPkgNotes" rows="2" placeholder="Ex: Pacote com 5 etapas semanais de hidratação profunda e reconstrução."></textarea>
     </div>
   `;
 
-  openModal('Vender / Criar Pacote de Serviços', html, async () => {
-    const clientName = document.getElementById('mPkgClientCustom').value.trim() || document.getElementById('mPkgClientSelect').value;
-    const packageName = document.getElementById('mPkgName').value.trim();
-    const totalSessions = parseInt(document.getElementById('mPkgSessions').value, 10) || 5;
+  openModal('Cadastrar Novo Pacote de Serviços', html, async () => {
+    const name = document.getElementById('mPkgName').value.trim();
+    const sessionsCount = parseInt(document.getElementById('mPkgSessions').value, 10) || 5;
+    const durationMinutes = parseInt(document.getElementById('mPkgDuration').value, 10) || 60;
     const price = Number(document.getElementById('mPkgPrice').value) || 0;
-    const notes = document.getElementById('mPkgNotes').value.trim();
+    const commissionPercent = Number(document.getElementById('mPkgComm').value) || 50;
+    const observation = document.getElementById('mPkgNotes').value.trim();
 
-    if (!clientName || !packageName) {
-      asyncAlert('Nome da Cliente e Nome do Pacote são obrigatórios.');
+    if (!name || isNaN(price) || price <= 0) {
+      asyncAlert('Nome do Pacote e Valor Total válido são obrigatórios.');
       return;
     }
 
-    const clientMatch = (state.clients || []).find(c => c.name === clientName);
+    const res = await tenantFetch('/api/services', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name,
+        category: 'Pacotes',
+        isPackage: true,
+        sessionsCount,
+        durationMinutes,
+        price,
+        commissionPercent,
+        observation
+      })
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      asyncAlert(err.error || 'Erro ao cadastrar pacote.');
+      return;
+    }
+
+    closeModal();
+    window.currentPackageTab = 'catalogo';
+    await loadInitialData();
+    renderView('pacotes');
+  });
+};
+
+// Edita um Pacote existente no Catálogo
+window.openEditPackageModal = function(serviceId) {
+  if (!isManager) {
+    asyncAlert('Apenas gestores têm permissão para editar pacotes.');
+    return;
+  }
+  const s = (state.services || []).find(srv => srv.id === serviceId);
+  if (!s) return asyncAlert('Pacote não encontrado.');
+
+  const html = `
+    <div class="form-group">
+      <label>Nome do Pacote / Procedimento</label>
+      <input type="text" class="form-control" id="mEditPkgName" value="${s.name || ''}">
+    </div>
+    <div class="form-group">
+      <label>Quantidade de Sessões / Etapas</label>
+      <input type="number" class="form-control" id="mEditPkgSessions" value="${s.sessionsCount || 5}" min="1" max="50">
+    </div>
+    <div class="form-group">
+      <label>Duração por Sessão (minutos)</label>
+      <input type="number" class="form-control" id="mEditPkgDuration" value="${s.durationMinutes || 60}" min="10" step="5">
+    </div>
+    <div class="form-group">
+      <label>Valor Total do Pacote (R$)</label>
+      <input type="number" class="form-control" id="mEditPkgPrice" value="${s.price || 0}" step="0.50">
+    </div>
+    <div class="form-group">
+      <label>Comissão do Profissional (%)</label>
+      <input type="number" class="form-control" id="mEditPkgComm" value="${s.commissionPercent || 50}" min="0" max="100">
+    </div>
+    <div class="form-group">
+      <label>Observações / Descrição</label>
+      <textarea class="form-control" id="mEditPkgNotes" rows="2">${s.observation || ''}</textarea>
+    </div>
+  `;
+
+  openModal('Editar Pacote de Serviços', html, async () => {
+    const name = document.getElementById('mEditPkgName').value.trim();
+    const sessionsCount = parseInt(document.getElementById('mEditPkgSessions').value, 10) || 5;
+    const durationMinutes = parseInt(document.getElementById('mEditPkgDuration').value, 10) || 60;
+    const price = Number(document.getElementById('mEditPkgPrice').value) || 0;
+    const commissionPercent = Number(document.getElementById('mEditPkgComm').value) || 50;
+    const observation = document.getElementById('mEditPkgNotes').value.trim();
+
+    if (!name || isNaN(price) || price <= 0) {
+      asyncAlert('Nome do Pacote e Valor Total válido são obrigatórios.');
+      return;
+    }
+
+    const res = await tenantFetch(`/api/services/${serviceId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name,
+        category: 'Pacotes',
+        isPackage: true,
+        sessionsCount,
+        durationMinutes,
+        price,
+        commissionPercent,
+        observation
+      })
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      asyncAlert(err.error || 'Erro ao atualizar pacote.');
+      return;
+    }
+
+    closeModal();
+    await loadInitialData();
+    renderView('pacotes');
+  });
+};
+
+// Exclui um Pacote do Catálogo
+window.deletePackageService = async function(serviceId) {
+  if (!isManager) {
+    await asyncAlert('Apenas gestores têm permissão para excluir pacotes.', 'Acesso Restrito', 'warning');
+    return;
+  }
+  const s = (state.services || []).find(srv => srv.id === serviceId);
+  const name = s ? s.name : 'este pacote';
+  const confirmed = await asyncConfirm(`Deseja realmente excluir "${name}" do catálogo de pacotes?`, 'Excluir Pacote', { isDanger: true });
+  if (!confirmed) return;
+
+  const res = await tenantFetch(`/api/services/${serviceId}`, { method: 'DELETE' });
+  if (!res.ok) {
+    const err = await res.json();
+    await asyncAlert(err.error || 'Erro ao excluir pacote.', 'Erro', 'error');
+    return;
+  }
+
+  await loadInitialData();
+  renderView('pacotes');
+};
+
+// Vende um Pacote diretamente para uma Cliente no Balcão (Recepção)
+window.openSellPackageModal = function(defaultServiceId) {
+  const catalogPackages = (state.services || []).filter(s => 
+    s.isPackage === true || 
+    (s.sessionsCount && s.sessionsCount > 1) || 
+    (s.category && s.category.toLowerCase().includes('pacote'))
+  );
+
+  if (catalogPackages.length === 0) {
+    asyncAlert('Nenhum pacote cadastrado no catálogo ainda. Cadastre um pacote primeiro!', 'Atenção', 'warning');
+    return;
+  }
+
+  const pkgOptions = catalogPackages.map(p => 
+    `<option value="${p.id}" ${defaultServiceId === p.id ? 'selected' : ''}>${p.name} (${p.sessionsCount || 5} sessões - R$ ${Number(p.price).toFixed(2)})</option>`
+  ).join('');
+
+  const clientOptions = (state.clients || []).map(c => 
+    `<option value="${c.id}">${c.name} (${c.phone || 'Sem telefone'})</option>`
+  ).join('');
+
+  const selectedPkg = (defaultServiceId && catalogPackages.find(p => p.id === defaultServiceId)) || catalogPackages[0];
+
+  const html = `
+    <div class="form-group">
+      <label>Pacote a Vender</label>
+      <select class="form-control" id="mSellPkgSelect" onchange="handleSellPackageSelectChange(this.value)">
+        ${pkgOptions}
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Cliente</label>
+      <select class="form-control" id="mSellClientSelect" onchange="document.getElementById('mSellClientCustom').value = ''">
+        <option value="">-- Selecione uma Cliente da Lista --</option>
+        ${clientOptions}
+      </select>
+      <input type="text" class="form-control" id="mSellClientCustom" placeholder="Ou digite o nome de uma nova cliente" style="margin-top: 6px;">
+    </div>
+    <div class="form-group">
+      <label>Total de Sessões</label>
+      <input type="number" class="form-control" id="mSellSessions" value="${selectedPkg ? (selectedPkg.sessionsCount || 5) : 5}" min="1" max="50">
+    </div>
+    <div class="form-group">
+      <label>Valor Total Cobrado (R$)</label>
+      <input type="number" class="form-control" id="mSellPrice" value="${selectedPkg ? selectedPkg.price : 0}" step="0.50">
+    </div>
+    <div class="form-group">
+      <label>Observações da Venda</label>
+      <textarea class="form-control" id="mSellNotes" rows="2" placeholder="Ex: Pago via Pix na recepção / 1ª sessão realizada hoje"></textarea>
+    </div>
+  `;
+
+  window.handleSellPackageSelectChange = function(pkgId) {
+    const pkg = catalogPackages.find(p => p.id === pkgId);
+    if (pkg) {
+      const sessEl = document.getElementById('mSellSessions');
+      const priceEl = document.getElementById('mSellPrice');
+      if (sessEl) sessEl.value = pkg.sessionsCount || 5;
+      if (priceEl) priceEl.value = pkg.price || 0;
+    }
+  };
+
+  openModal('Vender Pacote para Cliente (Balcão)', html, async () => {
+    const pkgId = document.getElementById('mSellPkgSelect').value;
+    const clientSelectId = document.getElementById('mSellClientSelect').value;
+    const clientCustomName = document.getElementById('mSellClientCustom').value.trim();
+    const totalSessions = parseInt(document.getElementById('mSellSessions').value, 10) || 5;
+    const price = Number(document.getElementById('mSellPrice').value) || 0;
+    const notes = document.getElementById('mSellNotes').value.trim();
+
+    let clientId = null;
+    let clientName = '';
+    let clientPhone = '';
+
+    if (clientSelectId) {
+      const cli = (state.clients || []).find(c => c.id === clientSelectId);
+      if (cli) {
+        clientId = cli.id;
+        clientName = cli.name;
+        clientPhone = cli.phone || '';
+      }
+    } else if (clientCustomName) {
+      clientName = clientCustomName;
+    }
+
+    if (!clientName) {
+      asyncAlert('Por favor selecione uma cliente da lista ou informe o nome da cliente.');
+      return;
+    }
+
+    const pkgObj = catalogPackages.find(p => p.id === pkgId);
+    const packageName = pkgObj ? pkgObj.name : 'Pacote de Serviços';
 
     const res = await tenantFetch('/api/packages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        clientId: clientMatch ? clientMatch.id : null,
+        clientId,
         clientName,
+        clientPhone,
         packageName,
         totalSessions,
         price,
@@ -2149,11 +2557,12 @@ window.openNewPackageModal = function() {
 
     if (!res.ok) {
       const err = await res.json();
-      asyncAlert(err.error || 'Erro ao criar pacote.');
+      asyncAlert(err.error || 'Erro ao registrar venda do pacote.');
       return;
     }
 
     closeModal();
+    window.currentPackageTab = 'checklist';
     await loadInitialData();
     renderView('pacotes');
   });
@@ -2322,52 +2731,65 @@ function renderExpenses(container, actions) {
 function renderBirthdays(container, actions) {
   const now = new Date();
   const currentMonth = String(now.getMonth() + 1).padStart(2, '0');
-  const birthdays = state.clients.filter(c => {
+  const currentDay = String(now.getDate()).padStart(2, '0');
+
+  const monthBirthdays = (state.clients || []).filter(c => {
     if (!c.birthday) return false;
-    return isBirthdayToday(c.birthday, currentMonth, String(c.birthday).split('-')[2] || '');
+    return isBirthdayInMonth(c.birthday, currentMonth);
   });
 
-  // Mostra todos os clientes que fazem aniversário no mês atual
-  const monthBirthdays = state.clients.filter(c => {
-    if (!c.birthday) return false;
-    if (c.birthday.includes('-')) {
-      const parts = c.birthday.split('-');
-      const m = parts[0].length === 4 ? parts[1] : parts[1];
-      return String(m).padStart(2, '0') === currentMonth;
-    }
-    if (c.birthday.includes('/')) {
-      const parts = c.birthday.split('/');
-      const m = parts[2] && parts[2].length === 4 ? parts[1] : parts[0];
-      return String(m).padStart(2, '0') === currentMonth;
-    }
-    return false;
-  });
-
-  let bdaysHtml = monthBirthdays.map(c => `
-    <div class="data-item-card">
-      <div class="item-main-info">
-        <h4>${c.name}</h4>
-        <p>Data de Nascimento: <strong>${c.birthday}</strong> • WhatsApp: ${c.phone}</p>
-      </div>
-      <div>
-        <a href="https://wa.me/55${c.phone.replace(/\D/g, '')}?text=Parabéns%20pelo%20seu%20aniversário!" target="_blank" class="btn-falcon btn-primary">
-          Enviar Parabéns
-        </a>
-      </div>
-    </div>
-  `).join('');
-
-  if (monthBirthdays.length === 0) {
-    bdaysHtml = renderEmptyStateHtml({
-      icon: `<svg width="30" height="30" fill="none" stroke="var(--orange)" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="8" width="18" height="12" rx="2"></rect><path d="M12 8V3"></path><path d="M7.5 5a2.5 2.5 0 0 1 5 0C12.5 5 11 8 11 8H7.5z"></path><path d="M16.5 5a2.5 2.5 0 0 0-5 0c0 0 1.5 3 1.5 3h3.5z"></path></svg>`,
-      title: "Nenhum Aniversariante este Mês",
-      description: "Nenhuma cliente cadastrada faz aniversário no mês atual. Cadastre a data de nascimento nas clientes para enviar mensagens de parabéns!"
-    });
+  if (actions) {
+    actions.innerHTML = `
+      <span style="font-size:0.84rem; font-weight:500; color:var(--muted); background:rgba(255,255,255,0.7); padding:6px 14px; border-radius:999px; border:1px solid rgba(0,0,0,0.06); height:38px; display:inline-flex; align-items:center; box-sizing:border-box;">
+        <strong style="color:var(--ink); margin-right:4px;">${monthBirthdays.length}</strong> aniversariante${monthBirthdays.length !== 1 ? 's' : ''} no mês
+      </span>
+    `;
   }
 
-  container.innerHTML = `
-    <div class="data-list">${bdaysHtml}</div>
-  `;
+  if (monthBirthdays.length === 0) {
+    container.innerHTML = renderEmptyStateHtml({
+      icon: `<svg width="30" height="30" fill="none" stroke="var(--orange)" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="8" width="18" height="12" rx="2"></rect><path d="M12 8V3"></path><path d="M7.5 5a2.5 2.5 0 0 1 5 0C12.5 5 11 8 11 8H7.5z"></path><path d="M16.5 5a2.5 2.5 0 0 0-5 0c0 0 1.5 3 1.5 3h3.5z"></path></svg>`,
+      title: "Nenhum Aniversariante este Mês",
+      description: "Nenhuma cliente cadastrada faz aniversário no mês atual. Cadastre a data de nascimento nas clientes para enviar mensagens de parabéns!",
+      buttonText: "Ver Lista de Clientes",
+      buttonOnClick: "renderView('clientes')"
+    });
+    return;
+  }
+
+  // Ordena aniversariantes do dia primeiro
+  const sortedBirthdays = [...monthBirthdays].sort((a, b) => {
+    const aToday = isBirthdayToday(a.birthday, currentMonth, currentDay) ? 1 : 0;
+    const bToday = isBirthdayToday(b.birthday, currentMonth, currentDay) ? 1 : 0;
+    return bToday - aToday;
+  });
+
+  const bdaysHtml = sortedBirthdays.map(c => {
+    const isToday = isBirthdayToday(c.birthday, currentMonth, currentDay);
+    const cleanPhone = (c.phone || '').replace(/\D/g, '');
+    const waMsg = encodeURIComponent(`Olá ${c.name}, parabéns pelo seu aniversário! 🎉 Desejamos muitas felicidades e preparamos um mimo especial para você aqui no salão.`);
+
+    return `
+      <div class="data-item-card" style="${isToday ? 'border: 2px solid var(--orange); background: #fffaf5;' : ''}">
+        <div class="item-main-info">
+          <h4 style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+            <span>${c.name}</span>
+            ${isToday ? `<span style="font-size:0.72rem; font-weight:700; color:#c2410c; background:#ffedd5; padding:2px 8px; border-radius:12px;">🎂 Aniversariante de Hoje!</span>` : ''}
+          </h4>
+          <p>Data de Nascimento: <strong>${c.birthday}</strong> • WhatsApp: ${c.phone || 'Sem telefone'}</p>
+        </div>
+        <div>
+          ${cleanPhone ? `
+            <a href="https://wa.me/55${cleanPhone}?text=${waMsg}" target="_blank" class="btn-falcon ${isToday ? 'btn-primary' : 'btn-secondary'}" style="display:inline-flex; align-items:center; gap:6px;">
+              Enviar Parabéns
+            </a>
+          ` : `<span style="color:var(--muted); font-size:0.8rem;">Sem WhatsApp</span>`}
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  container.innerHTML = `<div class="data-list">${bdaysHtml}</div>`;
 }
 
 // 8.5 Render Balanço Mensal & Metas
@@ -3508,6 +3930,16 @@ window.openNewServiceModal = function() {
       <label>Comissão Padrão do Profissional (%)</label>
       <input type="number" class="form-control" id="mServComm" value="50">
     </div>
+    <div class="form-group" style="margin-top:10px;">
+      <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-weight:600; color:var(--ink);">
+        <input type="checkbox" id="mServIsPkg" onchange="document.getElementById('mServPkgSessionsBox').style.display = this.checked ? 'block' : 'none'">
+        <span>É um Pacote com Múltiplas Sessões (ex: 5x)</span>
+      </label>
+      <div id="mServPkgSessionsBox" style="display:none; margin-top:8px;">
+        <label>Quantidade de Sessões / Etapas</label>
+        <input type="number" class="form-control" id="mServSessions" value="5" min="1" max="50">
+      </div>
+    </div>
   `;
 
   openModal('Cadastrar Novo Serviço', html, async () => {
@@ -3516,6 +3948,8 @@ window.openNewServiceModal = function() {
     const price = Number(document.getElementById('mServPrice').value);
     const durationMinutes = Number(document.getElementById('mServDuration').value);
     const commissionPercent = Number(document.getElementById('mServComm').value);
+    const isPackage = document.getElementById('mServIsPkg')?.checked || category.toLowerCase().includes('pacote');
+    const sessionsCount = isPackage ? (parseInt(document.getElementById('mServSessions')?.value, 10) || 5) : 1;
 
     if (!name || !price) {
       asyncAlert('Nome e Preço são obrigatórios!');
@@ -3525,7 +3959,7 @@ window.openNewServiceModal = function() {
     await tenantFetch('/api/services', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, category, price, durationMinutes, commissionPercent })
+      body: JSON.stringify({ name, category, price, durationMinutes, commissionPercent, isPackage, sessionsCount })
     });
 
     closeModal();
@@ -4191,6 +4625,16 @@ window.openEditServiceModal = function(serviceId) {
       <label>Comissão Padrão do Profissional (%)</label>
       <input type="number" class="form-control" id="mEditServComm" value="${serv.commissionPercent || 50}">
     </div>
+    <div class="form-group" style="margin-top:10px;">
+      <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-weight:600; color:var(--ink);">
+        <input type="checkbox" id="mEditServIsPkg" ${serv.isPackage || (serv.category && serv.category.toLowerCase().includes('pacote')) ? 'checked' : ''} onchange="document.getElementById('mEditServPkgSessionsBox').style.display = this.checked ? 'block' : 'none'">
+        <span>É um Pacote com Múltiplas Sessões</span>
+      </label>
+      <div id="mEditServPkgSessionsBox" style="display:${serv.isPackage || (serv.category && serv.category.toLowerCase().includes('pacote')) ? 'block' : 'none'}; margin-top:8px;">
+        <label>Quantidade de Sessões / Etapas</label>
+        <input type="number" class="form-control" id="mEditServSessions" value="${serv.sessionsCount || 5}" min="1" max="50">
+      </div>
+    </div>
   `;
 
   openModal('Editar Serviço', html, async () => {
@@ -4199,6 +4643,8 @@ window.openEditServiceModal = function(serviceId) {
     const price = Number(document.getElementById('mEditServPrice').value);
     const durationMinutes = Number(document.getElementById('mEditServDuration').value);
     const commissionPercent = Number(document.getElementById('mEditServComm').value);
+    const isPackage = document.getElementById('mEditServIsPkg')?.checked || category.toLowerCase().includes('pacote');
+    const sessionsCount = isPackage ? (parseInt(document.getElementById('mEditServSessions')?.value, 10) || 5) : 1;
 
     if (!name || isNaN(price)) {
       asyncAlert('Nome e Preço são obrigatórios.');
@@ -4208,7 +4654,7 @@ window.openEditServiceModal = function(serviceId) {
     const res = await tenantFetch(`/api/services/${serviceId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, category, price, durationMinutes, commissionPercent })
+      body: JSON.stringify({ name, category, price, durationMinutes, commissionPercent, isPackage, sessionsCount })
     });
 
     if (!res.ok) {

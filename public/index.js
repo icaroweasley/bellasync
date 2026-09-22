@@ -825,6 +825,8 @@ app.get('/api/services', (req, res) => {
 app.post('/api/services', requireManager, (req, res) => {
   const db = getDb();
   const tenantId = getTenantId(req);
+  const isPackage = req.body.isPackage === true || (req.body.category && req.body.category.toLowerCase().includes('pacote'));
+  const sessionsCount = Math.max(1, Number(req.body.sessionsCount) || (isPackage ? 5 : 1));
   const newServ = {
     id: 'serv_' + Date.now(),
     tenantId: tenantId,
@@ -834,7 +836,9 @@ app.post('/api/services', requireManager, (req, res) => {
     durationMinutes: Number(req.body.durationMinutes) || 60,
     observation: req.body.observation || '',
     commissionPercent: Number(req.body.commissionPercent) || 50,
-    assistantCommissionPercent: Number(req.body.assistantCommissionPercent) || 0
+    assistantCommissionPercent: Number(req.body.assistantCommissionPercent) || 0,
+    isPackage,
+    sessionsCount
   };
   db.services.push(newServ);
   saveDb(db);
@@ -854,6 +858,10 @@ app.put('/api/services/:id', requireManager, (req, res) => {
   if (req.body.price !== undefined) serv.price = Number(req.body.price) || 0;
   if (req.body.durationMinutes !== undefined) serv.durationMinutes = Number(req.body.durationMinutes) || 60;
   if (req.body.commissionPercent !== undefined) serv.commissionPercent = Number(req.body.commissionPercent) || 50;
+  if (req.body.observation !== undefined) serv.observation = req.body.observation || '';
+  if (req.body.assistantCommissionPercent !== undefined) serv.assistantCommissionPercent = Number(req.body.assistantCommissionPercent) || 0;
+  if (req.body.isPackage !== undefined) serv.isPackage = !!req.body.isPackage;
+  if (req.body.sessionsCount !== undefined) serv.sessionsCount = Math.max(1, Number(req.body.sessionsCount) || 1);
 
   saveDb(db);
   res.json(serv);
