@@ -897,6 +897,26 @@ function renderView(view) {
   updateFabButton(view);
 
 
+function renderEmptyStateHtml({ icon, title, description, buttonText, buttonOnClick }) {
+  return `
+    <div class="card-shell" style="text-align: center; padding: 44px 24px; max-width: 520px; margin: 20px auto; border-radius: 20px; background: #ffffff; box-shadow: 0 4px 20px rgba(0,0,0,0.04);">
+      <div style="background: rgba(255, 105, 0, 0.1); width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; border: 1px solid rgba(255, 105, 0, 0.2);">
+        ${icon}
+      </div>
+      <h3 style="margin: 0 0 8px 0; color: var(--ink, #0f172a); font-weight: 700; font-size: 1.15rem;">${title}</h3>
+      <p style="color: var(--muted, #64748b); font-size: 0.88rem; line-height: 1.5; margin: 0 0 20px 0;">
+        ${description}
+      </p>
+      ${buttonText && buttonOnClick ? `
+        <button class="btn-falcon btn-primary" onclick="${buttonOnClick}" style="margin: 0 auto; display: inline-flex; align-items: center; gap: 8px;">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+          <span>${buttonText}</span>
+        </button>
+      ` : ''}
+    </div>
+  `;
+}
+
   switch (view) {
     case 'agenda':
       title.innerText = 'Agenda do Salão';
@@ -919,7 +939,7 @@ function renderView(view) {
       renderServices(container, actions);
       break;
     case 'pacotes':
-      title.innerText = 'Pacotes de Serviços & Check-list';
+      title.innerText = 'Pacotes';
       renderPackages(container, actions);
       break;
     case 'produtos':
@@ -1626,7 +1646,13 @@ function renderCommissions(container, actions) {
 
 function renderCommissionsList(list, canPay) {
   if (!list || list.length === 0) {
-    return `<div class="card-shell" style="text-align:center; color:var(--muted); padding:32px 16px;">Nenhum registro encontrado.</div>`;
+    return renderEmptyStateHtml({
+      icon: `<svg width="30" height="30" fill="none" stroke="var(--orange)" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>`,
+      title: "Nenhuma Comissão Registrada",
+      description: "As comissões e vales dos profissionais serão exibidos aqui conforme os atendimentos forem realizados.",
+      buttonText: isManager ? "Lançar Vale / Adiantamento" : "",
+      buttonOnClick: "openCommissionModal()"
+    });
   }
   return list.map(c => {
     const isVale = c.type === 'vale' || (c.amount < 0) || (c.description && c.description.toLowerCase().includes('vale'));
@@ -1715,6 +1741,17 @@ function renderProfessionals(container, actions) {
     </span>
   ` : '';
 
+  if (!state.professionals || state.professionals.length === 0) {
+    container.innerHTML = renderEmptyStateHtml({
+      icon: `<svg width="30" height="30" fill="none" stroke="var(--orange)" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>`,
+      title: "Nenhum Profissional Cadastrado",
+      description: "Adicione os membros da sua equipe para gerenciar a agenda, comissões e visibilidade no link de agendamento.",
+      buttonText: isManager ? "Cadastrar Primeiro Profissional" : "",
+      buttonOnClick: "openProfessionalModal()"
+    });
+    return;
+  }
+
   const profsHtml = state.professionals.map(p => `
     <div class="data-item-card">
       <div style="display: flex; align-items: center; gap: 14px;">
@@ -1775,6 +1812,17 @@ function renderClients(container, actions) {
     </span>
   `;
 
+  if (!state.clients || state.clients.length === 0) {
+    container.innerHTML = renderEmptyStateHtml({
+      icon: `<svg width="30" height="30" fill="none" stroke="var(--orange)" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>`,
+      title: "Nenhum Cliente Cadastrado",
+      description: "Cadastre suas clientes para gerenciar o histórico de atendimentos, aniversários e preferências no CRM.",
+      buttonText: "Cadastrar Primeira Cliente",
+      buttonOnClick: "openClientModal()"
+    });
+    return;
+  }
+
   const clientsHtml = state.clients.map(c => `
     <div class="data-item-card">
       <div class="item-main-info">
@@ -1809,6 +1857,17 @@ function renderClients(container, actions) {
 // 5. Render Serviços
 function renderServices(container, actions) {
   actions.innerHTML = '';
+
+  if (!state.services || state.services.length === 0) {
+    container.innerHTML = renderEmptyStateHtml({
+      icon: `<svg width="30" height="30" fill="none" stroke="var(--orange)" stroke-width="2" viewBox="0 0 24 24"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg>`,
+      title: "Nenhum Serviço Cadastrado",
+      description: "Adicione os serviços prestados pelo seu salão (ex: Corte, Escova, Coloração, Manicure) para liberar os agendamentos online e a grade da agenda.",
+      buttonText: isManager ? "Cadastrar Primeiro Serviço" : "",
+      buttonOnClick: "openServiceModal()"
+    });
+    return;
+  }
 
   const servsHtml = state.services.map(s => `
     <div class="data-item-card">
@@ -2023,6 +2082,17 @@ window.deletePackage = async function(pkgId) {
 function renderProducts(container, actions) {
   actions.innerHTML = '';
 
+  if (!state.products || state.products.length === 0) {
+    container.innerHTML = renderEmptyStateHtml({
+      icon: `<svg width="30" height="30" fill="none" stroke="var(--orange)" stroke-width="2" viewBox="0 0 24 24"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></svg>`,
+      title: "Nenhum Produto no Estoque",
+      description: "Cadastre produtos de revenda ou lavatório para controlar as quantidades em estoque e registrar vendas.",
+      buttonText: isManager ? "Cadastrar Primeiro Produto" : "",
+      buttonOnClick: "openProductModal()"
+    });
+    return;
+  }
+
   const prodsHtml = state.products.map(p => `
     <div class="data-item-card">
       <div class="item-main-info">
@@ -2053,6 +2123,17 @@ function renderProducts(container, actions) {
 // 7. Render Despesas
 function renderExpenses(container, actions) {
   actions.innerHTML = '';
+
+  if (!state.expenses || state.expenses.length === 0) {
+    container.innerHTML = renderEmptyStateHtml({
+      icon: `<svg width="30" height="30" fill="none" stroke="var(--orange)" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"></rect><line x1="2" y1="10" x2="22" y2="10"></line></svg>`,
+      title: "Nenhuma Despesa Registrada",
+      description: "Registre os custos fixos e variáveis do salão (aluguel, água, luz, produtos) para ter total controle do seu fluxo de caixa.",
+      buttonText: isManager ? "Registrar Primeira Despesa" : "",
+      buttonOnClick: "openExpenseModal()"
+    });
+    return;
+  }
 
   const total = state.expenses.reduce((acc, e) => acc + e.amount, 0);
   const paid = state.expenses.filter(e => e.status === 'pago').reduce((acc, e) => acc + e.amount, 0);
@@ -2144,7 +2225,11 @@ function renderBirthdays(container, actions) {
   `).join('');
 
   if (monthBirthdays.length === 0) {
-    bdaysHtml = `<div class="card-shell" style="text-align:center; color:var(--muted);">Nenhum aniversariante no mês atual.</div>`;
+    bdaysHtml = renderEmptyStateHtml({
+      icon: `<svg width="30" height="30" fill="none" stroke="var(--orange)" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="8" width="18" height="12" rx="2"></rect><path d="M12 8V3"></path><path d="M7.5 5a2.5 2.5 0 0 1 5 0C12.5 5 11 8 11 8H7.5z"></path><path d="M16.5 5a2.5 2.5 0 0 0-5 0c0 0 1.5 3 1.5 3h3.5z"></path></svg>`,
+      title: "Nenhum Aniversariante este Mês",
+      description: "Nenhuma cliente cadastrada faz aniversário no mês atual. Cadastre a data de nascimento nas clientes para enviar mensagens de parabéns!"
+    });
   }
 
   container.innerHTML = `
