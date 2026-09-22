@@ -642,10 +642,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     navSuperAdmin.style.display = 'flex';
   }
 
-  // Esconde Balanço & Metas no sidebar para quem não é Gestor (Configurações fica visível para Notificações)
   const navBalanco = document.getElementById('navItemBalanco');
   const navConfig = document.getElementById('navItemConfiguracoes');
-  if (navBalanco) navBalanco.style.display = isManager ? 'flex' : 'none';
+  if (navBalanco) navBalanco.style.display = 'flex';
   if (navConfig) navConfig.style.display = 'flex';
 
   // Se o usuário logado for profissional com ID associado, foca nele por padrão
@@ -936,11 +935,6 @@ function renderView(view) {
       renderBirthdays(container, actions);
       break;
     case 'balanco':
-      if (!isManager) {
-        asyncAlert('O Balanço e Faturamento Geral do salão são de acesso exclusivo para Gestores.');
-        renderView('agenda');
-        return;
-      }
       title.innerText = 'Balanço Mensal & Metas';
       renderBalanco(container, actions);
       break;
