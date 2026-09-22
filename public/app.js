@@ -1933,22 +1933,24 @@ function renderProfessionals(container, actions) {
   }
 
   const profsHtml = state.professionals.map(p => `
-    <div class="data-item-card">
-      <div style="display: flex; align-items: center; gap: 14px;">
-        <img src="${p.avatar || getButterflyAvatar(p.name)}" alt="${p.name}" style="width: 48px; height: 48px; border-radius: 50%;">
-        <div class="item-main-info">
-          <h4>${p.name}</h4>
-          <p>${p.role || 'Profissional'} • ${p.phone || 'Sem telefone'} • Acesso: <strong>${p.access || 'Profissional'}</strong></p>
+    <div class="data-item-card prof-item-card">
+      <div style="display: flex; align-items: center; gap: 14px; width: 100%;">
+        <img src="${p.avatar || getButterflyAvatar(p.name)}" alt="${p.name}" style="width: 48px; height: 48px; border-radius: 50%; flex-shrink: 0;">
+        <div class="item-main-info" style="flex: 1; min-width: 0;">
+          <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+            <h4 style="margin: 0; font-size: 1.02rem;">${p.name}</h4>
+            ${p.requireDeposit ? `
+              <span class="prof-deposit-badge" onclick="openEditProfessionalModal('${p.id}')" title="Sinal configurado: ${p.depositPercent || 30}% via ${p.pixBank || 'Pix'}">
+                💳 Sinal ${p.depositPercent || 30}% (${p.pixBank || 'Pix'})
+              </span>
+            ` : ''}
+          </div>
+          <p style="margin: 2px 0 0 0; font-size: 0.82rem; color: var(--muted);">${p.role || 'Profissional'} • ${p.phone || 'Sem telefone'} • Acesso: <strong>${p.access || 'Profissional'}</strong></p>
         </div>
       </div>
-      <div class="item-actions-group">
+      <div class="item-actions-group prof-actions-group">
         ${isManager ? `
-          ${p.requireDeposit ? `
-            <button class="btn-card-action edit" onclick="openEditProfessionalModal('${p.id}')" style="margin-right: 4px; font-size: 0.76rem; padding: 4px 10px;" title="Chave Pix: ${p.pixKey || 'Não informada'}">
-              Sinal ${p.depositPercent || 30}% (${p.pixBank || 'InfinitePay'})
-            </button>
-          ` : ''}
-          <button class="btn-card-action ${p.showInBooking ? 'pay' : 'edit'}" onclick="toggleProfBookingVisibility('${p.id}')" style="margin-right: 4px;" title="Clique para alternar visibilidade no agendamento online">
+          <button class="btn-card-action ${p.showInBooking ? 'pay' : 'edit'}" onclick="toggleProfBookingVisibility('${p.id}')" title="Clique para alternar visibilidade no agendamento online">
             ${p.showInBooking ? 'Visível no Link' : 'Oculto'}
           </button>
           <button class="btn-card-action edit" onclick="openEditProfessionalModal('${p.id}')" title="Editar Profissional">
@@ -1969,8 +1971,8 @@ function renderProfessionals(container, actions) {
   `).join('');
 
   const subscriptionBannerHtml = isManager ? `
-    <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 14px 18px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.03);">
-      <div style="display: flex; align-items: center; gap: 12px; flex: 1; min-width: 240px;">
+    <div class="subscription-banner-card">
+      <div class="subscription-banner-info">
         <div style="background: rgba(255, 105, 0, 0.1); width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
           <svg width="22" height="22" fill="none" stroke="var(--orange)" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
         </div>
@@ -1981,7 +1983,7 @@ function renderProfessionals(container, actions) {
           </p>
         </div>
       </div>
-      <div style="text-align: right; background: #f8fafc; padding: 8px 16px; border-radius: 12px; border: 1px solid #e2e8f0;">
+      <div class="subscription-banner-price-box">
         <small style="display: block; font-size: 0.72rem; color: var(--muted); font-weight: 500;">Mensalidade do Salão (${profCount}/10 profs)</small>
         <strong style="font-size: 1.05rem; color: var(--orange); font-weight: 800;">R$ ${totalMonthly.toFixed(2).replace('.', ',')} <span style="font-size: 0.75rem; font-weight: normal; color: var(--muted);">/ mês</span></strong>
       </div>
@@ -2947,17 +2949,20 @@ function renderExpenses(container, actions) {
   const pending = state.expenses.filter(e => e.status === 'pendente').reduce((acc, e) => acc + e.amount, 0);
 
   const expsHtml = state.expenses.map(e => `
-    <div class="data-item-card">
-      <div class="item-main-info">
-        <h4>${e.description}</h4>
-        <p>${e.category} • Vencimento: ${e.dueDate} • Pagamento: ${e.paymentType}</p>
-      </div>
-      <div class="item-actions-group">
-        <div style="text-align: right; margin-right: 6px;">
-          <span class="item-badge-price" style="color: ${e.status === 'pago' ? 'var(--green)' : 'var(--red)'};">
+    <div class="data-item-card expense-item-card">
+      <div class="item-main-info" style="width: 100%;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;">
+          <h4 style="margin: 0; font-size: 0.98rem; font-weight: 700; color: var(--ink); flex: 1;">${e.description}</h4>
+          <span class="item-badge-price expense-price-mobile" style="color: ${e.status === 'pago' ? 'var(--green)' : 'var(--red)'}; font-size: 1.05rem; font-weight: 800; white-space: nowrap; flex-shrink: 0;">
             R$ ${e.amount.toFixed(2)}
           </span>
         </div>
+        <p style="margin: 3px 0 0 0; font-size: 0.8rem; color: var(--muted);">${e.category} • Vencimento: ${e.dueDate} • Pagamento: ${e.paymentType}</p>
+      </div>
+      <div class="item-actions-group expense-actions-group">
+        <span class="item-badge-price expense-price-desktop" style="color: ${e.status === 'pago' ? 'var(--green)' : 'var(--red)'}; margin-right: 6px;">
+          R$ ${e.amount.toFixed(2)}
+        </span>
         <button class="btn-card-action ${e.status === 'pago' ? 'pay' : 'edit'}" onclick="toggleExpenseStatus('${e.id}')" title="Clique para alternar o status de pagamento">
           ${e.status === 'pago' ? '✓ Pago' : 'Pagar'}
         </button>
@@ -3101,7 +3106,7 @@ function renderBalanco(container, actions) {
   actions.innerHTML = '';
 
   const monthSelectorCardHtml = `
-    <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 20px; background: #ffffff; padding: 14px 18px; border-radius: 16px; border: 1px solid rgba(226, 232, 240, 0.8); box-shadow: 0 2px 8px rgba(0,0,0,0.02);">
+    <div class="balanco-month-card">
       <div style="display: flex; align-items: center; gap: 10px;">
         <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(255, 105, 0, 0.1); display: flex; align-items: center; justify-content: center; color: var(--orange, #ff6900);">
           <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
@@ -3111,7 +3116,7 @@ function renderBalanco(container, actions) {
           <div style="font-size: 0.78rem; color: var(--muted, #64748b);">Filtrar faturamento, despesas e comissões</div>
         </div>
       </div>
-      <select class="form-control" id="balancoMonthSelect" style="width: auto; min-width: 180px; padding: 7px 14px; font-weight: 600; cursor: pointer; border-radius: 10px;" onchange="changeBalancoMonth(this.value)">
+      <select class="form-control balanco-month-select" id="balancoMonthSelect" onchange="changeBalancoMonth(this.value)">
         ${monthOptions.map(m => `<option value="${m.ym}" ${m.ym === selectedBalancoMonth ? 'selected' : ''}>${m.label}</option>`).join('')}
       </select>
     </div>
