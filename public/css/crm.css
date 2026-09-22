@@ -1209,25 +1209,29 @@ input[type="date"].form-control {
 
   /* 2. Top-bar adaptativa no mobile */
   .top-bar {
-    padding: 0 8px !important;
-    height: 68px !important;
-    min-height: 68px !important;
-    max-height: 68px !important;
+    padding: 6px 10px !important;
+    height: auto !important;
+    min-height: auto !important;
+    max-height: none !important;
     display: flex !important;
-    align-items: center !important;
-    justify-content: space-between !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
     position: sticky !important;
     top: 0 !important;
     background: #ffffff !important;
     border-bottom: 1px solid rgba(0, 0, 0, 0.08) !important;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04) !important;
     z-index: 50 !important;
+    gap: 6px !important;
   }
 
   .top-bar-container {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    width: 100% !important;
     padding: 0 4px !important;
     gap: 8px !important;
-    position: relative !important;
   }
 
   .top-bar-title {
@@ -1272,9 +1276,28 @@ input[type="date"].form-control {
     z-index: 1000 !important;
   }
 
-  /* Oculta botões de topo extras no mobile (usamos FAB e banners) */
+  /* Exibe todos os botões de ação superiores no mobile */
   .top-bar-actions {
+    display: flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    overflow-x: auto !important;
+    white-space: nowrap !important;
+    padding: 2px 0 4px 0 !important;
+    width: 100% !important;
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+  }
+
+  .top-bar-actions::-webkit-scrollbar {
     display: none !important;
+  }
+
+  .agenda-actions-wrapper {
+    display: flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    flex-wrap: nowrap !important;
   }
 
   /* Sidebar Flutuante (Drawer) */

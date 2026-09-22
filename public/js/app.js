@@ -2502,18 +2502,28 @@ window.setAgendaStartHour = async function(h) {
 window.saveSettings = async function() {
   const logoVal = document.getElementById('settingSalonLogoValue')?.value || state.settings.logo || state.settings.photo || '';
 
+  const getVal = (id, fallback) => {
+    const el = document.getElementById(id);
+    return el ? el.value : (fallback || '');
+  };
+
+  const getCheck = (id, fallback) => {
+    const el = document.getElementById(id);
+    return el ? el.checked : (fallback !== false);
+  };
+
   const updated = {
     ...state.settings,
-    salonName: isManager ? document.getElementById('cfgName').value : (state.settings.salonName || ''),
-    phone: isManager ? document.getElementById('cfgPhone').value : (state.settings.phone || ''),
-    address: isManager ? document.getElementById('cfgAddress').value : (state.settings.address || ''),
+    salonName: isManager ? getVal('cfgName', state.settings.salonName) : (state.settings.salonName || ''),
+    phone: isManager ? getVal('cfgPhone', state.settings.phone) : (state.settings.phone || ''),
+    address: isManager ? getVal('cfgAddress', state.settings.address) : (state.settings.address || ''),
     logo: isManager ? logoVal : (state.settings.logo || ''),
     photo: isManager ? logoVal : (state.settings.photo || ''),
-    intervalMinutes: isManager ? Number(document.getElementById('cfgInterval').value) : (state.settings.intervalMinutes || 30),
-    notifyNewAppointments: document.getElementById('cfgNotifyNewAppointments').checked,
-    notifyReminders: document.getElementById('cfgNotifyReminders').checked,
-    notifyBirthdays: document.getElementById('cfgNotifyBirthdays').checked,
-    notifySound: document.getElementById('cfgNotifySound').checked
+    intervalMinutes: isManager ? Number(getVal('cfgInterval', state.settings.intervalMinutes || 30)) : (state.settings.intervalMinutes || 30),
+    notifyNewAppointments: getCheck('cfgNotifyNewAppointments', state.settings.notifyNewAppointments),
+    notifyReminders: getCheck('cfgNotifyReminders', state.settings.notifyReminders),
+    notifyBirthdays: getCheck('cfgNotifyBirthdays', state.settings.notifyBirthdays),
+    notifySound: getCheck('cfgNotifySound', state.settings.notifySound)
   };
 
   const res = await tenantFetch('/api/settings', {
@@ -2537,7 +2547,9 @@ window.saveSettings = async function() {
     const sLogoEl = document.getElementById('sidebarSalonLogo');
     if (sLogoEl) sLogoEl.src = updated.logo || updated.photo;
   }
-  asyncAlert('Configurações atualizadas com sucesso!');
+  if (document.getElementById('cfgName')) {
+    asyncAlert('Configurações atualizadas com sucesso!');
+  }
 };
 
 
