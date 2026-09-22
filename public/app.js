@@ -97,12 +97,41 @@ const isManager = Boolean(!currentUser || currentUser.role === 'admin' || curren
 window.isSuperAdmin = isSuperAdmin;
 window.isManager = isManager;
 
+function canManageAppointment(app) {
+  if (!app) return false;
+  if (isManager) return true;
+
+  const myProf = (typeof state !== 'undefined' && Array.isArray(state?.professionals))
+    ? state.professionals.find(p => 
+        (currentUser?.professionalId && p.id === currentUser.professionalId) ||
+        (p.email && currentUser?.email && p.email.toLowerCase() === currentUser.email.toLowerCase()) ||
+        (p.name && currentUser?.name && p.name.trim().toLowerCase() === currentUser.name.trim().toLowerCase())
+      )
+    : null;
+  const myProfId = myProf ? myProf.id : (currentUser?.professionalId || '');
+  if (!myProfId) return false;
+
+  return app.professionalId === myProfId;
+}
+window.canManageAppointment = canManageAppointment;
+
 // Helper universal de fetch para injetar o x-tenant-id e autenticação automaticamente
 async function tenantFetch(url, options = {}) {
+  let myProfId = (currentUser && currentUser.professionalId) || '';
+  if (!myProfId && typeof state !== 'undefined' && Array.isArray(state?.professionals)) {
+    const myProf = state.professionals.find(p => 
+      (p.email && currentUser?.email && p.email.toLowerCase() === currentUser.email.toLowerCase()) ||
+      (p.name && currentUser?.name && p.name.trim().toLowerCase() === currentUser.name.trim().toLowerCase())
+    );
+    if (myProf) myProfId = myProf.id;
+  }
+
   options.headers = {
     ...(options.headers || {}),
-    'x-tenant-id': currentTenant ? currentTenant.id : 'tenant_metamorfose',
-    'x-user-role': (currentUser && currentUser.role) || 'professional'
+    'x-tenant-id': (window.currentUser && window.currentUser.tenantId) || (typeof currentTenant !== 'undefined' && currentTenant ? currentTenant.id : 'tenant_metamorfose'),
+    'x-user-role': (currentUser && currentUser.role) || (isManager ? 'admin' : 'professional'),
+    'x-user-id': (currentUser && currentUser.id) || '',
+    'x-professional-id': myProfId
   };
   return fetch(url, options);
 }
@@ -1720,6 +1749,8 @@ function updateScheduleView() {
           statusLabel = 'Faltou';
         }
 
+        const canManageThis = canManageAppointment(app);
+
         if (app.status === 'indisponivel') {
           listHtml += `
             <div class="agenda-list-item-card" style="background:#fef2f2; border-color:#fecaca;">
@@ -1735,7 +1766,7 @@ function updateScheduleView() {
               <div class="agenda-list-badge-time">
                 <span class="status-badge-pill cancelado">Bloqueado</span>
                 <span class="agenda-list-time-range">${app.startTime} - ${app.endTime}</span>
-                <button class="btn-delete-app" onclick="deleteAppointment('${app.id}', event)" style="margin-top:4px;">Desbloquear</button>
+                ${canManageThis ? `<button class="btn-delete-app" onclick="deleteAppointment('${app.id}', event)" style="margin-top:4px;">Desbloquear</button>` : ''}
               </div>
             </div>
           `;
@@ -1764,9 +1795,17 @@ function updateScheduleView() {
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91C2.13 13.66 2.59 15.36 3.45 16.86L2.05 22L7.3 20.62C8.75 21.41 10.38 21.83 12.04 21.83C17.5 21.83 21.95 17.38 21.95 11.92C21.95 9.27 20.92 6.78 19.05 4.91C17.18 3.03 14.69 2 12.04 2ZM12.05 20.16C10.57 20.16 9.12 19.76 7.85 19.01L7.55 18.83L4.43 19.65L5.26 16.61L5.06 16.29C4.24 14.99 3.81 13.47 3.81 11.91C3.81 7.37 7.5 3.68 12.05 3.68C14.25 3.68 16.31 4.54 17.87 6.1C19.42 7.66 20.28 9.72 20.27 11.92C20.28 16.46 16.59 20.16 12.05 20.16ZM16.56 14.46C16.31 14.33 15.09 13.73 14.86 13.65C14.63 13.56 14.47 13.52 14.3 13.77C14.14 14.02 13.66 14.58 13.52 14.75C13.37 14.92 13.23 14.94 12.98 14.81C12.73 14.69 11.93 14.42 10.98 13.58C10.24 12.92 9.74 12.11 9.6 11.86C9.45 11.61 9.58 11.48 9.71 11.35C9.82 11.24 9.96 11.06 10.08 10.91C10.21 10.77 10.25 10.66 10.33 10.5C10.41 10.33 10.37 10.19 10.31 10.06C10.25 9.94 9.76 8.73 9.55 8.24C9.35 7.75 9.15 7.82 8.99 7.81C8.85 7.8 8.68 7.8 8.52 7.8C8.35 7.8 8.08 7.86 7.85 8.11C7.62 8.36 6.98 8.96 6.98 10.18C6.98 11.4 7.87 12.58 7.99 12.74C8.11 12.91 9.74 15.42 12.23 16.5C12.82 16.76 13.28 16.91 13.64 17.03C14.23 17.22 14.77 17.19 15.2 17.13C15.68 17.06 16.67 16.53 16.88 15.95C17.08 15.37 17.08 14.88 17.02 14.77C16.96 14.67 16.81 14.59 16.56 14.46Z"/></svg>
                     </button>
                   `}
-                  <button class="btn-delete-app" onclick="deleteAppointment('${app.id}', event)" title="Excluir">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18m-2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-                  </button>
+                  ${canManageThis ? `
+                    ${app.status !== 'faltou' ? `
+                      <button class="btn-delete-app btn-noshow-app" style="background:#fef2f2; color:#b91c1c; border-color:#fecaca; padding:4px 8px; font-size:0.75rem;" onclick="markAppointmentNoShow('${app.id}', event)" title="Registrar Falta">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>
+                        <span>Faltou</span>
+                      </button>
+                    ` : ''}
+                    <button class="btn-delete-app" onclick="deleteAppointment('${app.id}', event)" title="Excluir">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18m-2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                    </button>
+                  ` : (app.status === 'faltou' ? `<span style="font-size:0.72rem; font-weight:bold; color:#b91c1c; background:#fee2e2; padding:3px 6px; border-radius:6px;">Faltou</span>` : '')}
                 </div>
               </div>
             </div>
@@ -1818,6 +1857,7 @@ function updateScheduleView() {
       const profBadgeText = isAllProf && prof ? ` • ${prof.name}` : '';
 
       if (appStartingHere.status === 'indisponivel') {
+        const canManageBlock = canManageAppointment(appStartingHere);
         html += `
           <td class="salon-block-indisponivel" rowspan="${rowSpan}">
             <div>
@@ -1825,15 +1865,18 @@ function updateScheduleView() {
               <div style="font-weight: 600; color: #555; margin-top: 4px;">Horário Bloqueado / Indisponível</div>
               <span>${appStartingHere.notes || ''}</span>
             </div>
-            <div style="margin-top: 10px;">
-              <button class="btn-delete-app" onclick="deleteAppointment('${appStartingHere.id}', event)">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18m-2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-                Desbloquear Horário
-              </button>
-            </div>
+            ${canManageBlock ? `
+              <div style="margin-top: 10px;">
+                <button class="btn-delete-app" onclick="deleteAppointment('${appStartingHere.id}', event)">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18m-2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                  Desbloquear Horário
+                </button>
+              </div>
+            ` : ''}
           </td>
         `;
       } else {
+        const canManageThisApp = canManageAppointment(appStartingHere);
         html += `
           <td class="cell-agendado" rowspan="${rowSpan}">
             <div class="salon-block-agendado">
@@ -1858,18 +1901,22 @@ function updateScheduleView() {
                       <span>Lembrete</span>
                     </button>
                   ` : ''}
-                  ${appStartingHere.status !== 'faltou' ? `
-                    <button class="btn-delete-app btn-noshow-app" style="background:#fef2f2; color:#b91c1c; border-color:#fecaca;" onclick="markAppointmentNoShow('${appStartingHere.id}', event)" title="Registrar que o cliente faltou (Gera histórico para taxa de 50% de remarcação)">
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>
-                      <span>Faltou</span>
+                  ${canManageThisApp ? `
+                    ${appStartingHere.status !== 'faltou' ? `
+                      <button class="btn-delete-app btn-noshow-app" style="background:#fef2f2; color:#b91c1c; border-color:#fecaca;" onclick="markAppointmentNoShow('${appStartingHere.id}', event)" title="Registrar que o cliente faltou (Gera histórico para taxa de 50% de remarcação)">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>
+                        <span>Faltou</span>
+                      </button>
+                    ` : `
+                      <span style="font-size:0.72rem; font-weight:bold; color:#b91c1c; background:#fee2e2; padding:3px 6px; border-radius:6px;">Faltou</span>
+                    `}
+                    <button class="btn-delete-app btn-cancel-app" onclick="deleteAppointment('${appStartingHere.id}', event)" title="Excluir / Cancelar este agendamento">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18m-2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                      <span>Cancelar</span>
                     </button>
-                  ` : `
+                  ` : (appStartingHere.status === 'faltou' ? `
                     <span style="font-size:0.72rem; font-weight:bold; color:#b91c1c; background:#fee2e2; padding:3px 6px; border-radius:6px;">Faltou</span>
-                  `}
-                  <button class="btn-delete-app btn-cancel-app" onclick="deleteAppointment('${appStartingHere.id}', event)" title="Excluir / Cancelar este agendamento">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18m-2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-                    <span>Cancelar</span>
-                  </button>
+                  ` : '')}
                 </div>
               </div>
               <div class="app-bottom-bar">
@@ -1900,15 +1947,19 @@ window.refreshAgendaData = async function() {
 
 window.deleteAppointment = async function(appId, event) {
   if (event) event.stopPropagation();
+
+  const app = (state.appointments || []).find(a => a.id === appId);
+  if (app && !canManageAppointment(app)) {
+    await asyncAlert("Apenas o gestor e o profissional em que o agendamento foi feito têm permissão para excluir ou cancelar este horário.", "Acesso Restrito", "warning");
+    return;
+  }
+
   const confirmed = await asyncConfirm("Tem certeza que deseja excluir / desmarcar este agendamento?", "Excluir Agendamento", { isDanger: true });
   if (!confirmed) return;
   
   try {
-    const res = await fetch(`/api/appointments/${appId}`, {
-      method: 'DELETE',
-      headers: {
-        'x-tenant-id': (window.currentUser && window.currentUser.tenantId) || 'tenant_metamorfose'
-      }
+    const res = await tenantFetch(`/api/appointments/${appId}`, {
+      method: 'DELETE'
     });
     if (!res.ok) {
       const err = await res.json();
@@ -1924,18 +1975,22 @@ window.deleteAppointment = async function(appId, event) {
 
 window.markAppointmentNoShow = async function(appId, event) {
   if (event) event.stopPropagation();
-  const app = state.appointments.find(a => a.id === appId);
+  const app = (state.appointments || []).find(a => a.id === appId);
+  if (app && !canManageAppointment(app)) {
+    await asyncAlert("Apenas o gestor e o profissional em que o agendamento foi feito têm permissão para marcar falta neste agendamento.", "Acesso Restrito", "warning");
+    return;
+  }
+
   const clientName = app ? app.clientName : 'este cliente';
   
   const confirmed = await asyncConfirm(`Confirmar que ${clientName} Frizou / Faltou ao agendamento?\n\nIsso registrará histórico de ausência no sistema. Em caso de remarcação, a taxa de garantia de 50% será aplicada automaticamente pelo cruzamento de dados.`, "Registrar Falta / Ausência", { isDanger: true });
   if (!confirmed) return;
 
   try {
-    const res = await fetch(`/api/appointments/${appId}/status`, {
+    const res = await tenantFetch(`/api/appointments/${appId}/status`, {
       method: 'PATCH',
       headers: {
-        'Content-Type': 'application/json',
-        'x-tenant-id': (window.currentUser && window.currentUser.tenantId) || 'tenant_metamorfose'
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify({ status: 'faltou' })
     });

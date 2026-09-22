@@ -1625,6 +1625,44 @@ app.get('/api/appointments/check-policy', (req, res) => {
   return res.json({ penalty: false, percent: 30, reason: null });
 });
 
+// Helper para validar se o usuário pode gerenciar o agendamento (Gestor ou Profissional do agendamento)
+function canUserManageAppointment(req, app, db) {
+  if (!app) return false;
+  const userRole = req.headers['x-user-role'];
+  // Se for admin, superadmin ou gestor: permissão total
+  if (userRole === 'admin' || userRole === 'superadmin' || userRole === 'gestor') {
+    return true;
+  }
+
+  const profId = req.headers['x-professional-id'];
+  const userId = req.headers['x-user-id'];
+
+  // Se o profissional do agendamento bater com o profissional da requisição
+  if (profId && app.professionalId === profId) {
+    return true;
+  }
+
+  // Se tiver userId, verifica o cadastro do usuário
+  if (userId) {
+    const user = (db.users || []).find(u => u.id === userId);
+    if (user) {
+      if (user.role === 'admin' || user.role === 'superadmin' || user.role === 'gestor') {
+        return true;
+      }
+      if (user.professionalId && app.professionalId === user.professionalId) {
+        return true;
+      }
+    }
+  }
+
+  // Se a requisição veio de um profissional e não bateu com o profissional do agendamento: BLOQUEIA
+  if (userRole === 'professional' || (profId && app.professionalId !== profId)) {
+    return false;
+  }
+
+  return true;
+}
+
 // Atualizar status de um agendamento (ex: 'agendado', 'concluido', 'cancelado', 'faltou')
 app.patch('/api/appointments/:id/status', (req, res) => {
   const db = getDb();
@@ -1634,6 +1672,11 @@ app.patch('/api/appointments/:id/status', (req, res) => {
   const app = (db.appointments || []).find(a => a.id === req.params.id && a.tenantId === tenantId);
   if (!app) {
     return res.status(404).json({ error: 'Agendamento não encontrado.' });
+  }
+
+  // Apenas o gestor e o profissional em que o agendamento foi feito podem alterar o status
+  if (!canUserManageAppointment(req, app, db)) {
+    return res.status(403).json({ error: 'Apenas o gestor e o profissional em que o agendamento foi feito têm permissão para alterar este agendamento.' });
   }
 
   app.status = status;
@@ -1661,6 +1704,13 @@ app.delete('/api/appointments/:id', (req, res) => {
   if (idx === -1) {
     return res.status(404).json({ error: 'Agendamento não encontrado.' });
   }
+
+  const app = db.appointments[idx];
+  // Apenas o gestor e o profissional em que o agendamento foi feito podem excluir o agendamento
+  if (!canUserManageAppointment(req, app, db)) {
+    return res.status(403).json({ error: 'Apenas o gestor e o profissional em que o agendamento foi feito têm permissão para excluir este agendamento.' });
+  }
+
   const removed = db.appointments.splice(idx, 1)[0];
   saveDb(db);
   res.json({ message: 'Agendamento removido com sucesso.', removed });
