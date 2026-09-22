@@ -2182,11 +2182,21 @@ function renderBalanco(container, actions) {
 
   const estimatedNetProfit = totalGrossRevenue - totalExpenses - totalCommissions;
 
-  // Render Seletor de Mês nas actions superiores
-  actions.innerHTML = `
-    <div style="display: flex; align-items: center; gap: 8px;">
-      <label style="font-size: 0.85rem; font-weight: 600; color: var(--muted); margin: 0;">Mês de Referência:</label>
-      <select class="form-control" id="balancoMonthSelect" style="width: auto; padding: 6px 12px; font-weight: 600;" onchange="changeBalancoMonth(this.value)">
+  // Limpa actions superiores para evitar overflow no mobile
+  actions.innerHTML = '';
+
+  const monthSelectorCardHtml = `
+    <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 20px; background: #ffffff; padding: 14px 18px; border-radius: 16px; border: 1px solid rgba(226, 232, 240, 0.8); box-shadow: 0 2px 8px rgba(0,0,0,0.02);">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(255, 105, 0, 0.1); display: flex; align-items: center; justify-content: center; color: var(--orange, #ff6900);">
+          <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+        </div>
+        <div>
+          <div style="font-weight: 700; color: var(--ink, #0f172a); font-size: 0.95rem;">Mês de Referência</div>
+          <div style="font-size: 0.78rem; color: var(--muted, #64748b);">Filtrar faturamento, despesas e comissões</div>
+        </div>
+      </div>
+      <select class="form-control" id="balancoMonthSelect" style="width: auto; min-width: 180px; padding: 7px 14px; font-weight: 600; cursor: pointer; border-radius: 10px;" onchange="changeBalancoMonth(this.value)">
         ${monthOptions.map(m => `<option value="${m.ym}" ${m.ym === selectedBalancoMonth ? 'selected' : ''}>${m.label}</option>`).join('')}
       </select>
     </div>
@@ -2237,8 +2247,8 @@ function renderBalanco(container, actions) {
         <div class="prof-goal-header">
           <div class="prof-goal-info">
             <img src="${prof.avatar || getButterflyAvatar(prof.name)}" class="prof-goal-avatar" alt="${prof.name}">
-            <div>
-              <h4 class="prof-goal-title">${prof.name} ${isMe ? '<span style="font-size:0.75rem; background: var(--orange, #ff6900); color:#fff; padding:2px 6px; border-radius:10px; margin-left:4px;">Você</span>' : ''}</h4>
+            <div style="min-width:0; flex:1; overflow:hidden;">
+              <h4 class="prof-goal-title" title="${prof.name}">${prof.name} ${isMe ? '<span style="font-size:0.75rem; background: var(--orange, #ff6900); color:#fff; padding:2px 6px; border-radius:10px; margin-left:4px;">Você</span>' : ''}</h4>
               <span class="prof-goal-role">${prof.role || 'Profissional'} • Comissão (${prof.commissionDefault || 50}%)</span>
             </div>
           </div>
@@ -2286,6 +2296,7 @@ function renderBalanco(container, actions) {
   }
 
   container.innerHTML = `
+    ${monthSelectorCardHtml}
     ${overallSummaryHtml}
     <div style="margin-top: 24px;">
       <h3 style="margin-bottom: 16px; font-size: 1.1rem; font-weight: 700; color: var(--ink);">🎯 Desempenho e Metas Individuais</h3>
@@ -3386,7 +3397,7 @@ window.openNewProfessionalModal = function() {
     </div>
     <div class="form-group">
       <label>Nome Completo</label>
-      <input type="text" class="form-control" id="mProfName" placeholder="Ex: Juliana Castro">
+      <input type="text" class="form-control" id="mProfName" maxlength="25" placeholder="Ex: Juliana Castro">
     </div>
     <div class="form-group">
       <label>Especialidade / Cargo</label>
@@ -3644,7 +3655,7 @@ window.openEditProfessionalModal = function(profId) {
     </div>
     <div class="form-group">
       <label>Nome Completo</label>
-      <input type="text" class="form-control" id="mEditProfName" value="${prof.name || ''}">
+      <input type="text" class="form-control" id="mEditProfName" value="${prof.name || ''}" maxlength="25">
     </div>
     <div class="form-group">
       <label>Especialidade / Cargo</label>
@@ -4859,7 +4870,7 @@ window.closeProfileModal = function() {
 
 window.saveUserProfile = async function() {
   if (!currentUser) return;
-  const name = document.getElementById('profileNameInput').value.trim();
+  const name = document.getElementById('profileNameInput').value.trim().slice(0, 25);
   const password = document.getElementById('profilePasswordInput').value.trim();
   const avatar = document.getElementById('profileAvatarValue').value;
 
