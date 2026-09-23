@@ -70,7 +70,7 @@
     }
     .category-body {
       display: none;
-      padding: 8px 16px 16px 16px;
+      padding: 10px 12px 14px 12px;
       border-top: 1px solid var(--border-peach);
     }
     .category-body.open {
@@ -78,29 +78,94 @@
     }
     .service-book-card {
       display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 12px 0;
-      border-bottom: 1px dashed var(--border-peach);
+      flex-direction: column;
+      gap: 10px;
+      padding: 14px 14px;
+      border-radius: 14px;
+      margin-bottom: 10px;
+      background: #ffffff;
+      border: 1px solid rgba(0, 0, 0, 0.08);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
+      transition: background 0.2s, border-color 0.2s, box-shadow 0.2s;
     }
     .service-book-card:last-child {
-      border-bottom: none;
+      margin-bottom: 0;
+    }
+    .service-book-card.is-selected {
+      background: rgba(255, 105, 0, 0.05) !important;
+      border-color: rgba(255, 105, 0, 0.45) !important;
+      box-shadow: 0 4px 14px rgba(255, 105, 0, 0.12) !important;
+    }
+    .service-book-info {
+      width: 100%;
     }
     .service-book-info h4 {
       font-size: 0.98rem;
-      font-weight: var(--weight-semibold);
+      font-weight: 700;
       color: var(--ink);
+      line-height: 1.35;
+      margin: 0 0 6px 0;
     }
     .service-book-info span {
       font-size: 0.85rem;
       color: var(--muted);
     }
     .service-book-cta {
-      text-align: right;
       display: flex;
-      flex-direction: column;
-      align-items: flex-end;
+      flex-direction: row;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+      border-top: 1px dashed rgba(0, 0, 0, 0.08);
+      padding-top: 10px;
       gap: 8px;
+    }
+    .item-badge-price {
+      font-size: 1.05rem;
+      font-weight: 800;
+      color: #15803d;
+      white-space: nowrap !important;
+      flex-shrink: 0 !important;
+      letter-spacing: -0.01em;
+    }
+    .service-actions-row {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      flex-shrink: 0;
+    }
+    .btn-toggle-service {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      padding: 7px 12px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-family: inherit;
+      border: 1.5px solid var(--orange, #ff6900);
+      background: #ffffff;
+      color: var(--orange, #ff6900);
+      white-space: nowrap !important;
+      flex-shrink: 0 !important;
+    }
+    .btn-toggle-service.selected {
+      background: #15803d;
+      border-color: #15803d;
+      color: #ffffff;
+    }
+    .btn-toggle-service:hover {
+      opacity: 0.9;
+    }
+    .btn-book-direct {
+      padding: 7px 14px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      white-space: nowrap !important;
+      flex-shrink: 0 !important;
     }
     .duration-badge {
       display: inline-block;
@@ -203,41 +268,6 @@
       font-weight: 500;
     }
 
-    /* Estilos do Card de Serviço Selecionado / Toggle */
-    .service-book-card {
-      transition: background 0.2s, border-color 0.2s;
-      border-radius: 12px;
-      padding: 12px 8px;
-    }
-    .service-book-card.is-selected {
-      background: rgba(255, 105, 0, 0.06);
-      border-color: rgba(255, 105, 0, 0.4) !important;
-    }
-    .btn-toggle-service {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 5px;
-      padding: 7px 13px;
-      font-size: 0.8rem;
-      font-weight: 600;
-      border-radius: 10px;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      font-family: inherit;
-      border: 1.5px solid var(--orange, #ff6900);
-      background: #ffffff;
-      color: var(--orange, #ff6900);
-    }
-    .btn-toggle-service.selected {
-      background: #15803d;
-      border-color: #15803d;
-      color: #ffffff;
-    }
-    .btn-toggle-service:hover {
-      opacity: 0.9;
-    }
-
     /* Itens no Checkout (Modal de Agendamento) */
     .checkout-items-list {
       display: flex;
@@ -323,12 +353,17 @@
       border-left: 4px solid #6b7280;
     }
     .consult-badge {
-      display: inline-block;
-      padding: 3px 9px;
-      border-radius: 999px;
-      font-size: 0.72rem;
-      font-weight: 700;
-      letter-spacing: 0.02em;
+      display: inline-flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      gap: 4px !important;
+      padding: 4px 10px !important;
+      border-radius: 999px !important;
+      font-size: 0.75rem !important;
+      font-weight: 700 !important;
+      letter-spacing: 0.02em !important;
+      white-space: nowrap !important;
+      flex-shrink: 0 !important;
     }
     .consult-badge.badge-agendado {
       background: #ecfdf5;
@@ -345,6 +380,41 @@
     .consult-badge.badge-faltou {
       background: #f3f4f6;
       color: #374151;
+    }
+
+    @media (max-width: 480px) {
+      .booking-wrapper {
+        padding: 16px 10px 100px 10px;
+      }
+      .category-header {
+        padding: 12px 12px;
+      }
+      .category-body {
+        padding: 8px 6px 12px 6px;
+      }
+      .service-book-card {
+        padding: 12px 10px;
+        gap: 8px;
+      }
+      .service-book-cta {
+        padding-top: 8px;
+        gap: 6px;
+      }
+      .item-badge-price {
+        font-size: 0.96rem;
+      }
+      .btn-toggle-service {
+        padding: 6px 8px;
+        font-size: 0.74rem;
+        gap: 3px;
+      }
+      .btn-book-direct {
+        padding: 6px 11px;
+        font-size: 0.74rem;
+      }
+      .consult-app-card {
+        padding: 12px 10px;
+      }
     }
   </style>
 </head>
@@ -927,8 +997,8 @@
 
           return `
             <div class="consult-app-card status-${app.status || 'agendado'}">
-              <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 8px;">
-                <div>
+              <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 8px;">
+                <div style="flex: 1; min-width: 0;">
                   <span style="font-size: 0.72rem; color: var(--muted); text-transform: uppercase; font-weight: 700; letter-spacing: 0.04em;">Data e Horário</span>
                   <div style="font-size: 0.95rem; font-weight: 700; color: var(--ink);">
                     ${formatPtBrDate(app.date)}
@@ -937,16 +1007,16 @@
                     🕒 ${app.startTime} às ${app.endTime}
                   </div>
                 </div>
-                <span class="consult-badge ${badgeClass}">${badgeText}</span>
+                <span class="consult-badge ${badgeClass}" style="white-space: nowrap !important; flex-shrink: 0 !important;">${badgeText}</span>
               </div>
 
               <div style="background: #f8fafc; border-radius: 10px; padding: 10px 12px; margin: 10px 0; border: 1px solid #e2e8f0;">
-                <div style="font-size: 0.88rem; font-weight: 700; color: var(--ink); margin-bottom: 2px;">
+                <div style="font-size: 0.88rem; font-weight: 700; color: var(--ink); margin-bottom: 4px; word-break: break-word;">
                   ${app.serviceName}
                 </div>
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px;">
-                  <span style="font-size: 0.78rem; color: var(--muted);">Atendimento com: <strong>${profName}</strong></span>
-                  <strong style="font-size: 0.88rem; color: #15803d;">R$ ${(Number(app.price) || 0).toFixed(2)}</strong>
+                <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 6px;">
+                  <span style="font-size: 0.78rem; color: var(--muted); flex: 1; min-width: 0; line-height: 1.35; overflow-wrap: break-word;">Atendimento com: <strong>${profName}</strong></span>
+                  <strong style="font-size: 0.95rem; font-weight: 800; color: #15803d; white-space: nowrap !important; flex-shrink: 0 !important;">R$ ${(Number(app.price) || 0).toFixed(2)}</strong>
                 </div>
               </div>
 
@@ -1017,24 +1087,26 @@
 
           return `
             <div class="service-book-card ${isSel ? 'is-selected' : ''}" id="service-card-${s.id}">
-              <div class="service-book-info" style="flex: 1; padding-right: 12px;">
-                <h4 style="display:flex; align-items:center; gap:8px; margin-bottom: 4px;">
+              <div class="service-book-info">
+                <h4 style="display:flex; align-items:center; gap:8px; margin-bottom: 4px; flex-wrap: wrap;">
                   <span>${s.name}</span>
                   ${isPkg ? `<span style="background:#0f172a; color:#fff; font-size:0.68rem; font-weight:700; padding:2px 8px; border-radius:12px; letter-spacing:0.02em;">Pacote ${sessionsNum}x</span>` : ''}
                 </h4>
-                <span style="display:inline-flex; align-items:center; gap:4px; font-size:0.82rem; color:var(--muted);">
-                  <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-                  Duração: <strong>${s.durationMinutes} min</strong>
-                </span>
-                ${s.observation ? `<small style="color:#888; font-size:0.75rem; display:block; margin-top:2px;">${s.observation}</small>` : ''}
+                <div style="display:flex; align-items:center; gap:6px; font-size:0.82rem; color:var(--muted); margin-bottom: 4px;">
+                  <span class="duration-badge" style="display:inline-flex; align-items:center; gap:4px; font-size:0.75rem; padding:3px 8px;">
+                    <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                    ${s.durationMinutes} min
+                  </span>
+                </div>
+                ${s.observation ? `<small style="color:#718096; font-size:0.75rem; display:block; line-height: 1.35;">${s.observation}</small>` : ''}
               </div>
               <div class="service-book-cta">
-                <span class="item-badge-price" style="font-size:0.95rem; font-weight:800; color:#15803d;">R$ ${(Number(s.price) || 0).toFixed(2)}</span>
-                <div style="display: flex; gap: 6px; align-items: center;">
+                <span class="item-badge-price">R$ ${(Number(s.price) || 0).toFixed(2)}</span>
+                <div class="service-actions-row">
                   <button type="button" class="btn-toggle-service ${isSel ? 'selected' : ''}" id="btn-toggle-${s.id}" onclick="toggleServiceSelection('${s.id}')" title="Adicionar ou remover do checkout">
                     ${isSel ? '<svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"></polyline></svg> Adicionado' : '<svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg> Adicionar'}
                   </button>
-                  <button type="button" class="btn-falcon btn-success" style="padding: 7px 14px; font-size:0.8rem; font-weight:700;" onclick="bookDirectly('${s.id}')">
+                  <button type="button" class="btn-falcon btn-success btn-book-direct" onclick="bookDirectly('${s.id}')">
                     ${isPkg ? 'Comprar' : 'Agendar'}
                   </button>
                 </div>
