@@ -111,6 +111,228 @@
       font-size: 0.75rem;
       font-weight: 600;
     }
+
+    /* Estilos para Consulta de Agendamentos */
+    .btn-consult-app {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 18px;
+      border-radius: 999px;
+      background: #ffffff;
+      border: 1.5px solid var(--orange, #ff6900);
+      color: var(--orange, #ff6900);
+      font-size: 0.85rem;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 4px 14px rgba(255, 105, 0, 0.12);
+      transition: all 0.2s ease;
+      font-family: inherit;
+    }
+    .btn-consult-app:hover {
+      background: var(--orange, #ff6900);
+      color: #ffffff;
+      transform: translateY(-1px);
+      box-shadow: 0 6px 18px rgba(255, 105, 0, 0.25);
+    }
+
+    /* Barra Flutuante de Checkout (Multi-serviços) */
+    body.has-cart-bar {
+      padding-bottom: 96px;
+    }
+    .checkout-floating-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: rgba(255, 255, 255, 0.96);
+      backdrop-filter: blur(14px);
+      border-top: 1.5px solid rgba(255, 105, 0, 0.28);
+      box-shadow: 0 -8px 25px rgba(0, 0, 0, 0.08);
+      z-index: 999;
+      transform: translateY(120%);
+      transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .checkout-floating-bar.active {
+      transform: translateY(0);
+    }
+    .checkout-bar-content {
+      max-width: 580px;
+      margin: 0 auto;
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .checkout-bar-info {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .checkout-bar-count {
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--orange, #ff6900);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .checkout-bar-price {
+      font-size: 1.15rem;
+      font-weight: 800;
+      color: var(--ink, #1e293b);
+      line-height: 1.2;
+    }
+    .checkout-bar-duration {
+      font-size: 0.75rem;
+      color: var(--muted, #64748b);
+      font-weight: 500;
+    }
+
+    /* Estilos do Card de Serviço Selecionado / Toggle */
+    .service-book-card {
+      transition: background 0.2s, border-color 0.2s;
+      border-radius: 12px;
+      padding: 12px 8px;
+    }
+    .service-book-card.is-selected {
+      background: rgba(255, 105, 0, 0.06);
+      border-color: rgba(255, 105, 0, 0.4) !important;
+    }
+    .btn-toggle-service {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      padding: 7px 13px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-family: inherit;
+      border: 1.5px solid var(--orange, #ff6900);
+      background: #ffffff;
+      color: var(--orange, #ff6900);
+    }
+    .btn-toggle-service.selected {
+      background: #15803d;
+      border-color: #15803d;
+      color: #ffffff;
+    }
+    .btn-toggle-service:hover {
+      opacity: 0.9;
+    }
+
+    /* Itens no Checkout (Modal de Agendamento) */
+    .checkout-items-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 8px;
+      max-height: 180px;
+      overflow-y: auto;
+    }
+    .checkout-item-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 8px 12px;
+      background: #f8fafc;
+      border-radius: 10px;
+      border: 1px solid #e2e8f0;
+    }
+    .checkout-item-title {
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: var(--ink, #1e293b);
+      flex: 1;
+      min-width: 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .checkout-item-remove-btn {
+      background: none;
+      border: none;
+      color: #ef4444;
+      font-size: 1.1rem;
+      cursor: pointer;
+      padding: 2px 6px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.15s;
+    }
+    .checkout-item-remove-btn:hover {
+      background: #fee2e2;
+    }
+    .btn-add-more-services {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: none;
+      border: 1px dashed var(--orange, #ff6900);
+      color: var(--orange, #ff6900);
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .btn-add-more-services:hover {
+      background: rgba(255, 105, 0, 0.08);
+    }
+
+    /* Cards da Consulta de Agendamentos */
+    .consult-app-card {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 14px;
+      padding: 14px;
+      margin-bottom: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+    }
+    .consult-app-card.status-agendado {
+      border-left: 4px solid #10b981;
+    }
+    .consult-app-card.status-concluido {
+      border-left: 4px solid #3b82f6;
+    }
+    .consult-app-card.status-cancelado {
+      border-left: 4px solid #ef4444;
+    }
+    .consult-app-card.status-faltou {
+      border-left: 4px solid #6b7280;
+    }
+    .consult-badge {
+      display: inline-block;
+      padding: 3px 9px;
+      border-radius: 999px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+    .consult-badge.badge-agendado {
+      background: #ecfdf5;
+      color: #065f46;
+    }
+    .consult-badge.badge-concluido {
+      background: #eff6ff;
+      color: #1e40af;
+    }
+    .consult-badge.badge-cancelado {
+      background: #fef2f2;
+      color: #991b1b;
+    }
+    .consult-badge.badge-faltou {
+      background: #f3f4f6;
+      color: #374151;
+    }
   </style>
 </head>
 <body>
@@ -132,10 +354,81 @@
       <h1 id="bSalonName">Metamorfose Hair</h1>
       <p id="bSalonPhone">(67) 98424-8821</p>
       <small style="color:var(--muted); margin-top:6px; display:block;">Agende online com disponibilidade em tempo real</small>
+      <div style="margin-top: 14px;">
+        <button type="button" class="btn-consult-app" onclick="openConsultModal()">
+          <svg width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+          Consultar Meus Agendamentos
+        </button>
+      </div>
     </div>
 
     <h3 style="font-size: 1.15rem; font-weight: var(--weight-bold); margin-bottom: 14px; padding-left: 4px;">Selecione o Serviço Desejado</h3>
     <div id="servicesAccordion"></div>
+  </div>
+
+  <!-- Barra Flutuante de Checkout (Multi-serviços) -->
+  <div class="checkout-floating-bar" id="checkoutFloatingBar">
+    <div class="checkout-bar-content">
+      <div class="checkout-bar-info">
+        <span class="checkout-bar-count" id="cartCountLabel">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path></svg>
+          <span id="cartCountNum">0</span> serviços selecionados
+        </span>
+        <div style="display:flex; align-items:baseline; gap:8px;">
+          <span class="checkout-bar-price" id="cartTotalPrice">R$ 0,00</span>
+          <span class="checkout-bar-duration" id="cartTotalDuration">• 0 min</span>
+        </div>
+      </div>
+      <button class="btn-falcon btn-primary" onclick="openBookingModal()" style="padding: 10px 20px; font-weight: 700; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 14px rgba(255,105,0,0.35);">
+        Continuar
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"></path></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Modal de Consulta de Agendamentos por Telefone -->
+  <div class="modal-backdrop" id="consultModal">
+    <div class="modal-dialog" style="max-width: 520px; max-height: calc(100vh - 36px); display: flex; flex-direction: column;">
+      <div class="modal-header" style="padding: 16px 20px;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(255,105,0,0.12); color: var(--orange); display: grid; place-items: center;">
+            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+          </div>
+          <div>
+            <h3 style="font-size: 1.15rem; margin: 0;">Meus Agendamentos</h3>
+            <span style="font-size: 0.78rem; color: var(--muted);">Consulte seus horários pelo seu WhatsApp</span>
+          </div>
+        </div>
+        <button onclick="closeConsultModal()" style="background:none;border:none;font-size:1.5rem;cursor:pointer;color:var(--muted);">&times;</button>
+      </div>
+      <div class="modal-body" style="padding: 16px 20px; flex: 1; overflow-y: auto;">
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 14px; padding: 14px; margin-bottom: 16px;">
+          <label style="font-size: 0.85rem; font-weight: 600; color: var(--ink); display: block; margin-bottom: 6px;">
+            Digite seu telefone com DDD:
+          </label>
+          <div style="display: flex; gap: 8px;">
+            <input type="tel" id="consultPhoneInput" class="form-control" placeholder="(67) 99999-9999" maxlength="15" oninput="formatPhoneInput(this)" onkeydown="if(event.key==='Enter') searchClientAppointments()" style="font-size: 1rem; font-weight: 600; letter-spacing: 0.02em;">
+            <button class="btn-falcon btn-primary" onclick="searchClientAppointments()" style="white-space: nowrap; padding: 10px 18px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">
+              <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+              Buscar
+            </button>
+          </div>
+          <div id="consultPhoneError" style="display: none; color: #dc2626; font-size: 0.78rem; font-weight: 600; margin-top: 6px;"></div>
+        </div>
+
+        <div id="consultResultsContainer">
+          <div style="text-align: center; padding: 30px 10px; color: var(--muted);">
+            <div style="margin-bottom: 8px; opacity: 0.5;">
+              <svg width="36" height="36" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+            </div>
+            <p style="font-size: 0.88rem; margin: 0;">Informe seu número acima para localizar seus agendamentos.</p>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer" style="padding: 12px 20px;">
+        <button class="btn-falcon btn-secondary" onclick="closeConsultModal()" style="width: 100%;">Fechar</button>
+      </div>
+    </div>
   </div>
 
   <!-- Modal Interativo de Agendamento com Grade de Disponibilidade -->
@@ -150,6 +443,32 @@
       </div>
       <div class="modal-body" style="padding: 16px 20px; flex: 1; overflow-y: auto; gap: 12px;">
         <input type="hidden" id="bookServId">
+
+        <!-- Resumo dos Serviços Escolhidos (Multi-serviços / Checkout) -->
+        <div id="checkoutSummaryBox" style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 16px; padding: 14px 16px; margin-bottom: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.03);">
+          <div style="display:flex; justify-content:space-between; align-items:center; border-bottom: 1px solid #f1f5f9; padding-bottom: 8px;">
+            <div style="display:flex; align-items:center; gap:6px;">
+              <svg width="16" height="16" fill="none" stroke="var(--orange)" stroke-width="2" viewBox="0 0 24 24"><path d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path></svg>
+              <strong style="font-size:0.88rem; color:var(--ink);">Serviços no Checkout</strong>
+            </div>
+            <span id="checkoutTotalBadge" class="duration-badge" style="background:rgba(255,105,0,0.1); color:var(--orange);">1 serviço</span>
+          </div>
+
+          <div class="checkout-items-list" id="checkoutItemsContainer">
+            <!-- Itens selecionados injetados dinamicamente via JS -->
+          </div>
+
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px; padding-top:10px; border-top: 1px dashed #e2e8f0;">
+            <button type="button" class="btn-add-more-services" onclick="closeBookingModal()">
+              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+              Adicionar mais serviços
+            </button>
+            <div style="text-align:right;">
+              <small style="color:var(--muted); font-size:0.75rem; display:block;">Valor Total:</small>
+              <strong id="checkoutSummaryTotalVal" style="color:#15803d; font-size:1.1rem;">R$ 0,00</strong>
+            </div>
+          </div>
+        </div>
         
         <!-- Card de Destaque da Profissional Selecionada -->
         <div id="selectedProfCard" style="display: flex; align-items: center; gap: 14px; background: #ffffff; border: 1.5px solid var(--orange); border-radius: 16px; padding: 12px 16px; margin-bottom: 12px; box-shadow: 0 4px 14px -4px rgba(255,105,0,0.15);">
@@ -275,7 +594,7 @@
           </div>
           <div class="form-group">
             <label>5. Seu WhatsApp</label>
-            <input type="text" class="form-control" id="bookClientPhone" placeholder="(67) 99999-9999" oninput="checkClientPenaltyDebounced()">
+            <input type="text" class="form-control" id="bookClientPhone" placeholder="(67) 99999-9999" maxlength="15" oninput="formatPhoneInput(this); checkClientPenaltyDebounced()">
           </div>
         </div>
       </div>
@@ -290,11 +609,47 @@
     let services = [];
     let professionals = [];
     let settings = {};
-    let selectedService = null;
+    let selectedServices = []; // Carrinho de múltiplos serviços selecionados
     let selectedSlot = null; // { time, endTime }
 
     let salonSlug = new URLSearchParams(window.location.search).get('salao') || 'metamorfose_hair';
     let currentTenantId = 'tenant_metamorfose';
+
+    // Máscara automática de telefone (XX) XXXXX-XXXX
+    function formatPhoneInput(el) {
+      if (!el) return;
+      let val = el.value.replace(/\D/g, '');
+      if (val.length > 11) val = val.substring(0, 11);
+      if (val.length <= 2) {
+        el.value = val ? `(${val}` : '';
+      } else if (val.length <= 6) {
+        el.value = `(${val.substring(0, 2)}) ${val.substring(2)}`;
+      } else if (val.length <= 10) {
+        el.value = `(${val.substring(0, 2)}) ${val.substring(2, 6)}-${val.substring(6)}`;
+      } else {
+        el.value = `(${val.substring(0, 2)}) ${val.substring(2, 7)}-${val.substring(7)}`;
+      }
+    }
+
+    // Formatador amigável de duração
+    function formatDuration(min) {
+      min = Number(min) || 0;
+      if (min < 60) return `${min} min`;
+      const h = Math.floor(min / 60);
+      const m = min % 60;
+      return m > 0 ? `${h}h ${m}min` : `${h}h`;
+    }
+
+    // Formatador amigável de data com dia da semana
+    function formatPtBrDate(dateStr) {
+      if (!dateStr) return '';
+      const parts = dateStr.split('-');
+      if (parts.length !== 3) return dateStr;
+      const d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+      const weekDays = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
+      const dayName = weekDays[d.getDay()] || '';
+      return `${dayName}, ${parts[2]}/${parts[1]}/${parts[0]}`;
+    }
 
     document.addEventListener('DOMContentLoaded', async () => {
       const dateInput = document.getElementById('bookDate');
@@ -397,6 +752,24 @@
       return getButterflyAvatar(prof.name || 'P');
     }
 
+    function renderTeamCards() {
+      const teamSection = document.getElementById('bSalonTeamSection');
+      const teamGrid = document.getElementById('bSalonTeamGrid');
+      if (!teamSection || !teamGrid) return;
+      if (!professionals || professionals.length === 0) {
+        teamSection.style.display = 'none';
+        return;
+      }
+      teamSection.style.display = 'block';
+      teamGrid.innerHTML = professionals.map(p => `
+        <div style="flex: 0 0 auto; text-align: center; width: 90px; background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.8); border-radius: 16px; padding: 12px 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.04);">
+          <img src="${getProfAvatarUrl(p)}" alt="${p.name}" style="width: 58px; height: 58px; border-radius: 50%; object-fit: cover; border: 2.5px solid var(--orange); box-shadow: 0 4px 12px rgba(255,105,0,0.22); margin: 0 auto 8px auto; display: block;">
+          <div style="font-size: 0.82rem; font-weight: 700; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${p.name.split(' ')[0]}</div>
+          <div style="font-size: 0.72rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px;">${p.role || 'Profissional'}</div>
+        </div>
+      `).join('');
+    }
+
     function onProfSelectChange() {
       updateSelectedProfCard();
       fetchAvailableSlots();
@@ -424,33 +797,220 @@
       if (roleEl) roleEl.innerText = prof.role || 'Profissional';
     }
 
+    // ==========================================
+    // CONSULTA DE AGENDAMENTOS POR TELEFONE
+    // ==========================================
+    function openConsultModal() {
+      const modal = document.getElementById('consultModal');
+      if (!modal) return;
+      modal.classList.add('open');
+      const input = document.getElementById('consultPhoneInput');
+      if (input) {
+        setTimeout(() => input.focus(), 150);
+      }
+    }
+
+    function closeConsultModal() {
+      const modal = document.getElementById('consultModal');
+      if (modal) modal.classList.remove('open');
+    }
+
+    async function searchClientAppointments() {
+      const input = document.getElementById('consultPhoneInput');
+      const errorBox = document.getElementById('consultPhoneError');
+      const resultsBox = document.getElementById('consultResultsContainer');
+
+      if (!input) return;
+      const rawDigits = input.value.replace(/\D/g, '');
+
+      // Checagem rigorosa de número com DDD
+      if (!rawDigits || rawDigits.length < 10) {
+        if (errorBox) {
+          errorBox.innerText = 'Por favor, informe seu telefone com DDD (mínimo de 10 dígitos, ex: 67 99999-9999).';
+          errorBox.style.display = 'block';
+        }
+        return;
+      }
+
+      if (errorBox) errorBox.style.display = 'none';
+
+      if (resultsBox) {
+        resultsBox.innerHTML = `
+          <div style="padding: 30px; text-align: center; color: var(--muted);">
+            <div style="display: inline-block; animation: spin 1s linear infinite; margin-bottom: 8px;">
+              <svg width="28" height="28" fill="none" stroke="var(--orange)" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke-opacity="0.25"></circle><path d="M12 2a10 10 0 0 1 10 10"></path></svg>
+            </div>
+            <div>Buscando seus agendamentos...</div>
+          </div>
+        `;
+      }
+
+      try {
+        const res = await fetch(`/api/public/client-appointments?phone=${rawDigits}&tenantId=${currentTenantId}`);
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.error || 'Erro ao buscar agendamentos');
+        }
+
+        const data = await res.json();
+        const appointments = data.appointments || [];
+
+        if (appointments.length === 0) {
+          resultsBox.innerHTML = `
+            <div style="padding: 28px 16px; text-align: center; color: var(--muted); background: #ffffff; border-radius: 14px; border: 1px dashed #cbd5e1;">
+              <div style="width: 48px; height: 48px; border-radius: 50%; background: #f1f5f9; display: flex; align-items: center; justify-content: center; margin: 0 auto 12px auto; color: #64748b;">
+                <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="8" y1="12" x2="16" y2="12"></line></svg>
+              </div>
+              <strong style="color: var(--ink); font-size: 0.98rem; display: block; margin-bottom: 4px;">Nenhum agendamento encontrado</strong>
+              <p style="font-size: 0.82rem; margin: 0 0 12px 0;">Não localizamos nenhum agendamento para <strong>${input.value}</strong> neste estabelecimento.</p>
+              <button class="btn-falcon btn-primary" onclick="closeConsultModal()" style="font-size: 0.82rem; padding: 7px 16px;">Fazer Agendamento Agora</button>
+            </div>
+          `;
+          return;
+        }
+
+        const nowStr = new Date().toISOString().split('T')[0];
+        const upcoming = appointments.filter(a => a.status === 'agendado' && a.date >= nowStr);
+        const history = appointments.filter(a => !(a.status === 'agendado' && a.date >= nowStr));
+
+        function renderAppCard(app) {
+          const isUpcoming = app.status === 'agendado' && app.date >= nowStr;
+          let badgeClass = 'badge-agendado';
+          let badgeText = 'Agendado';
+
+          if (app.status === 'concluido') {
+            badgeClass = 'badge-concluido';
+            badgeText = 'Concluído';
+          } else if (app.status === 'cancelado') {
+            badgeClass = 'badge-cancelado';
+            badgeText = 'Cancelado';
+          } else if (app.status === 'faltou') {
+            badgeClass = 'badge-faltou';
+            badgeText = 'Não Compareceu';
+          } else if (app.status === 'agendado') {
+            badgeClass = 'badge-agendado';
+            badgeText = isUpcoming ? '✓ Confirmado' : 'Agendado';
+          }
+
+          const profName = app.professional ? app.professional.name : 'Profissional';
+          const profPhone = (app.professional && app.professional.phone ? app.professional.phone : (data.salon ? data.salon.phone : '')).replace(/\D/g, '');
+
+          const contactWaText = encodeURIComponent(`Olá, ${profName}! Estou consultando meu agendamento de "${app.serviceName}" para ${formatPtBrDate(app.date)} às ${app.startTime}.`);
+          const contactUrl = profPhone ? `https://wa.me/55${profPhone}?text=${contactWaText}` : '';
+
+          return `
+            <div class="consult-app-card status-${app.status || 'agendado'}">
+              <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 8px;">
+                <div>
+                  <span style="font-size: 0.72rem; color: var(--muted); text-transform: uppercase; font-weight: 700; letter-spacing: 0.04em;">Data e Horário</span>
+                  <div style="font-size: 0.95rem; font-weight: 700; color: var(--ink);">
+                    ${formatPtBrDate(app.date)}
+                  </div>
+                  <div style="font-size: 0.85rem; font-weight: 600; color: var(--orange); margin-top: 1px;">
+                    🕒 ${app.startTime} às ${app.endTime}
+                  </div>
+                </div>
+                <span class="consult-badge ${badgeClass}">${badgeText}</span>
+              </div>
+
+              <div style="background: #f8fafc; border-radius: 10px; padding: 10px 12px; margin: 10px 0; border: 1px solid #e2e8f0;">
+                <div style="font-size: 0.88rem; font-weight: 700; color: var(--ink); margin-bottom: 2px;">
+                  ${app.serviceName}
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px;">
+                  <span style="font-size: 0.78rem; color: var(--muted);">Atendimento com: <strong>${profName}</strong></span>
+                  <strong style="font-size: 0.88rem; color: #15803d;">R$ ${(Number(app.price) || 0).toFixed(2)}</strong>
+                </div>
+              </div>
+
+              ${contactUrl ? `
+                <div style="text-align: right; margin-top: 6px;">
+                  <a href="${contactUrl}" target="_blank" style="display: inline-flex; align-items: center; gap: 5px; font-size: 0.78rem; font-weight: 600; color: #15803d; text-decoration: none; padding: 5px 10px; border-radius: 6px; background: rgba(34, 197, 94, 0.1);">
+                    <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24"><path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.007c.106.005.249-.04.39.298.144.347.491 1.2.534 1.287.043.087.072.188.014.304-.058.116-.087.188-.173.289l-.26.304c-.087.086-.177.18-.076.353.101.173.449.741.963 1.201.662.591 1.221.774 1.394.86.173.086.274.072.376-.043.101-.116.433-.506.549-.679.116-.173.231-.145.39-.087s1.011.477 1.184.564.289.13.332.202c.043.073.043.419-.101.824z"/></svg>
+                    Falar no WhatsApp
+                  </a>
+                </div>
+              ` : ''}
+            </div>
+          `;
+        }
+
+        let html = '';
+        if (data.clientName) {
+          html += `<div style="font-size: 0.9rem; font-weight: 700; color: var(--ink); margin-bottom: 12px;">Olá, ${data.clientName}! Veja seus agendamentos:</div>`;
+        }
+
+        if (upcoming.length > 0) {
+          html += `
+            <div style="font-size: 0.78rem; text-transform: uppercase; font-weight: 700; color: #15803d; letter-spacing: 0.05em; margin-bottom: 8px; display: flex; align-items: center; gap: 5px;">
+              <span style="width: 8px; height: 8px; border-radius: 50%; background: #15803d;"></span>
+              Próximos Agendamentos (${upcoming.length})
+            </div>
+          `;
+          html += upcoming.map(renderAppCard).join('');
+        }
+
+        if (history.length > 0) {
+          html += `
+            <div style="font-size: 0.78rem; text-transform: uppercase; font-weight: 700; color: var(--muted); letter-spacing: 0.05em; margin: 16px 0 8px 0; display: flex; align-items: center; gap: 5px;">
+              <span style="width: 8px; height: 8px; border-radius: 50%; background: #94a3b8;"></span>
+              Histórico Anterior (${history.length})
+            </div>
+          `;
+          html += history.map(renderAppCard).join('');
+        }
+
+        resultsBox.innerHTML = html;
+      } catch (err) {
+        console.error("Erro na busca de agendamentos:", err);
+        if (resultsBox) {
+          resultsBox.innerHTML = `
+            <div style="padding: 20px; text-align: center; color: #dc2626; font-size: 0.88rem;">
+              ${err.message || 'Erro ao consultar agendamentos. Tente novamente.'}
+            </div>
+          `;
+        }
+      }
+    }
+
+    // ==========================================
+    // CHECKOUT / MÚLTIPLOS SERVIÇOS
+    // ==========================================
     function renderAccordion() {
       const categories = [...new Set(services.map(s => s.category || 'Outros'))];
       const accordion = document.getElementById('servicesAccordion');
+      if (!accordion) return;
 
       accordion.innerHTML = categories.map((cat, idx) => {
         const catServices = services.filter(s => (s.category || 'Outros') === cat);
         const servicesHtml = catServices.map(s => {
           const isPkg = s.isPackage || (s.sessionsCount && s.sessionsCount > 1) || cat.toLowerCase().includes('pacote');
           const sessionsNum = s.sessionsCount || 3;
+          const isSel = selectedServices.some(sel => sel.id === s.id);
+
           return `
-            <div class="service-book-card">
-              <div class="service-book-info">
-                <h4 style="display:flex; align-items:center; gap:8px;">
+            <div class="service-book-card ${isSel ? 'is-selected' : ''}" id="service-card-${s.id}">
+              <div class="service-book-info" style="flex: 1; padding-right: 12px;">
+                <h4 style="display:flex; align-items:center; gap:8px; margin-bottom: 4px;">
                   <span>${s.name}</span>
-                  ${isPkg ? `<span style="background:#0f172a; color:#fff; font-size:0.68rem; font-weight:700; padding:2px 8px; border-radius:12px; letter-spacing:0.02em;">Pacote ${sessionsNum}x Sessões</span>` : ''}
+                  ${isPkg ? `<span style="background:#0f172a; color:#fff; font-size:0.68rem; font-weight:700; padding:2px 8px; border-radius:12px; letter-spacing:0.02em;">Pacote ${sessionsNum}x</span>` : ''}
                 </h4>
-                <span style="display:inline-flex; align-items:center; gap:4px;">
+                <span style="display:inline-flex; align-items:center; gap:4px; font-size:0.82rem; color:var(--muted);">
                   <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-                  Duração: <strong>${s.durationMinutes} min por sessão</strong>
+                  Duração: <strong>${s.durationMinutes} min</strong>
                 </span>
-                ${s.observation ? `<small style="color:#999; font-size:0.75rem;">${s.observation}</small>` : ''}
+                ${s.observation ? `<small style="color:#888; font-size:0.75rem; display:block; margin-top:2px;">${s.observation}</small>` : ''}
               </div>
               <div class="service-book-cta">
-                <span class="item-badge-price">R$ ${s.price.toFixed(2)}</span>
-                <button class="btn-falcon btn-success" style="padding: 7px 16px; font-size:0.82rem;" onclick="openBookingModal('${s.id}')">
-                  ${isPkg ? 'Comprar Pacote' : 'Reservar'}
-                </button>
+                <span class="item-badge-price" style="font-size:0.95rem; font-weight:800; color:#15803d;">R$ ${(Number(s.price) || 0).toFixed(2)}</span>
+                <div style="display: flex; gap: 6px; align-items: center;">
+                  <button type="button" class="btn-toggle-service ${isSel ? 'selected' : ''}" id="btn-toggle-${s.id}" onclick="toggleServiceSelection('${s.id}')" title="Adicionar ou remover do checkout">
+                    ${isSel ? '<svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"></polyline></svg> Adicionado' : '<svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg> Adicionar'}
+                  </button>
+                  <button type="button" class="btn-falcon btn-success" style="padding: 7px 14px; font-size:0.8rem; font-weight:700;" onclick="bookDirectly('${s.id}')">
+                    ${isPkg ? 'Comprar' : 'Agendar'}
+                  </button>
+                </div>
               </div>
             </div>
           `;
@@ -472,22 +1032,165 @@
 
     function toggleCategory(idx) {
       const body = document.getElementById(`cat-body-${idx}`);
+      if (!body) return;
       body.classList.toggle('open');
-      document.getElementById(`cat-arrow-${idx}`).innerText = body.classList.contains('open') ? '▲' : '▼';
+      const arrow = document.getElementById(`cat-arrow-${idx}`);
+      if (arrow) arrow.innerText = body.classList.contains('open') ? '▲' : '▼';
+    }
+
+    function bookDirectly(serviceId) {
+      const s = services.find(srv => srv.id === serviceId);
+      if (s && !selectedServices.some(sel => sel.id === s.id)) {
+        selectedServices.push(s);
+      }
+      openBookingModal();
+    }
+
+    function toggleServiceSelection(serviceId) {
+      const service = services.find(s => s.id === serviceId);
+      if (!service) return;
+
+      const idx = selectedServices.findIndex(s => s.id === serviceId);
+      if (idx >= 0) {
+        selectedServices.splice(idx, 1);
+      } else {
+        selectedServices.push(service);
+      }
+
+      updateCheckoutUI();
+    }
+
+    function removeServiceFromCheckout(serviceId) {
+      const idx = selectedServices.findIndex(s => s.id === serviceId);
+      if (idx >= 0) {
+        selectedServices.splice(idx, 1);
+      }
+
+      updateCheckoutUI();
+
+      if (selectedServices.length === 0) {
+        closeBookingModal();
+      } else {
+        refreshBookingModalContent();
+        fetchAvailableSlots();
+        updateDepositNotice();
+      }
+    }
+
+    function updateCheckoutUI() {
+      const bar = document.getElementById('checkoutFloatingBar');
+      const countNum = document.getElementById('cartCountNum');
+      const totalPriceEl = document.getElementById('cartTotalPrice');
+      const totalDurEl = document.getElementById('cartTotalDuration');
+
+      const totalCount = selectedServices.length;
+      const totalPrice = selectedServices.reduce((sum, s) => sum + (Number(s.price) || 0), 0);
+      const totalDuration = selectedServices.reduce((sum, s) => sum + (Number(s.durationMinutes) || 0), 0);
+
+      if (totalCount > 0) {
+        document.body.classList.add('has-cart-bar');
+        if (bar) bar.classList.add('active');
+        if (countNum) countNum.innerText = totalCount;
+        if (totalPriceEl) totalPriceEl.innerText = totalPrice.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        if (totalDurEl) totalDurEl.innerText = `• ${formatDuration(totalDuration)}`;
+      } else {
+        document.body.classList.remove('has-cart-bar');
+        if (bar) bar.classList.remove('active');
+      }
+
+      // Atualiza botões e destaques dos cards
+      services.forEach(s => {
+        const card = document.getElementById(`service-card-${s.id}`);
+        const btn = document.getElementById(`btn-toggle-${s.id}`);
+        const isSel = selectedServices.some(sel => sel.id === s.id);
+        if (card) {
+          if (isSel) card.classList.add('is-selected');
+          else card.classList.remove('is-selected');
+        }
+        if (btn) {
+          if (isSel) {
+            btn.classList.add('selected');
+            btn.innerHTML = `<svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"></polyline></svg> Adicionado`;
+          } else {
+            btn.classList.remove('selected');
+            btn.innerHTML = `<svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg> Adicionar`;
+          }
+        }
+      });
+    }
+
+    function refreshBookingModalContent() {
+      const totalCount = selectedServices.length;
+      const totalPrice = selectedServices.reduce((sum, s) => sum + (Number(s.price) || 0), 0);
+      const totalDuration = selectedServices.reduce((sum, s) => sum + (Number(s.durationMinutes) || 0), 0);
+
+      const titleEl = document.getElementById('bModalTitle');
+      const durEl = document.getElementById('bModalDuration');
+      const servIdEl = document.getElementById('bookServId');
+      const totalBadgeEl = document.getElementById('checkoutTotalBadge');
+      const summaryTotalEl = document.getElementById('checkoutSummaryTotalVal');
+      const itemsContainer = document.getElementById('checkoutItemsContainer');
+
+      if (totalCount === 1) {
+        if (titleEl) titleEl.innerText = selectedServices[0].name;
+        if (durEl) durEl.innerText = `Duração: ${totalDuration} min`;
+      } else {
+        if (titleEl) titleEl.innerText = `${totalCount} Serviços Selecionados`;
+        if (durEl) durEl.innerText = `Duração Total: ${formatDuration(totalDuration)}`;
+      }
+
+      if (servIdEl && selectedServices[0]) {
+        servIdEl.value = selectedServices[0].id;
+      }
+      if (totalBadgeEl) {
+        totalBadgeEl.innerText = `${totalCount} serviço${totalCount > 1 ? 's' : ''}`;
+      }
+      if (summaryTotalEl) {
+        summaryTotalEl.innerText = totalPrice.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+      }
+
+      if (itemsContainer) {
+        itemsContainer.innerHTML = selectedServices.map(s => `
+          <div class="checkout-item-row">
+            <div style="flex:1; min-width:0;">
+              <div class="checkout-item-title">${s.name}</div>
+              <div style="display:flex; align-items:center; gap:8px; margin-top:2px;">
+                <span class="duration-badge" style="font-size:0.7rem; padding:2px 7px;">${s.durationMinutes} min</span>
+                <span style="font-size:0.8rem; font-weight:700; color:#15803d;">R$ ${(Number(s.price) || 0).toFixed(2)}</span>
+              </div>
+            </div>
+            <button type="button" class="checkout-item-remove-btn" onclick="removeServiceFromCheckout('${s.id}')" title="Remover este serviço">
+              <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+          </div>
+        `).join('');
+      }
     }
 
     function openBookingModal(serviceId) {
-      selectedService = services.find(s => s.id === serviceId);
+      if (serviceId) {
+        const s = services.find(srv => srv.id === serviceId);
+        if (s && !selectedServices.some(sel => sel.id === s.id)) {
+          selectedServices.push(s);
+        }
+      }
+
+      if (selectedServices.length === 0) {
+        asyncAlert('Selecione ao menos um serviço para agendar.', 'Nenhum Serviço Selecionado', 'warning');
+        return;
+      }
+
       selectedSlot = null;
       document.getElementById('btnConfirmBooking').disabled = true;
       document.getElementById('selectedSlotNotice').innerText = 'Nenhum horário selecionado.';
 
-      document.getElementById('bModalTitle').innerText = selectedService.name;
-      document.getElementById('bModalDuration').innerText = `Duração total: ${selectedService.durationMinutes} minutos`;
-      document.getElementById('bookServId').value = serviceId;
+      updateCheckoutUI();
+      refreshBookingModalContent();
 
       const profSelect = document.getElementById('bookProfSelect');
-      profSelect.innerHTML = professionals.map(p => `<option value="${p.id}">${p.name} (${p.role})</option>`).join('');
+      if (profSelect && (!profSelect.value || profSelect.options.length === 0)) {
+        profSelect.innerHTML = professionals.map(p => `<option value="${p.id}">${p.name} (${p.role})</option>`).join('');
+      }
 
       updateSelectedProfCard();
       document.getElementById('bookingModal').classList.add('open');
@@ -507,12 +1210,15 @@
       document.getElementById('btnConfirmBooking').disabled = true;
       document.getElementById('selectedSlotNotice').innerText = 'Nenhum horário selecionado.';
 
-      if (!profId || !date || !selectedService) return;
+      if (!profId || !date || selectedServices.length === 0) return;
+
+      const totalDuration = selectedServices.reduce((sum, s) => sum + (Number(s.durationMinutes) || 0), 0);
+      const firstServId = selectedServices[0].id;
 
       container.innerHTML = '<div style="padding:20px; text-align:center; color:var(--muted);">Buscando horários na agenda...</div>';
 
       try {
-        const res = await fetch(`/api/appointments/availability?date=${date}&professionalId=${profId}&serviceId=${selectedService.id}`, {
+        const res = await fetch(`/api/appointments/availability?date=${date}&professionalId=${profId}&serviceId=${firstServId}&durationMinutes=${totalDuration}`, {
           headers: { 'x-tenant-id': currentTenantId }
         });
         const data = await res.json();
@@ -525,7 +1231,7 @@
               <div style="margin-bottom:8px; color:var(--muted);">
                 <svg width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
               </div>
-              <strong style="color:var(--ink); font-size:0.95rem;">Não há mais horários disponíveis para este dia.</strong>
+              <strong style="color:var(--ink); font-size:0.95rem;">Não há horários contínuos suficientes (${formatDuration(totalDuration)}) para este dia.</strong>
               <div style="font-size:0.82rem; margin-top:4px;">Por favor selecione outra data acima ou outro profissional.</div>
             </div>
           `;
@@ -551,10 +1257,13 @@
       element.classList.add('selected');
       selectedSlot = { time, endTime };
 
+      const totalDuration = selectedServices.reduce((sum, s) => sum + (Number(s.durationMinutes) || 0), 0);
+      const durLabel = formatDuration(totalDuration);
+
       document.getElementById('selectedSlotNotice').innerHTML = `
         <span style="display:inline-flex; align-items:center; gap:6px; color:#15803d; font-weight:600;">
           <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"></polyline></svg>
-          Horário escolhido: <strong>${time} às ${endTime}</strong> (${selectedService.durationMinutes} min)
+          Horário escolhido: <strong>${time} às ${endTime}</strong> (${durLabel})
         </span>
       `;
       document.getElementById('btnConfirmBooking').disabled = false;
@@ -611,8 +1320,8 @@
       const box = document.getElementById('depositNoticeBox');
       const confirmBtn = document.getElementById('btnConfirmBooking');
 
-      if (!prof || !prof.requireDeposit || !selectedService) {
-        box.style.display = 'none';
+      if (!prof || !prof.requireDeposit || selectedServices.length === 0) {
+        if (box) box.style.display = 'none';
         if (confirmBtn) confirmBtn.innerText = 'Confirmar Agendamento';
         return;
       }
@@ -626,13 +1335,12 @@
       if (depNameEl) depNameEl.innerText = prof.name;
       if (depRoleEl) depRoleEl.innerText = prof.role || 'Profissional';
       
-      // Se detectado cruzamento com falta/remarcação anterior, aplica a taxa de 50%
       const basePct = Number(prof.depositPercent) || 30;
       const pct = clientPenaltyActive ? clientPenaltyPct : basePct;
 
-      const total = Number(selectedService.price) || 0;
-      const depositVal = (total * pct) / 100;
-      const remainVal = Math.max(0, total - depositVal);
+      const totalPrice = selectedServices.reduce((sum, s) => sum + (Number(s.price) || 0), 0);
+      const depositVal = (totalPrice * pct) / 100;
+      const remainVal = Math.max(0, totalPrice - depositVal);
 
       const formatBRL = (val) => val.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
@@ -673,6 +1381,11 @@
     }
 
     async function confirmOnlineBooking() {
+      if (selectedServices.length === 0) {
+        await asyncAlert('Selecione ao menos um serviço para agendar.', 'Aviso', 'warning');
+        return;
+      }
+
       if (!selectedSlot) {
         await asyncAlert('Por favor selecione um horário disponível na tabela.', 'Horário não selecionado', 'warning');
         return;
@@ -688,21 +1401,30 @@
         return;
       }
 
+      const cleanDigits = phone.replace(/\D/g, '');
+      if (cleanDigits.length < 10) {
+        await asyncAlert('Por favor informe um WhatsApp válido com DDD (ex: 67 99999-9999).', 'Telefone Inválido', 'warning');
+        return;
+      }
+
       const prof = professionals.find(p => p.id === profId);
       const btn = document.getElementById('btnConfirmBooking');
       btn.disabled = true;
       btn.innerText = 'Agendando...';
 
+      const totalPrice = selectedServices.reduce((sum, s) => sum + (Number(s.price) || 0), 0);
+      const totalDuration = selectedServices.reduce((sum, s) => sum + (Number(s.durationMinutes) || 0), 0);
+      const joinedServiceNames = selectedServices.map(s => s.name).join(' + ');
+
       let depositNotes = '';
       let hasDeposit = false;
       let depositAmount = 0;
 
-      if (prof && prof.requireDeposit && selectedService) {
+      if (prof && prof.requireDeposit && selectedServices.length > 0) {
         hasDeposit = true;
         const pct = clientPenaltyActive ? clientPenaltyPct : (Number(prof.depositPercent) || 30);
-        const total = Number(selectedService.price) || 0;
-        depositAmount = (total * pct) / 100;
-        const remainVal = Math.max(0, total - depositAmount);
+        depositAmount = (totalPrice * pct) / 100;
+        const remainVal = Math.max(0, totalPrice - depositAmount);
         const tipoSinal = clientPenaltyActive ? 'Taxa Reagendamento (Reincidência)' : 'Sinal de Adiantamento';
         depositNotes = ` | ${tipoSinal} ${pct}%: R$ ${depositAmount.toFixed(2)} (${prof.pixBank || 'InfinitePay'}) - Restante no salão: R$ ${remainVal.toFixed(2)}`;
       }
@@ -718,14 +1440,21 @@
             professionalId: profId,
             clientName: name,
             clientPhone: phone,
-            serviceId: selectedService.id,
-            serviceName: selectedService.name,
-            price: selectedService.price,
+            serviceId: selectedServices[0].id,
+            serviceName: joinedServiceNames,
+            price: totalPrice,
+            durationMinutes: totalDuration,
+            servicesList: selectedServices.map(s => ({
+              id: s.id,
+              name: s.name,
+              price: Number(s.price) || 0,
+              durationMinutes: Number(s.durationMinutes) || 30
+            })),
             date: date,
             startTime: selectedSlot.time,
             endTime: selectedSlot.endTime,
             status: 'agendado',
-            notes: `Agendamento Online (${selectedService.durationMinutes} min)${depositNotes}`
+            notes: `Agendamento Online (${formatDuration(totalDuration)} - ${selectedServices.length} serviço(s): ${joinedServiceNames})${depositNotes}`
           })
         });
 
@@ -740,14 +1469,20 @@
 
         closeBookingModal();
 
+        // Reseta o carrinho após conclusão
+        selectedServices = [];
+        updateCheckoutUI();
+
         // Se houver exigência de sinal, convida o cliente a enviar o comprovante no WhatsApp da profissional
         if (hasDeposit && prof.phone) {
           const cleanProfPhone = prof.phone.replace(/\D/g, '');
           const [y, m, d] = date.split('-');
           const dateBr = `${d}/${m}/${y}`;
           const msg = `Olá, ${prof.name}! Sou ${name}.\nAcabei de realizar um agendamento online:\n\n` +
-            `• *Serviço:* ${selectedService.name}\n` +
+            `• *Serviços:* ${joinedServiceNames}\n` +
+            `• *Duração:* ${formatDuration(totalDuration)}\n` +
             `• *Data:* ${dateBr} às ${selectedSlot.time}\n` +
+            `• *Valor Total:* R$ ${totalPrice.toFixed(2)}\n` +
             `• *Sinal de Adiantamento:* R$ ${depositAmount.toFixed(2)} via ${prof.pixBank || 'InfinitePay'}\n\n` +
             `Segue em anexo o comprovante do Pix para validação do meu horário!`;
 
@@ -761,7 +1496,7 @@
             window.open(waUrl, '_blank');
           }
         } else {
-          await asyncAlert(`Agendamento confirmado com sucesso!\n\nCliente: ${name}\nProfissional: ${prof.name}\nServiço: ${selectedService.name} (${selectedService.durationMinutes} min)\nData: ${date} das ${selectedSlot.time} às ${selectedSlot.endTime}`, 'Agendado com Sucesso', 'success');
+          await asyncAlert(`Agendamento confirmado com sucesso!\n\nCliente: ${name}\nProfissional: ${prof.name}\nServiços: ${joinedServiceNames} (${formatDuration(totalDuration)})\nData: ${date} das ${selectedSlot.time} às ${selectedSlot.endTime}\nValor Total: R$ ${totalPrice.toFixed(2)}`, 'Agendado com Sucesso', 'success');
         }
       } catch (err) {
         console.error(err);

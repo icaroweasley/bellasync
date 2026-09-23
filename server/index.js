@@ -525,6 +525,82 @@ app.get('/api/public/salon/:slug', (req, res) => {
   });
 });
 
+// Endpoint público para o cliente consultar seus próprios agendamentos através do telefone
+app.get('/api/public/client-appointments', (req, res) => {
+  const db = getDb();
+  const phone = (req.query.phone || '').trim();
+  const tenantIdOrSlug = req.query.tenantId || req.query.slug || req.headers['x-tenant-id'];
+
+  const cleanPhone = phone.replace(/\D/g, '');
+  if (!cleanPhone || cleanPhone.length < 10) {
+    return res.status(400).json({ error: 'Por favor, informe um número de telefone/WhatsApp válido com DDD (mínimo de 10 dígitos).' });
+  }
+
+  let tenant = null;
+  if (tenantIdOrSlug) {
+    tenant = (db.tenants || []).find(t => t.id === tenantIdOrSlug || t.slug === tenantIdOrSlug);
+  }
+  if (!tenant) {
+    tenant = db.tenants[0];
+  }
+
+  const rawSearch8 = cleanPhone.slice(-8);
+  const rawSearch9 = cleanPhone.slice(-9);
+
+  const matchedAppointments = (db.appointments || []).filter(a => {
+    if (a.tenantId !== tenant.id) return false;
+    if (a.status === 'indisponivel') return false; // Bloqueios de horário internos não são agendamentos de clientes
+
+    const aPhoneClean = (a.clientPhone || '').replace(/\D/g, '');
+    if (!aPhoneClean) return false;
+
+    return aPhoneClean.includes(rawSearch8) || aPhoneClean.includes(rawSearch9);
+  });
+
+  // Ordena por data decrescente e horário decrescente
+  matchedAppointments.sort((a, b) => {
+    const compDate = (b.date || '').localeCompare(a.date || '');
+    if (compDate !== 0) return compDate;
+    return (b.startTime || '').localeCompare(a.startTime || '');
+  });
+
+  // Encontra nome do cliente mais recente para saudação
+  const firstFound = matchedAppointments.find(a => a.clientName);
+  const clientName = firstFound ? firstFound.clientName : '';
+
+  const results = matchedAppointments.map(app => {
+    const prof = (db.professionals || []).find(p => p.id === app.professionalId);
+    return {
+      id: app.id,
+      serviceName: app.serviceName || 'Atendimento Geral',
+      servicesList: Array.isArray(app.servicesList) ? app.servicesList : [],
+      date: app.date,
+      startTime: app.startTime,
+      endTime: app.endTime,
+      price: Number(app.price) || 0,
+      status: app.status || 'agendado',
+      notes: app.notes || '',
+      professional: {
+        id: prof ? prof.id : app.professionalId,
+        name: prof ? prof.name : (app.professionalName || 'Profissional'),
+        role: prof ? prof.role : 'Especialista',
+        avatar: prof ? (prof.avatar || getButterflyAvatar(prof.name)) : getButterflyAvatar('P'),
+        phone: prof ? prof.phone : ''
+      }
+    };
+  });
+
+  res.json({
+    phone: cleanPhone,
+    clientName,
+    appointments: results,
+    salon: {
+      name: tenant.name,
+      phone: tenant.phone
+    }
+  });
+});
+
 // -------------------------------------------------------------
 // ASSINATURAS (SAAS) & MERCADO PAGO
 // -------------------------------------------------------------
@@ -1284,9 +1360,11 @@ app.get('/api/appointments/availability', (req, res) => {
 
   const tenant = (db.tenants || []).find(t => t.id === tenantId) || db.tenants[0];
 
-  // Duração do serviço solicitado (padrão 30 min se não fornecido)
+  // Duração do serviço solicitado ou soma de múltiplos serviços (padrão 30 min se não fornecido)
   let serviceDuration = 30;
-  if (serviceId) {
+  if (req.query.durationMinutes) {
+    serviceDuration = Number(req.query.durationMinutes) || 30;
+  } else if (serviceId) {
     const serv = (db.services || []).find(s => s.id === serviceId && s.tenantId === tenantId);
     if (serv && serv.durationMinutes) {
       serviceDuration = Number(serv.durationMinutes);
@@ -1404,10 +1482,10 @@ app.post('/api/appointments', (req, res) => {
   const { professionalId, clientId, clientName, clientPhone, serviceId, serviceName, date, startTime, notes, status } = req.body;
 
   let price = Number(req.body.price) || 0;
-  let duration = 30;
+  let duration = Number(req.body.durationMinutes) || 30;
 
-  // Busca serviço para validar duração e preço exatos
-  if (serviceId) {
+  // Busca serviço para validar duração e preço exatos se não passados
+  if (serviceId && !req.body.durationMinutes) {
     const serv = (db.services || []).find(s => s.id === serviceId && s.tenantId === tenantId);
     if (serv) {
       duration = Number(serv.durationMinutes) || 30;
@@ -1440,6 +1518,7 @@ app.post('/api/appointments', (req, res) => {
     clientPhone: clientPhone || '',
     serviceId: serviceId || null,
     serviceName: serviceName || 'Atendimento Geral',
+    servicesList: Array.isArray(req.body.servicesList) ? req.body.servicesList : [],
     date,
     startTime,
     endTime,
