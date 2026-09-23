@@ -140,6 +140,9 @@
     body.has-cart-bar {
       padding-bottom: 96px;
     }
+    .modal-backdrop {
+      z-index: 2000 !important;
+    }
     .checkout-floating-bar {
       position: fixed;
       bottom: 0;
@@ -155,6 +158,16 @@
     }
     .checkout-floating-bar.active {
       transform: translateY(0);
+    }
+    /* Ocultar barra flutuante imediatamente quando modal de checkout ou consulta estiver aberto */
+    body:has(.modal-backdrop.open) .checkout-floating-bar,
+    body:has(.modal-backdrop.active) .checkout-floating-bar,
+    body.modal-open .checkout-floating-bar,
+    .checkout-floating-bar.hidden-modal {
+      display: none !important;
+      opacity: 0 !important;
+      pointer-events: none !important;
+      transform: translateY(120%) !important;
     }
     .checkout-bar-content {
       max-width: 580px;
@@ -804,6 +817,12 @@
       const modal = document.getElementById('consultModal');
       if (!modal) return;
       modal.classList.add('open');
+      document.body.classList.add('modal-open');
+      const bar = document.getElementById('checkoutFloatingBar');
+      if (bar) {
+        bar.classList.add('hidden-modal');
+        bar.classList.remove('active');
+      }
       const input = document.getElementById('consultPhoneInput');
       if (input) {
         setTimeout(() => input.focus(), 150);
@@ -813,6 +832,14 @@
     function closeConsultModal() {
       const modal = document.getElementById('consultModal');
       if (modal) modal.classList.remove('open');
+      document.body.classList.remove('modal-open');
+      const bar = document.getElementById('checkoutFloatingBar');
+      if (bar) {
+        bar.classList.remove('hidden-modal');
+        if (selectedServices.length > 0) {
+          bar.classList.add('active');
+        }
+      }
     }
 
     async function searchClientAppointments() {
@@ -1087,15 +1114,28 @@
       const totalPrice = selectedServices.reduce((sum, s) => sum + (Number(s.price) || 0), 0);
       const totalDuration = selectedServices.reduce((sum, s) => sum + (Number(s.durationMinutes) || 0), 0);
 
+      const isAnyModalOpen = !!document.querySelector('.modal-backdrop.open, .modal-backdrop.active');
+
       if (totalCount > 0) {
         document.body.classList.add('has-cart-bar');
-        if (bar) bar.classList.add('active');
+        if (bar) {
+          if (isAnyModalOpen) {
+            bar.classList.remove('active');
+            bar.classList.add('hidden-modal');
+          } else {
+            bar.classList.remove('hidden-modal');
+            bar.classList.add('active');
+          }
+        }
         if (countNum) countNum.innerText = totalCount;
         if (totalPriceEl) totalPriceEl.innerText = totalPrice.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
         if (totalDurEl) totalDurEl.innerText = `• ${formatDuration(totalDuration)}`;
       } else {
         document.body.classList.remove('has-cart-bar');
-        if (bar) bar.classList.remove('active');
+        if (bar) {
+          bar.classList.remove('active');
+          bar.classList.remove('hidden-modal');
+        }
       }
 
       // Atualiza botões e destaques dos cards
@@ -1194,12 +1234,26 @@
 
       updateSelectedProfCard();
       document.getElementById('bookingModal').classList.add('open');
+      document.body.classList.add('modal-open');
+      const bar = document.getElementById('checkoutFloatingBar');
+      if (bar) {
+        bar.classList.add('hidden-modal');
+        bar.classList.remove('active');
+      }
       updateDepositNotice();
       fetchAvailableSlots();
     }
 
     function closeBookingModal() {
       document.getElementById('bookingModal').classList.remove('open');
+      document.body.classList.remove('modal-open');
+      const bar = document.getElementById('checkoutFloatingBar');
+      if (bar) {
+        bar.classList.remove('hidden-modal');
+        if (selectedServices.length > 0) {
+          bar.classList.add('active');
+        }
+      }
     }
 
     async function fetchAvailableSlots() {
