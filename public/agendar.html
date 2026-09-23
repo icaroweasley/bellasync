@@ -514,6 +514,64 @@
     </div>
   </div>
 
+  <!-- Modal de Edição de Agendamento pelo Cliente (Permitido apenas no dia da marcação) -->
+  <div class="modal-backdrop" id="clientEditModal" style="z-index: 2500;">
+    <div class="modal-dialog" style="max-width: 520px; max-height: calc(100vh - 36px); display: flex; flex-direction: column;">
+      <div class="modal-header" style="padding: 16px 20px;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <div style="width: 38px; height: 38px; border-radius: 12px; background: rgba(255,105,0,0.12); color: var(--orange); display: grid; place-items: center;">
+            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+          </div>
+          <div>
+            <h3 style="font-size: 1.15rem; margin: 0;">Editar Agendamento</h3>
+            <span style="font-size: 0.78rem; color: var(--muted);">Disponível no mesmo dia em que o agendamento foi feito</span>
+          </div>
+        </div>
+        <button class="btn-close-modal" onclick="closeClientEditModal()" aria-label="Fechar" style="background:none; border:none; font-size:1.5rem; cursor:pointer; color:var(--muted); line-height:1;">&times;</button>
+      </div>
+
+      <div class="modal-body" style="padding: 16px 20px; overflow-y: auto; flex: 1;">
+        <input type="hidden" id="editAppId">
+        
+        <!-- Profissional do Agendamento -->
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px; margin-bottom: 14px; display: flex; align-items: center; gap: 12px;">
+          <img id="editAppProfAvatar" src="/images/butterflies/butterfly-1.svg" alt="Profissional" style="width: 44px; height: 44px; border-radius: 50%; object-fit: cover; border: 2px solid var(--orange);">
+          <div>
+            <span style="font-size: 0.74rem; color: var(--muted); text-transform: uppercase; font-weight: 700;">Profissional</span>
+            <div id="editAppProfName" style="font-size: 0.95rem; font-weight: 700; color: var(--ink);">Profissional</div>
+          </div>
+        </div>
+
+        <!-- Seleção de Serviços -->
+        <div style="margin-bottom: 16px;">
+          <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px;">
+            <label style="font-size: 0.85rem; font-weight: 700; color: var(--ink);">Serviços Desejados</label>
+            <span id="editAppTotalSummary" style="font-size: 0.82rem; font-weight: 800; color: #15803d;">0 min • R$ 0,00</span>
+          </div>
+          <div id="editAppServicesList" style="max-height: 180px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 12px; padding: 6px 10px; background: #fafafa;"></div>
+        </div>
+
+        <!-- Data do Atendimento -->
+        <div class="form-group" style="margin-bottom: 14px;">
+          <label style="font-size: 0.85rem; font-weight: 700; color: var(--ink); display: block; margin-bottom: 4px;">Data do Atendimento</label>
+          <input type="date" class="form-control" id="editAppDate" onchange="fetchEditAvailableSlots()">
+        </div>
+
+        <!-- Horários Disponíveis -->
+        <div class="form-group" style="margin-bottom: 8px;">
+          <label style="font-size: 0.85rem; font-weight: 700; color: var(--ink); display: block; margin-bottom: 4px;">Selecione o Novo Horário</label>
+          <div id="editAppSlotsContainer" class="slots-grid" style="max-height: 160px; overflow-y: auto; padding: 4px 2px; display: grid; grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)); gap: 6px;"></div>
+          <small id="editAppSlotNotice" style="display: block; font-size: 0.78rem; color: var(--muted); margin-top: 6px;">Nenhum horário selecionado.</small>
+        </div>
+      </div>
+
+      <div class="modal-footer" style="padding: 14px 20px; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 10px;">
+        <button type="button" class="btn-falcon btn-secondary" onclick="closeClientEditModal()">Cancelar</button>
+        <button type="button" class="btn-falcon btn-primary" id="btnConfirmEditApp" onclick="saveClientAppointmentEdit()" style="padding: 9px 18px; font-weight: 700;">Salvar Alterações</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Modal Interativo de Agendamento com Grade de Disponibilidade -->
   <div class="modal-backdrop" id="bookingModal">
     <div class="modal-dialog" style="max-width: 520px; max-height: calc(100vh - 36px); display: flex; flex-direction: column;">
@@ -912,6 +970,12 @@
       }
     }
 
+    let lastSearchedPhone = '';
+    let lastConsultAppointments = [];
+    let currentEditingApp = null;
+    let editSelectedServiceIds = [];
+    let editSelectedSlot = null;
+
     async function searchClientAppointments() {
       const input = document.getElementById('consultPhoneInput');
       const errorBox = document.getElementById('consultPhoneError');
@@ -951,6 +1015,8 @@
 
         const data = await res.json();
         const appointments = data.appointments || [];
+        lastSearchedPhone = rawDigits;
+        lastConsultAppointments = appointments;
 
         if (appointments.length === 0) {
           resultsBox.innerHTML = `
@@ -995,6 +1061,38 @@
           const contactWaText = encodeURIComponent(`Olá, ${profName}! Estou consultando meu agendamento de "${app.serviceName}" para ${formatPtBrDate(app.date)} às ${app.startTime}.`);
           const contactUrl = profPhone ? `https://wa.me/55${profPhone}?text=${contactWaText}` : '';
 
+          let policyHtml = '';
+          let clientActionsHtml = '';
+
+          if (app.status === 'agendado') {
+            if (app.canEditOnline) {
+              policyHtml = `
+                <div style="margin: 8px 0; padding: 6px 10px; background: rgba(34, 197, 94, 0.08); border: 1px solid rgba(34, 197, 94, 0.25); border-radius: 8px; font-size: 0.74rem; color: #15803d; font-weight: 600; display: flex; align-items: center; gap: 6px;">
+                  <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                  <span>Agendado hoje • Alterações e cancelamento online liberados</span>
+                </div>
+              `;
+              clientActionsHtml = `
+                <div style="display: flex; gap: 8px; justify-content: flex-end; margin-top: 10px; flex-wrap: wrap;">
+                  <button type="button" class="btn-falcon btn-secondary" onclick="openClientEditModal('${app.id}')" style="font-size: 0.76rem; padding: 6px 12px; font-weight: 700; border-radius: 8px; display: inline-flex; align-items: center; gap: 5px;">
+                    <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                    Editar Serviços / Horário
+                  </button>
+                  <button type="button" class="btn-falcon" onclick="cancelClientAppointment('${app.id}')" style="font-size: 0.76rem; padding: 6px 12px; font-weight: 700; border-radius: 8px; display: inline-flex; align-items: center; gap: 5px; background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; cursor: pointer;">
+                    <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    Cancelar Horário
+                  </button>
+                </div>
+              `;
+            } else {
+              policyHtml = `
+                <div style="margin: 8px 0; padding: 6px 10px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 0.74rem; color: #64748b; line-height: 1.35;">
+                  🔒 <strong>Alterações online bloqueadas:</strong> Permitidas apenas no dia da marcação (${formatPtBrDate(app.bookingDate)}). Para reagendar ou cancelar este horário, fale conosco pelo WhatsApp abaixo.
+                </div>
+              `;
+            }
+          }
+
           return `
             <div class="consult-app-card status-${app.status || 'agendado'}">
               <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 8px;">
@@ -1020,14 +1118,17 @@
                 </div>
               </div>
 
-              ${contactUrl ? `
-                <div style="text-align: right; margin-top: 6px;">
-                  <a href="${contactUrl}" target="_blank" style="display: inline-flex; align-items: center; gap: 5px; font-size: 0.78rem; font-weight: 600; color: #15803d; text-decoration: none; padding: 5px 10px; border-radius: 6px; background: rgba(34, 197, 94, 0.1);">
+              ${policyHtml}
+
+              <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 8px; flex-wrap: wrap;">
+                ${contactUrl ? `
+                  <a href="${contactUrl}" target="_blank" style="display: inline-flex; align-items: center; gap: 5px; font-size: 0.78rem; font-weight: 600; color: #15803d; text-decoration: none; padding: 6px 12px; border-radius: 8px; background: rgba(34, 197, 94, 0.1);">
                     <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24"><path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.007c.106.005.249-.04.39.298.144.347.491 1.2.534 1.287.043.087.072.188.014.304-.058.116-.087.188-.173.289l-.26.304c-.087.086-.177.18-.076.353.101.173.449.741.963 1.201.662.591 1.221.774 1.394.86.173.086.274.072.376-.043.101-.116.433-.506.549-.679.116-.173.231-.145.39-.087s1.011.477 1.184.564.289.13.332.202c.043.073.043.419-.101.824z"/></svg>
                     Falar no WhatsApp
                   </a>
-                </div>
-              ` : ''}
+                ` : '<div></div>'}
+                ${clientActionsHtml}
+              </div>
             </div>
           `;
         }
@@ -1066,6 +1167,275 @@
               ${err.message || 'Erro ao consultar agendamentos. Tente novamente.'}
             </div>
           `;
+        }
+      }
+    }
+
+    // ==========================================
+    // CANCELAMENTO E EDIÇÃO DE AGENDAMENTO (CLIENTE)
+    // ==========================================
+    async function cancelClientAppointment(appId) {
+      const app = lastConsultAppointments.find(a => a.id === appId);
+      if (!app) return;
+
+      const confirmed = await asyncConfirm(
+        `Tem certeza que deseja cancelar seu agendamento de "${app.serviceName}" para o dia ${formatPtBrDate(app.date)} às ${app.startTime}?`,
+        'Cancelar Agendamento',
+        { isDanger: true }
+      );
+      if (!confirmed) return;
+
+      try {
+        const res = await fetch(`/api/public/client-appointments/${appId}/cancel`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone: lastSearchedPhone, tenantId: currentTenantId })
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.error || 'Erro ao cancelar agendamento');
+        }
+
+        await asyncAlert('Seu agendamento foi cancelado com sucesso.', 'Agendamento Cancelado', 'success');
+        await searchClientAppointments();
+      } catch (err) {
+        await asyncAlert(err.message || 'Erro ao cancelar horário.', 'Erro', 'error');
+      }
+    }
+
+    function openClientEditModal(appId) {
+      const app = lastConsultAppointments.find(a => a.id === appId);
+      if (!app) return;
+
+      currentEditingApp = app;
+      const modal = document.getElementById('clientEditModal');
+      if (!modal) return;
+
+      document.getElementById('editAppId').value = app.id;
+      
+      const avatarEl = document.getElementById('editAppProfAvatar');
+      const nameEl = document.getElementById('editAppProfName');
+      if (avatarEl) avatarEl.src = app.professional?.avatar || getButterflyAvatar(app.professional?.name || 'P');
+      if (nameEl) nameEl.innerText = `${app.professional?.name || 'Profissional'}${app.professional?.role ? ' (' + app.professional.role + ')' : ''}`;
+
+      // Configura data
+      const dateInput = document.getElementById('editAppDate');
+      if (dateInput) {
+        dateInput.value = app.date;
+        dateInput.min = new Date().toISOString().split('T')[0];
+        const maxDays = salonSettings.advanceBookingDays || 60;
+        const maxDate = new Date();
+        maxDate.setDate(maxDate.getDate() + maxDays);
+        dateInput.max = maxDate.toISOString().split('T')[0];
+      }
+
+      // Serviços selecionados inicialmente
+      if (Array.isArray(app.servicesList) && app.servicesList.length > 0) {
+        editSelectedServiceIds = app.servicesList.map(s => s.id);
+      } else if (app.serviceId) {
+        editSelectedServiceIds = [app.serviceId];
+      } else {
+        editSelectedServiceIds = [];
+      }
+
+      editSelectedSlot = app.startTime;
+
+      renderEditServicesChecklist();
+      fetchEditAvailableSlots();
+
+      modal.classList.add('open');
+      modal.classList.add('active');
+      document.body.classList.add('modal-open');
+    }
+
+    function closeClientEditModal() {
+      const modal = document.getElementById('clientEditModal');
+      if (modal) {
+        modal.classList.remove('open');
+        modal.classList.remove('active');
+      }
+      currentEditingApp = null;
+      const consultModal = document.getElementById('consultModal');
+      if (!consultModal || !consultModal.classList.contains('open')) {
+        document.body.classList.remove('modal-open');
+      }
+    }
+
+    function renderEditServicesChecklist() {
+      const container = document.getElementById('editAppServicesList');
+      if (!container) return;
+
+      container.innerHTML = services.map(s => {
+        const isChecked = editSelectedServiceIds.includes(s.id);
+        return `
+          <label style="display: flex; align-items: center; justify-content: space-between; padding: 7px 8px; border-radius: 8px; margin-bottom: 4px; background: ${isChecked ? '#fff7ed' : '#ffffff'}; border: 1px solid ${isChecked ? 'var(--orange)' : '#e2e8f0'}; cursor: pointer;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <input type="checkbox" value="${s.id}" ${isChecked ? 'checked' : ''} onchange="toggleEditService('${s.id}')" style="accent-color: var(--orange); width: 16px; height: 16px;">
+              <span style="font-size: 0.84rem; font-weight: 600; color: var(--ink);">${s.name}</span>
+            </div>
+            <div style="text-align: right;">
+              <span style="font-size: 0.78rem; font-weight: 700; color: #15803d;">R$ ${(Number(s.price) || 0).toFixed(2)}</span>
+              <span style="font-size: 0.72rem; color: var(--muted); margin-left: 4px;">(${s.durationMinutes}m)</span>
+            </div>
+          </label>
+        `;
+      }).join('');
+
+      updateEditServicesSummary();
+    }
+
+    function toggleEditService(serviceId) {
+      const idx = editSelectedServiceIds.indexOf(serviceId);
+      if (idx >= 0) {
+        if (editSelectedServiceIds.length === 1) {
+          asyncAlert('O agendamento precisa ter ao menos um serviço.', 'Aviso', 'warning');
+          renderEditServicesChecklist();
+          return;
+        }
+        editSelectedServiceIds.splice(idx, 1);
+      } else {
+        editSelectedServiceIds.push(serviceId);
+      }
+      renderEditServicesChecklist();
+      fetchEditAvailableSlots();
+    }
+
+    function updateEditServicesSummary() {
+      const summaryEl = document.getElementById('editAppTotalSummary');
+      if (!summaryEl) return;
+      const selected = services.filter(s => editSelectedServiceIds.includes(s.id));
+      const totalDur = selected.reduce((sum, s) => sum + (Number(s.durationMinutes) || 0), 0);
+      const totalVal = selected.reduce((sum, s) => sum + (Number(s.price) || 0), 0);
+      summaryEl.innerText = `${formatDuration(totalDur)} • ${totalVal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`;
+    }
+
+    async function fetchEditAvailableSlots() {
+      if (!currentEditingApp) return;
+      const date = document.getElementById('editAppDate').value;
+      const container = document.getElementById('editAppSlotsContainer');
+      const notice = document.getElementById('editAppSlotNotice');
+      const confirmBtn = document.getElementById('btnConfirmEditApp');
+
+      if (!container || !date) return;
+
+      const selected = services.filter(s => editSelectedServiceIds.includes(s.id));
+      const totalDuration = selected.reduce((sum, s) => sum + (Number(s.durationMinutes) || 0), 30);
+      const firstServId = selected[0] ? selected[0].id : '';
+
+      container.innerHTML = '<div style="padding: 10px; color: var(--muted); font-size: 0.8rem; text-align: center; grid-column: 1 / -1;">Carregando horários...</div>';
+
+      try {
+        const res = await fetch(`/api/appointments/availability?date=${date}&professionalId=${currentEditingApp.professional.id}&serviceId=${firstServId}&durationMinutes=${totalDuration}`, {
+          headers: { 'x-tenant-id': currentTenantId }
+        });
+        const data = await res.json();
+        const slots = data.slots || [];
+
+        if (slots.length === 0) {
+          container.innerHTML = '<div style="padding: 12px; color: var(--muted); font-size: 0.82rem; text-align: center; grid-column: 1 / -1;">Nenhum horário livre para esta data.</div>';
+          if (confirmBtn) confirmBtn.disabled = true;
+          return;
+        }
+
+        // Se for na mesma data do agendamento atual, o horário atual do agendamento é mantido como opção disponível
+        if (date === currentEditingApp.date && !slots.includes(currentEditingApp.startTime)) {
+          slots.push(currentEditingApp.startTime);
+          slots.sort();
+        }
+
+        container.innerHTML = slots.map(time => {
+          const isSelected = editSelectedSlot === time;
+          return `
+            <button type="button" class="slot-btn ${isSelected ? 'selected' : ''}" onclick="selectEditSlot('${time}')" style="padding: 6px 10px; font-size: 0.82rem; font-weight: 600; border-radius: 8px;">
+              ${time}
+            </button>
+          `;
+        }).join('');
+
+        if (editSelectedSlot && slots.includes(editSelectedSlot)) {
+          if (notice) notice.innerText = `Horário selecionado: ${editSelectedSlot}`;
+          if (confirmBtn) confirmBtn.disabled = false;
+        } else {
+          editSelectedSlot = null;
+          if (notice) notice.innerText = 'Selecione um dos horários acima.';
+          if (confirmBtn) confirmBtn.disabled = true;
+        }
+      } catch (err) {
+        container.innerHTML = '<div style="padding: 10px; color: #dc2626; font-size: 0.8rem; grid-column: 1 / -1;">Erro ao carregar horários.</div>';
+      }
+    }
+
+    function selectEditSlot(time) {
+      editSelectedSlot = time;
+      const container = document.getElementById('editAppSlotsContainer');
+      if (container) {
+        container.querySelectorAll('.slot-btn').forEach(btn => {
+          btn.classList.toggle('selected', btn.innerText.trim() === time);
+        });
+      }
+      const notice = document.getElementById('editAppSlotNotice');
+      if (notice) notice.innerText = `Horário selecionado: ${time}`;
+      const confirmBtn = document.getElementById('btnConfirmEditApp');
+      if (confirmBtn) confirmBtn.disabled = false;
+    }
+
+    async function saveClientAppointmentEdit() {
+      if (!currentEditingApp || !editSelectedSlot) {
+        asyncAlert('Por favor, selecione um horário para o agendamento.', 'Aviso', 'warning');
+        return;
+      }
+
+      const selected = services.filter(s => editSelectedServiceIds.includes(s.id));
+      if (selected.length === 0) {
+        asyncAlert('Selecione ao menos um serviço.', 'Aviso', 'warning');
+        return;
+      }
+
+      const date = document.getElementById('editAppDate').value;
+      const totalDuration = selected.reduce((sum, s) => sum + (Number(s.durationMinutes) || 0), 0);
+      const totalPrice = selected.reduce((sum, s) => sum + (Number(s.price) || 0), 0);
+      const firstServ = selected[0];
+      const serviceName = selected.length === 1 ? firstServ.name : `${selected.length} Serviços (${selected.map(s => s.name).join(' + ')})`;
+
+      const confirmBtn = document.getElementById('btnConfirmEditApp');
+      if (confirmBtn) {
+        confirmBtn.disabled = true;
+        confirmBtn.innerText = 'Salvando...';
+      }
+
+      try {
+        const res = await fetch(`/api/public/client-appointments/${currentEditingApp.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            phone: lastSearchedPhone,
+            tenantId: currentTenantId,
+            professionalId: currentEditingApp.professional.id,
+            serviceId: firstServ.id,
+            serviceName,
+            servicesList: selected,
+            durationMinutes: totalDuration,
+            price: totalPrice,
+            date,
+            startTime: editSelectedSlot
+          })
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.error || 'Erro ao atualizar agendamento');
+        }
+
+        await asyncAlert('Seu agendamento foi alterado com sucesso!', 'Sucesso', 'success');
+        closeClientEditModal();
+        await searchClientAppointments();
+      } catch (err) {
+        await asyncAlert(err.message || 'Erro ao salvar alterações.', 'Aviso', 'warning');
+      } finally {
+        if (confirmBtn) {
+          confirmBtn.disabled = false;
+          confirmBtn.innerText = 'Salvar Alterações';
         }
       }
     }

@@ -525,6 +525,28 @@ app.get('/api/public/salon/:slug', (req, res) => {
   });
 });
 
+// Helper para data atual de hoje no fuso brasileiro (YYYY-MM-DD)
+function getTodayDateStr() {
+  return new Intl.DateTimeFormat('fr-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date());
+}
+
+// Helper para obter a data de criação/marcação do agendamento (YYYY-MM-DD)
+function getAppBookingDate(app) {
+  if (app.bookingDate) return app.bookingDate;
+  if (app.createdAt) {
+    try {
+      return new Intl.DateTimeFormat('fr-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date(app.createdAt));
+    } catch (e) {}
+  }
+  const ts = app.id && app.id.startsWith('app_') ? Number(app.id.replace('app_', '')) : NaN;
+  if (!isNaN(ts) && ts > 1000000000000) {
+    try {
+      return new Intl.DateTimeFormat('fr-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date(ts));
+    } catch (e) {}
+  }
+  return app.date || null;
+}
+
 // Endpoint público para o cliente consultar seus próprios agendamentos através do telefone
 app.get('/api/public/client-appointments', (req, res) => {
   const db = getDb();
@@ -568,18 +590,29 @@ app.get('/api/public/client-appointments', (req, res) => {
   const firstFound = matchedAppointments.find(a => a.clientName);
   const clientName = firstFound ? firstFound.clientName : '';
 
+  const todayStr = getTodayDateStr();
+
   const results = matchedAppointments.map(app => {
     const prof = (db.professionals || []).find(p => p.id === app.professionalId);
+    const bDate = getAppBookingDate(app);
+    // REGRA DE NEGÓCIO: O cliente só pode editar/cancelar no mesmo dia em que fez o agendamento
+    const canEditOnline = (bDate === todayStr) && (app.status === 'agendado');
+
     return {
       id: app.id,
+      professionalId: app.professionalId,
+      serviceId: app.serviceId,
       serviceName: app.serviceName || 'Atendimento Geral',
       servicesList: Array.isArray(app.servicesList) ? app.servicesList : [],
+      durationMinutes: Number(app.durationMinutes) || (app.startTime && app.endTime ? (timeToMinutes(app.endTime) - timeToMinutes(app.startTime)) : 30),
       date: app.date,
       startTime: app.startTime,
       endTime: app.endTime,
       price: Number(app.price) || 0,
       status: app.status || 'agendado',
       notes: app.notes || '',
+      bookingDate: bDate,
+      canEditOnline,
       professional: {
         id: prof ? prof.id : app.professionalId,
         name: prof ? prof.name : (app.professionalName || 'Profissional'),
@@ -600,6 +633,150 @@ app.get('/api/public/client-appointments', (req, res) => {
     }
   });
 });
+
+// Endpoint público para o cliente editar o próprio agendamento (permitido APENAS no dia em que o agendamento foi realizado)
+app.put('/api/public/client-appointments/:id', (req, res) => {
+  const db = getDb();
+  const phone = (req.body.phone || req.query.phone || '').trim();
+
+  const cleanPhone = phone.replace(/\D/g, '');
+  if (!cleanPhone || cleanPhone.length < 10) {
+    return res.status(400).json({ error: 'Por favor, informe seu telefone com DDD para confirmar a alteração.' });
+  }
+
+  const app = (db.appointments || []).find(a => a.id === req.params.id);
+  if (!app) {
+    return res.status(404).json({ error: 'Agendamento não encontrado.' });
+  }
+
+  // Validação de segurança por telefone (compara os últimos 8-9 dígitos)
+  const aPhoneClean = (app.clientPhone || '').replace(/\D/g, '');
+  const rawSearch8 = cleanPhone.slice(-8);
+  const rawSearch9 = cleanPhone.slice(-9);
+  if (!aPhoneClean || (!aPhoneClean.includes(rawSearch8) && !aPhoneClean.includes(rawSearch9))) {
+    return res.status(403).json({ error: 'Número de telefone não confere com o titular deste agendamento.' });
+  }
+
+  if (app.status !== 'agendado') {
+    return res.status(400).json({ error: `Não é possível alterar um agendamento com status "${app.status}".` });
+  }
+
+  // REGRA DE NEGÓCIO: Permitido APENAS no dia em que o agendamento foi realizado
+  const todayStr = getTodayDateStr();
+  const bDate = getAppBookingDate(app);
+  if (bDate !== todayStr) {
+    return res.status(403).json({
+      error: 'Alterações e cancelamentos online são permitidos apenas no mesmo dia em que o agendamento foi realizado. Para alterar ou cancelar este horário, por favor entre em contato diretamente pelo WhatsApp do salão.'
+    });
+  }
+
+  const { date, startTime, serviceId, serviceName, servicesList } = req.body;
+  const newDate = date || app.date;
+  const newStart = startTime || app.startTime;
+  const newProfId = req.body.professionalId || app.professionalId;
+
+  let newDuration = Number(req.body.durationMinutes) || 30;
+  let newPrice = Number(req.body.price) || 0;
+
+  if (Array.isArray(servicesList) && servicesList.length > 0) {
+    newPrice = servicesList.reduce((sum, s) => sum + (Number(s.price) || 0), 0);
+    newDuration = servicesList.reduce((sum, s) => sum + (Number(s.durationMinutes) || 30), 0);
+  } else if (serviceId) {
+    const srv = (db.services || []).find(s => s.id === serviceId);
+    if (srv) {
+      newPrice = Number(srv.price) || 0;
+      newDuration = Number(srv.durationMinutes) || 30;
+    }
+  } else {
+    newDuration = app.durationMinutes || (app.startTime && app.endTime ? (timeToMinutes(app.endTime) - timeToMinutes(app.startTime)) : 30);
+    newPrice = Number(app.price) || 0;
+  }
+
+  const startMin = timeToMinutes(newStart);
+  const endMin = req.body.endTime ? timeToMinutes(req.body.endTime) : (startMin + newDuration);
+  const newEndTime = minutesToTime(endMin);
+
+  // Validação de conflito de agenda (desconsiderando o próprio agendamento atual)
+  const hasConflict = (db.appointments || []).some(a => {
+    if (a.id === app.id) return false;
+    if (a.tenantId !== app.tenantId || a.professionalId !== newProfId || a.date !== newDate || a.status === 'cancelado') return false;
+    const aStart = timeToMinutes(a.startTime);
+    const aEnd = timeToMinutes(a.endTime);
+    return Math.max(startMin, aStart) < Math.min(endMin, aEnd);
+  });
+
+  if (hasConflict) {
+    return res.status(409).json({ error: 'O novo horário escolhido está indisponível ou em conflito com outro agendamento. Por favor escolha outro horário.' });
+  }
+
+  // Atualiza os dados
+  if (serviceId) app.serviceId = serviceId;
+  if (serviceName) app.serviceName = serviceName;
+  if (Array.isArray(servicesList)) app.servicesList = servicesList;
+  app.professionalId = newProfId;
+  app.date = newDate;
+  app.startTime = newStart;
+  app.endTime = newEndTime;
+  app.price = newPrice;
+  app.durationMinutes = newDuration;
+  app.updatedAt = new Date().toISOString();
+
+  saveDb(db);
+
+  res.json({
+    message: 'Agendamento atualizado com sucesso!',
+    appointment: app
+  });
+});
+
+// Endpoint público para o cliente cancelar o próprio agendamento (permitido APENAS no dia em que o agendamento foi realizado)
+const handleClientCancelAppointment = (req, res) => {
+  const db = getDb();
+  const phone = (req.body.phone || req.query.phone || '').trim();
+
+  const cleanPhone = phone.replace(/\D/g, '');
+  if (!cleanPhone || cleanPhone.length < 10) {
+    return res.status(400).json({ error: 'Por favor, informe seu telefone com DDD para confirmar o cancelamento.' });
+  }
+
+  const app = (db.appointments || []).find(a => a.id === req.params.id);
+  if (!app) {
+    return res.status(404).json({ error: 'Agendamento não encontrado.' });
+  }
+
+  // Validação de segurança por telefone
+  const aPhoneClean = (app.clientPhone || '').replace(/\D/g, '');
+  const rawSearch8 = cleanPhone.slice(-8);
+  const rawSearch9 = cleanPhone.slice(-9);
+  if (!aPhoneClean || (!aPhoneClean.includes(rawSearch8) && !aPhoneClean.includes(rawSearch9))) {
+    return res.status(403).json({ error: 'Número de telefone não confere com o titular deste agendamento.' });
+  }
+
+  if (app.status === 'cancelado') {
+    return res.json({ message: 'Agendamento já estava cancelado.', appointment: app });
+  }
+
+  // REGRA DE NEGÓCIO: Permitido APENAS no dia em que o agendamento foi realizado
+  const todayStr = getTodayDateStr();
+  const bDate = getAppBookingDate(app);
+  if (bDate !== todayStr) {
+    return res.status(403).json({
+      error: 'Alterações e cancelamentos online são permitidos apenas no mesmo dia em que o agendamento foi realizado. Para alterar ou cancelar este horário, por favor entre em contato diretamente pelo WhatsApp do salão.'
+    });
+  }
+
+  app.status = 'cancelado';
+  app.cancelledAt = new Date().toISOString();
+  saveDb(db);
+
+  res.json({
+    message: 'Agendamento cancelado com sucesso.',
+    appointment: app
+  });
+};
+
+app.post('/api/public/client-appointments/:id/cancel', handleClientCancelAppointment);
+app.delete('/api/public/client-appointments/:id', handleClientCancelAppointment);
 
 // -------------------------------------------------------------
 // ASSINATURAS (SAAS) & MERCADO PAGO
@@ -1523,8 +1700,11 @@ app.post('/api/appointments', (req, res) => {
     startTime,
     endTime,
     price,
+    durationMinutes: duration,
     status: status || 'agendado', // agendado, indisponivel, concluido, cancelado
-    notes: notes || ''
+    notes: notes || '',
+    createdAt: new Date().toISOString(),
+    bookingDate: getTodayDateStr()
   };
 
   db.appointments.push(newApp);

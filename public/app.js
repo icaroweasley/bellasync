@@ -3973,9 +3973,10 @@ window.openNewAppointmentModal = function(defaultTime = "10:00") {
       <label>Profissional</label>
       <select class="form-control" id="modalAppProf" ${(!isManager && currentUser?.professionalId) ? 'disabled style="background:#f1f5f9; cursor:not-allowed;"' : ''}>${profOptions}</select>
     </div>
-    <div class="form-group">
+    <div class="form-group client-autocomplete-wrapper">
       <label>Nome do Cliente</label>
-      <input type="text" class="form-control" id="modalAppName" placeholder="Ex: Lucas Ferreira">
+      <input type="text" class="form-control" id="modalAppName" placeholder="Comece a digitar o nome do cliente..." autocomplete="off">
+      <div id="modalAppClientSuggestions" class="client-autocomplete-dropdown"></div>
     </div>
     <div class="form-group">
       <label>WhatsApp do Cliente</label>
@@ -3999,7 +4000,9 @@ window.openNewAppointmentModal = function(defaultTime = "10:00") {
 
   openModal('Novo Agendamento', html, async () => {
     const profId = document.getElementById('modalAppProf').value;
-    const clientName = document.getElementById('modalAppName').value.trim();
+    const nameInput = document.getElementById('modalAppName');
+    const clientName = nameInput.value.trim();
+    const clientId = nameInput.dataset.selectedClientId || null;
     const clientPhone = document.getElementById('modalAppPhone').value.trim();
     const serviceSelect = document.getElementById('modalAppService');
     const serviceId = serviceSelect.value;
@@ -4019,6 +4022,7 @@ window.openNewAppointmentModal = function(defaultTime = "10:00") {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         professionalId: profId,
+        clientId,
         clientName,
         clientPhone,
         serviceId,
@@ -4042,8 +4046,138 @@ window.openNewAppointmentModal = function(defaultTime = "10:00") {
     renderView('agenda');
   });
 
-  setTimeout(updateModalEndTime, 50);
+  setTimeout(() => {
+    updateModalEndTime();
+    initClientAppointmentAutocomplete();
+  }, 50);
 };
+
+function initClientAppointmentAutocomplete() {
+  const nameInput = document.getElementById('modalAppName');
+  const phoneInput = document.getElementById('modalAppPhone');
+  const suggestionsBox = document.getElementById('modalAppClientSuggestions');
+  let activeIndex = -1;
+
+  if (!nameInput || !suggestionsBox) return;
+
+  function closeDropdown() {
+    suggestionsBox.classList.remove('open');
+    suggestionsBox.innerHTML = '';
+    activeIndex = -1;
+  }
+
+  function selectClient(client) {
+    if (!client) return;
+    nameInput.value = client.name;
+    nameInput.dataset.selectedClientId = client.id;
+    if (phoneInput && client.phone) {
+      phoneInput.value = client.phone;
+    }
+    closeDropdown();
+  }
+
+  function renderSuggestions(matches) {
+    if (!matches || matches.length === 0) {
+      suggestionsBox.innerHTML = `
+        <div class="client-autocomplete-empty">
+          Nenhum cliente cadastrado encontrado.<br>
+          <small style="color:var(--muted)">O novo cliente será cadastrado automaticamente.</small>
+        </div>
+      `;
+      suggestionsBox.classList.add('open');
+      activeIndex = -1;
+      return;
+    }
+
+    suggestionsBox.innerHTML = matches.map((c, idx) => {
+      const initials = (c.name || 'C').split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
+      const phoneDisplay = c.phone || 'Sem telefone cadastrado';
+      return `
+        <div class="client-autocomplete-item ${idx === activeIndex ? 'active' : ''}" data-idx="${idx}">
+          <div class="client-autocomplete-avatar">${initials}</div>
+          <div class="client-autocomplete-info">
+            <div class="client-autocomplete-name">${c.name}</div>
+            <div class="client-autocomplete-phone">📱 ${phoneDisplay}</div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    suggestionsBox.classList.add('open');
+
+    const items = suggestionsBox.querySelectorAll('.client-autocomplete-item');
+    items.forEach((item, idx) => {
+      item.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        selectClient(matches[idx]);
+      });
+    });
+  }
+
+  function getFilteredClients(q) {
+    if (!q) return [];
+    const cleanQ = q.toLowerCase();
+    const digitsQ = q.replace(/\D/g, '');
+    const clients = state.clients || [];
+
+    return clients.filter(c => {
+      const nameMatch = (c.name || '').toLowerCase().includes(cleanQ);
+      const phoneMatch = digitsQ && (c.phone || '').replace(/\D/g, '').includes(digitsQ);
+      return nameMatch || phoneMatch;
+    }).slice(0, 8);
+  }
+
+  nameInput.addEventListener('input', () => {
+    delete nameInput.dataset.selectedClientId;
+    const q = nameInput.value.trim();
+    if (q.length === 0) {
+      closeDropdown();
+      return;
+    }
+    const matches = getFilteredClients(q);
+    renderSuggestions(matches);
+  });
+
+  nameInput.addEventListener('focus', () => {
+    const q = nameInput.value.trim();
+    if (q.length > 0) {
+      const matches = getFilteredClients(q);
+      renderSuggestions(matches);
+    }
+  });
+
+  nameInput.addEventListener('keydown', (e) => {
+    if (!suggestionsBox.classList.contains('open')) return;
+    const items = suggestionsBox.querySelectorAll('.client-autocomplete-item');
+    if (items.length === 0) return;
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      activeIndex = (activeIndex + 1) % items.length;
+      items.forEach((it, idx) => it.classList.toggle('active', idx === activeIndex));
+      items[activeIndex].scrollIntoView({ block: 'nearest' });
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      activeIndex = (activeIndex - 1 + items.length) % items.length;
+      items.forEach((it, idx) => it.classList.toggle('active', idx === activeIndex));
+      items[activeIndex].scrollIntoView({ block: 'nearest' });
+    } else if (e.key === 'Enter') {
+      if (activeIndex >= 0 && activeIndex < items.length) {
+        e.preventDefault();
+        items[activeIndex].click();
+      }
+    } else if (e.key === 'Escape') {
+      closeDropdown();
+    }
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!nameInput.contains(e.target) && !suggestionsBox.contains(e.target)) {
+      closeDropdown();
+    }
+  });
+}
 
 window.openBlockTimeModal = function(defaultStart = "12:00") {
   const profOptions = state.professionals.map(p => `<option value="${p.id}" ${p.id === selectedProfessionalId ? 'selected' : ''}>${p.name} (${p.role})</option>`).join('');
