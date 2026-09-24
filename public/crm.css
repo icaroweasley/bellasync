@@ -3346,6 +3346,39 @@ input[type="checkbox"] {
   position: relative;
 }
 
+.category-dropdown-arrow-btn {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--muted, #64748b);
+  padding: 6px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  transition: all 0.15s ease;
+  z-index: 2;
+}
+
+.category-dropdown-arrow-btn:hover {
+  color: var(--orange, #f97316);
+  background: rgba(249, 115, 22, 0.08);
+}
+
+.category-dropdown-arrow-btn svg {
+  transition: transform 0.2s ease;
+}
+
+.category-autocomplete-wrapper.is-open .category-dropdown-arrow-btn svg {
+  transform: rotate(180deg);
+}
+
 .category-autocomplete-dropdown {
   position: absolute;
   top: calc(100% + 4px);

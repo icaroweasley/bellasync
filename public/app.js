@@ -4720,11 +4720,13 @@ window.initCategoryAutocomplete = function(inputId, suggestionsBoxId) {
   const box = document.getElementById(suggestionsBoxId);
   if (!input || !box) return;
 
+  const wrapper = input.closest('.category-autocomplete-wrapper');
   let activeIndex = -1;
 
   function closeDropdown() {
     box.classList.remove('open');
     box.innerHTML = '';
+    if (wrapper) wrapper.classList.remove('is-open');
     activeIndex = -1;
   }
 
@@ -4742,11 +4744,13 @@ window.initCategoryAutocomplete = function(inputId, suggestionsBoxId) {
           </div>
         `;
         box.classList.add('open');
+        if (wrapper) wrapper.classList.add('is-open');
         activeIndex = 0;
         return;
       }
       box.innerHTML = `<div class="category-autocomplete-empty">Nenhuma categoria cadastrada ainda.</div>`;
       box.classList.add('open');
+      if (wrapper) wrapper.classList.add('is-open');
       activeIndex = -1;
       return;
     }
@@ -4759,6 +4763,7 @@ window.initCategoryAutocomplete = function(inputId, suggestionsBoxId) {
     `).join('');
 
     box.classList.add('open');
+    if (wrapper) wrapper.classList.add('is-open');
   }
 
   function getFiltered(q) {
@@ -4774,6 +4779,12 @@ window.initCategoryAutocomplete = function(inputId, suggestionsBoxId) {
     render(matches, q);
   });
 
+  input.addEventListener('click', () => {
+    const q = input.value;
+    const matches = getFiltered(q);
+    render(matches, q);
+  });
+
   input.addEventListener('input', () => {
     const q = input.value;
     const matches = getFiltered(q);
@@ -4781,7 +4792,15 @@ window.initCategoryAutocomplete = function(inputId, suggestionsBoxId) {
   });
 
   input.addEventListener('keydown', (e) => {
-    if (!box.classList.contains('open')) return;
+    if (!box.classList.contains('open')) {
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        const q = input.value;
+        const matches = getFiltered(q);
+        render(matches, q);
+      }
+      return;
+    }
     const items = box.querySelectorAll('.category-autocomplete-item');
     if (items.length === 0) return;
 
@@ -4806,9 +4825,10 @@ window.initCategoryAutocomplete = function(inputId, suggestionsBoxId) {
   });
 
   document.addEventListener('click', (e) => {
-    if (!input.contains(e.target) && !box.contains(e.target)) {
-      closeDropdown();
+    if (wrapper && wrapper.contains(e.target)) {
+      return;
     }
+    closeDropdown();
   });
 };
 
@@ -4819,27 +4839,41 @@ window.selectCategoryDirectly = function(inputId, catName, suggestionsBoxId) {
   if (box) {
     box.classList.remove('open');
     box.innerHTML = '';
+    const wrapper = box.closest('.category-autocomplete-wrapper');
+    if (wrapper) wrapper.classList.remove('is-open');
   }
 };
 
-window.toggleCategoryQuickDropdown = function(inputId, suggestionsBoxId) {
+window.toggleCategoryQuickDropdown = function(inputId, suggestionsBoxId, event) {
+  const ev = event || window.event;
+  if (ev) {
+    if (ev.preventDefault) ev.preventDefault();
+    if (ev.stopPropagation) ev.stopPropagation();
+  }
   const input = document.getElementById(inputId);
   const box = document.getElementById(suggestionsBoxId);
   if (!input || !box) return;
 
+  const wrapper = box.closest('.category-autocomplete-wrapper');
+
   if (box.classList.contains('open')) {
     box.classList.remove('open');
     box.innerHTML = '';
+    if (wrapper) wrapper.classList.remove('is-open');
   } else {
-    input.focus();
     const all = getSystemCategories();
-    box.innerHTML = (all.length > 0 ? all.map((c, idx) => `
-      <div class="category-autocomplete-item" onclick="selectCategoryDirectly('${inputId}', '${c.name.replace(/'/g, "\\'")}', '${suggestionsBoxId}')">
-        <span class="category-autocomplete-item-name">${c.name}</span>
-        <span class="category-autocomplete-item-badge">${c.servicesCount} serviço${c.servicesCount === 1 ? '' : 's'}</span>
-      </div>
-    `).join('') : '<div class="category-autocomplete-empty">Nenhuma categoria cadastrada ainda.</div>');
+    if (!all || all.length === 0) {
+      box.innerHTML = '<div class="category-autocomplete-empty">Nenhuma categoria cadastrada ainda.</div>';
+    } else {
+      box.innerHTML = all.map((c, idx) => `
+        <div class="category-autocomplete-item" onclick="selectCategoryDirectly('${inputId}', '${c.name.replace(/'/g, "\\'")}', '${suggestionsBoxId}')">
+          <span class="category-autocomplete-item-name">${c.name}</span>
+          <span class="category-autocomplete-item-badge">${c.servicesCount} serviço${c.servicesCount === 1 ? '' : 's'}</span>
+        </div>
+      `).join('');
+    }
     box.classList.add('open');
+    if (wrapper) wrapper.classList.add('is-open');
   }
 };
 
@@ -4851,6 +4885,13 @@ window.selectedCategoryInPicker = '';
 
 window.openCategoryPickerModal = function(targetInputId) {
   window.activeCategoryTargetInputId = targetInputId;
+  const quickBox = document.getElementById(targetInputId + 'Suggestions');
+  if (quickBox) {
+    quickBox.classList.remove('open');
+    quickBox.innerHTML = '';
+    const wrapper = quickBox.closest('.category-autocomplete-wrapper');
+    if (wrapper) wrapper.classList.remove('is-open');
+  }
   const input = document.getElementById(targetInputId);
   window.selectedCategoryInPicker = input ? input.value.trim() : '';
 
@@ -5181,9 +5222,9 @@ window.openNewServiceModal = function() {
         </button>
       </div>
       <div style="position: relative; display: flex; align-items: center;">
-        <input type="text" class="form-control" id="mServCat" placeholder="Selecione ou digite uma categoria..." autocomplete="off" style="padding-right: 36px;">
-        <button type="button" onclick="toggleCategoryQuickDropdown('mServCat', 'mServCatSuggestions')" title="Ver categorias existentes" style="position: absolute; right: 6px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: var(--muted); padding: 4px; display: flex; align-items: center; justify-content: center;">
-          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"></polyline></svg>
+        <input type="text" class="form-control" id="mServCat" placeholder="Selecione ou digite uma categoria..." autocomplete="off" style="padding-right: 40px;">
+        <button type="button" class="category-dropdown-arrow-btn" onclick="toggleCategoryQuickDropdown('mServCat', 'mServCatSuggestions', event)" title="Ver categorias existentes">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"></polyline></svg>
         </button>
       </div>
       <div id="mServCatSuggestions" class="category-autocomplete-dropdown"></div>
@@ -6018,9 +6059,9 @@ window.openEditServiceModal = function(serviceId) {
         </button>
       </div>
       <div style="position: relative; display: flex; align-items: center;">
-        <input type="text" class="form-control" id="mEditServCat" value="${serv.category || ''}" placeholder="Selecione ou digite uma categoria..." autocomplete="off" style="padding-right: 36px;">
-        <button type="button" onclick="toggleCategoryQuickDropdown('mEditServCat', 'mEditServCatSuggestions')" title="Ver categorias existentes" style="position: absolute; right: 6px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: var(--muted); padding: 4px; display: flex; align-items: center; justify-content: center;">
-          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"></polyline></svg>
+        <input type="text" class="form-control" id="mEditServCat" value="${serv.category || ''}" placeholder="Selecione ou digite uma categoria..." autocomplete="off" style="padding-right: 40px;">
+        <button type="button" class="category-dropdown-arrow-btn" onclick="toggleCategoryQuickDropdown('mEditServCat', 'mEditServCatSuggestions', event)" title="Ver categorias existentes">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"></polyline></svg>
         </button>
       </div>
       <div id="mEditServCatSuggestions" class="category-autocomplete-dropdown"></div>
