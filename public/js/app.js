@@ -4825,6 +4825,18 @@ window.updateExpenseInstallmentPreview = function() {
   summary.innerHTML = `Serão gerados <strong>${count} lançamentos mensais</strong> de <strong>R$ ${valPerInstallment}</strong> cada.`;
 };
 
+window.toggleAllProfServices = function(check, isNew = false) {
+  const selector = isNew ? '.m-new-prof-service-cb' : '.m-edit-prof-service-cb';
+  document.querySelectorAll(selector).forEach(cb => {
+    cb.checked = check;
+    const parentLabel = cb.closest('label');
+    if (parentLabel) {
+      parentLabel.style.borderColor = check ? '#fed7aa' : '#e2e8f0';
+      parentLabel.style.background = check ? '#ffffff' : '#f8fafc';
+    }
+  });
+};
+
 window.openNewProfessionalModal = function() {
   if (!isManager) {
     asyncAlert('Apenas gestores têm permissão para adicionar profissionais.');
@@ -4958,31 +4970,49 @@ window.openNewProfessionalModal = function() {
     </div>
 
     <!-- Seção de Serviços Atendidos por este Profissional -->
-    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 14px; padding: 14px; margin-top: 14px;">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-        <label style="margin:0; font-weight:700; color:var(--ink); font-size:0.9rem;">
-          Serviços Realizados pelo Profissional
+    <div style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 14px; padding: 14px; margin-top: 14px;">
+      <div style="margin-bottom: 10px;">
+        <label style="margin: 0 0 4px 0; font-weight: 700; color: var(--ink); font-size: 0.92rem; display: flex; align-items: center; gap: 6px;">
+          <svg width="17" height="17" fill="none" stroke="var(--orange)" stroke-width="2.2" viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg>
+          <span>Serviços que este Profissional Realiza</span>
         </label>
-        <div style="display:flex; gap:6px;">
-          <button type="button" class="btn-falcon btn-secondary" onclick="document.querySelectorAll('.m-new-prof-service-cb').forEach(c => c.checked = true)" style="padding:3px 8px; font-size:0.72rem;">Marcar Todos</button>
-          <button type="button" class="btn-falcon btn-secondary" onclick="document.querySelectorAll('.m-new-prof-service-cb').forEach(c => c.checked = false)" style="padding:3px 8px; font-size:0.72rem;">Desmarcar Todos</button>
+        <p style="font-size: 0.76rem; color: var(--muted); margin: 0 0 10px 0; line-height: 1.35;">
+          No agendamento online, o cliente só verá este profissional nos serviços marcados abaixo:
+        </p>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+          <button type="button" onclick="toggleAllProfServices(true, true)" style="display: flex; align-items: center; justify-content: center; gap: 6px; padding: 8px 10px; font-size: 0.78rem; font-weight: 700; border-radius: 10px; border: 1.5px solid #fed7aa; background: #fff7ed; color: #c2410c; cursor: pointer; transition: all 0.15s ease;">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            <span>Marcar Todos</span>
+          </button>
+          <button type="button" onclick="toggleAllProfServices(false, true)" style="display: flex; align-items: center; justify-content: center; gap: 6px; padding: 8px 10px; font-size: 0.78rem; font-weight: 600; border-radius: 10px; border: 1.5px solid #e2e8f0; background: #f8fafc; color: #64748b; cursor: pointer; transition: all 0.15s ease;">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            <span>Desmarcar Todos</span>
+          </button>
         </div>
       </div>
-      <p style="font-size:0.78rem; color:var(--muted); margin-bottom:10px; line-height:1.4;">
-        Marque os procedimentos que este profissional realiza. No link de agendamento online, apenas os profissionais marcados aparecerão quando o cliente escolher o serviço.
-      </p>
-      <div style="max-height:180px; overflow-y:auto; border:1px solid #cbd5e1; border-radius:10px; padding:6px; background:#fff; display:flex; flex-direction:column; gap:4px;">
+      <div style="max-height: 200px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 10px; padding: 6px; background: #f8fafc; display: flex; flex-direction: column; gap: 5px;">
         ${(state.services && state.services.length > 0)
-          ? state.services.map(s => `
-            <label style="display:flex; align-items:center; justify-content:space-between; padding:7px 10px; border-radius:8px; border:1px solid #f1f5f9; background:#fff; cursor:pointer; margin:0; transition:all 0.15s ease;">
-              <div style="display:flex; align-items:center; gap:8px;">
-                <input type="checkbox" class="m-new-prof-service-cb" value="${s.id}" checked style="width:16px; height:16px; accent-color:var(--orange);">
-                <span style="font-size:0.84rem; font-weight:600; color:var(--ink);">${s.name}</span>
-                <span style="font-size:0.72rem; color:var(--muted); background:#f1f5f9; padding:2px 6px; border-radius:6px;">${s.category || 'Geral'}</span>
-              </div>
-              <span style="font-size:0.78rem; font-weight:700; color:#15803d;">R$ ${(Number(s.price) || 0).toFixed(2)}</span>
-            </label>
-          `).join('')
+          ? state.services.map(s => {
+            const priceFormatted = (Number(s.price) || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+            return `
+              <label style="display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; border-radius: 10px; border: 1.5px solid #fed7aa; background: #ffffff; cursor: pointer; margin: 0; transition: all 0.15s ease;">
+                <div style="display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1;">
+                  <input type="checkbox" class="m-new-prof-service-cb" value="${s.id}" checked onchange="this.closest('label').style.borderColor = this.checked ? '#fed7aa' : '#e2e8f0'; this.closest('label').style.background = this.checked ? '#ffffff' : '#f8fafc';" style="width: 18px; height: 18px; accent-color: var(--orange); flex-shrink: 0; cursor: pointer;">
+                  <div style="min-width: 0; flex: 1;">
+                    <div style="font-size: 0.86rem; font-weight: 700; color: var(--ink); line-height: 1.25; overflow-wrap: break-word;">${s.name}</div>
+                    <div style="font-size: 0.72rem; color: var(--muted); margin-top: 2px; display: flex; align-items: center; gap: 6px;">
+                      <span style="background: #f1f5f9; padding: 1px 6px; border-radius: 4px; font-weight: 600;">${s.category || 'Geral'}</span>
+                      <span>•</span>
+                      <span>${s.durationMinutes || 30} min</span>
+                    </div>
+                  </div>
+                </div>
+                <div style="font-size: 0.85rem; font-weight: 800; color: #15803d; white-space: nowrap !important; flex-shrink: 0; margin-left: 8px;">
+                  ${priceFormatted}
+                </div>
+              </label>
+            `;
+          }).join('')
           : '<div style="font-size:0.8rem; color:var(--muted); padding:10px; text-align:center;">Nenhum serviço cadastrado no salão.</div>'
         }
       </div>
@@ -5246,31 +5276,47 @@ window.openEditProfessionalModal = function(profId) {
     </div>
 
     <!-- Seção de Serviços Atendidos por este Profissional -->
-    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 14px; padding: 14px; margin-top: 14px;">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-        <label style="margin:0; font-weight:700; color:var(--ink); font-size:0.9rem;">
-          Serviços Realizados pelo Profissional
+    <div style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 14px; padding: 14px; margin-top: 14px;">
+      <div style="margin-bottom: 10px;">
+        <label style="margin: 0 0 4px 0; font-weight: 700; color: var(--ink); font-size: 0.92rem; display: flex; align-items: center; gap: 6px;">
+          <svg width="17" height="17" fill="none" stroke="var(--orange)" stroke-width="2.2" viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg>
+          <span>Serviços que este Profissional Realiza</span>
         </label>
-        <div style="display:flex; gap:6px;">
-          <button type="button" class="btn-falcon btn-secondary" onclick="document.querySelectorAll('.m-edit-prof-service-cb').forEach(c => c.checked = true)" style="padding:3px 8px; font-size:0.72rem;">Marcar Todos</button>
-          <button type="button" class="btn-falcon btn-secondary" onclick="document.querySelectorAll('.m-edit-prof-service-cb').forEach(c => c.checked = false)" style="padding:3px 8px; font-size:0.72rem;">Desmarcar Todos</button>
+        <p style="font-size: 0.76rem; color: var(--muted); margin: 0 0 10px 0; line-height: 1.35;">
+          No agendamento online, o cliente só verá este profissional nos serviços marcados abaixo:
+        </p>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+          <button type="button" onclick="toggleAllProfServices(true, false)" style="display: flex; align-items: center; justify-content: center; gap: 6px; padding: 8px 10px; font-size: 0.78rem; font-weight: 700; border-radius: 10px; border: 1.5px solid #fed7aa; background: #fff7ed; color: #c2410c; cursor: pointer; transition: all 0.15s ease;">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            <span>Marcar Todos</span>
+          </button>
+          <button type="button" onclick="toggleAllProfServices(false, false)" style="display: flex; align-items: center; justify-content: center; gap: 6px; padding: 8px 10px; font-size: 0.78rem; font-weight: 600; border-radius: 10px; border: 1.5px solid #e2e8f0; background: #f8fafc; color: #64748b; cursor: pointer; transition: all 0.15s ease;">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            <span>Desmarcar Todos</span>
+          </button>
         </div>
       </div>
-      <p style="font-size:0.78rem; color:var(--muted); margin-bottom:10px; line-height:1.4;">
-        Marque os procedimentos que este profissional realiza. No link de agendamento online, apenas os profissionais marcados aparecerão quando o cliente escolher o serviço.
-      </p>
-      <div style="max-height:180px; overflow-y:auto; border:1px solid #cbd5e1; border-radius:10px; padding:6px; background:#fff; display:flex; flex-direction:column; gap:4px;">
+      <div style="max-height: 200px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 10px; padding: 6px; background: #f8fafc; display: flex; flex-direction: column; gap: 5px;">
         ${(state.services && state.services.length > 0)
           ? state.services.map(s => {
             const isChecked = Array.isArray(prof.serviceIds) ? prof.serviceIds.includes(s.id) : true;
+            const priceFormatted = (Number(s.price) || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
             return `
-              <label style="display:flex; align-items:center; justify-content:space-between; padding:7px 10px; border-radius:8px; border:1px solid #f1f5f9; background:#fff; cursor:pointer; margin:0; transition:all 0.15s ease;">
-                <div style="display:flex; align-items:center; gap:8px;">
-                  <input type="checkbox" class="m-edit-prof-service-cb" value="${s.id}" ${isChecked ? 'checked' : ''} style="width:16px; height:16px; accent-color:var(--orange);">
-                  <span style="font-size:0.84rem; font-weight:600; color:var(--ink);">${s.name}</span>
-                  <span style="font-size:0.72rem; color:var(--muted); background:#f1f5f9; padding:2px 6px; border-radius:6px;">${s.category || 'Geral'}</span>
+              <label style="display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; border-radius: 10px; border: 1.5px solid ${isChecked ? '#fed7aa' : '#e2e8f0'}; background: ${isChecked ? '#ffffff' : '#f8fafc'}; cursor: pointer; margin: 0; transition: all 0.15s ease;">
+                <div style="display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1;">
+                  <input type="checkbox" class="m-edit-prof-service-cb" value="${s.id}" ${isChecked ? 'checked' : ''} onchange="this.closest('label').style.borderColor = this.checked ? '#fed7aa' : '#e2e8f0'; this.closest('label').style.background = this.checked ? '#ffffff' : '#f8fafc';" style="width: 18px; height: 18px; accent-color: var(--orange); flex-shrink: 0; cursor: pointer;">
+                  <div style="min-width: 0; flex: 1;">
+                    <div style="font-size: 0.86rem; font-weight: 700; color: var(--ink); line-height: 1.25; overflow-wrap: break-word;">${s.name}</div>
+                    <div style="font-size: 0.72rem; color: var(--muted); margin-top: 2px; display: flex; align-items: center; gap: 6px;">
+                      <span style="background: #f1f5f9; padding: 1px 6px; border-radius: 4px; font-weight: 600;">${s.category || 'Geral'}</span>
+                      <span>•</span>
+                      <span>${s.durationMinutes || 30} min</span>
+                    </div>
+                  </div>
                 </div>
-                <span style="font-size:0.78rem; font-weight:700; color:#15803d;">R$ ${(Number(s.price) || 0).toFixed(2)}</span>
+                <div style="font-size: 0.85rem; font-weight: 800; color: #15803d; white-space: nowrap !important; flex-shrink: 0; margin-left: 8px;">
+                  ${priceFormatted}
+                </div>
               </label>
             `;
           }).join('')
