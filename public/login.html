@@ -101,12 +101,12 @@
     }
     .auth-form-group input {
       width: 100%;
-      padding: 12px 16px;
-      border: 1px solid rgba(0, 0, 0, 0.1);
-      border-radius: 12px;
+      padding: 11px 15px;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 10px;
       font-size: 0.95rem;
       font-family: inherit;
-      background: rgba(255, 255, 255, 0.75);
+      background: rgba(255, 255, 255, 0.85);
       backdrop-filter: blur(10px);
       -webkit-backdrop-filter: blur(10px);
       box-sizing: border-box;
@@ -115,28 +115,28 @@
     }
     .auth-form-group input:focus {
       background: #ffffff;
-      border-color: #141414;
-      box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.08);
+      border-color: var(--orange, #ff6900);
+      box-shadow: 0 0 0 3px rgba(255, 105, 0, 0.15);
     }
     .btn-auth-submit {
       width: 100%;
-      padding: 13px;
-      background: #141414;
-      color: #fff;
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      border-radius: 999px;
+      padding: 13px 18px;
+      background: linear-gradient(135deg, #ff6900 0%, #ff5200 100%);
+      color: #ffffff;
+      border: 1px solid #ea580c;
+      border-radius: 12px;
       font-size: 0.95rem;
-      font-weight: 600;
+      font-weight: 700;
       cursor: pointer;
-      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
+      box-shadow: 0 4px 14px rgba(255, 105, 0, 0.28);
       transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
       margin-top: 10px;
       font-family: inherit;
     }
     .btn-auth-submit:hover {
-      background: #000000;
+      background: linear-gradient(135deg, #ea580c 0%, #d9480f 100%);
       transform: translateY(-1px);
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+      box-shadow: 0 6px 20px rgba(255, 105, 0, 0.38);
     }
     .auth-footer-help {
       margin-top: 22px;

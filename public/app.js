@@ -4980,11 +4980,11 @@ window.openNewProfessionalModal = function() {
           No agendamento online, o cliente só verá este profissional nos serviços marcados abaixo:
         </p>
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
-          <button type="button" onclick="toggleAllProfServices(true, true)" style="display: flex; align-items: center; justify-content: center; gap: 6px; padding: 8px 10px; font-size: 0.78rem; font-weight: 700; border-radius: 10px; border: 1.5px solid #fed7aa; background: #fff7ed; color: #c2410c; cursor: pointer; transition: all 0.15s ease;">
+          <button type="button" class="btn-falcon btn-brand-soft btn-sm" onclick="toggleAllProfServices(true, true)">
             <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"></polyline></svg>
             <span>Marcar Todos</span>
           </button>
-          <button type="button" onclick="toggleAllProfServices(false, true)" style="display: flex; align-items: center; justify-content: center; gap: 6px; padding: 8px 10px; font-size: 0.78rem; font-weight: 600; border-radius: 10px; border: 1.5px solid #e2e8f0; background: #f8fafc; color: #64748b; cursor: pointer; transition: all 0.15s ease;">
+          <button type="button" class="btn-falcon btn-secondary btn-sm" onclick="toggleAllProfServices(false, true)">
             <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
             <span>Desmarcar Todos</span>
           </button>
@@ -5286,11 +5286,11 @@ window.openEditProfessionalModal = function(profId) {
           No agendamento online, o cliente só verá este profissional nos serviços marcados abaixo:
         </p>
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
-          <button type="button" onclick="toggleAllProfServices(true, false)" style="display: flex; align-items: center; justify-content: center; gap: 6px; padding: 8px 10px; font-size: 0.78rem; font-weight: 700; border-radius: 10px; border: 1.5px solid #fed7aa; background: #fff7ed; color: #c2410c; cursor: pointer; transition: all 0.15s ease;">
+          <button type="button" class="btn-falcon btn-brand-soft btn-sm" onclick="toggleAllProfServices(true, false)">
             <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"></polyline></svg>
             <span>Marcar Todos</span>
           </button>
-          <button type="button" onclick="toggleAllProfServices(false, false)" style="display: flex; align-items: center; justify-content: center; gap: 6px; padding: 8px 10px; font-size: 0.78rem; font-weight: 600; border-radius: 10px; border: 1.5px solid #e2e8f0; background: #f8fafc; color: #64748b; cursor: pointer; transition: all 0.15s ease;">
+          <button type="button" class="btn-falcon btn-secondary btn-sm" onclick="toggleAllProfServices(false, false)">
             <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
             <span>Desmarcar Todos</span>
           </button>

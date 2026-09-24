@@ -386,34 +386,34 @@ body {
   display: none !important;
 }
 
-/* Container pílula elegante do Datepicker no top-bar */
+/* Container do Datepicker no top-bar */
 .agenda-date-wrapper {
   position: relative !important;
   display: inline-flex !important;
   align-items: center !important;
   gap: 6px !important;
-  height: 42px !important;
-  min-height: 42px !important;
-  max-height: 42px !important;
-  padding: 0 16px !important;
+  height: 40px !important;
+  min-height: 40px !important;
+  max-height: 40px !important;
+  padding: 0 14px !important;
   margin: 0 !important;
   background: #ffffff !important;
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
-  border: 1px solid rgba(0, 0, 0, 0.1) !important;
-  border-radius: 999px !important;
+  border: 1.5px solid #e2e8f0 !important;
+  border-radius: 10px !important;
   cursor: pointer !important;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03) !important;
-  transition: all 0.2s var(--ease) !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
+  transition: all 0.18s var(--ease) !important;
   box-sizing: border-box !important;
   white-space: nowrap !important;
   flex-shrink: 0 !important;
 }
 
 .agenda-date-wrapper:hover {
-  background: rgba(255, 255, 255, 0.95) !important;
-  border-color: rgba(0, 0, 0, 0.18) !important;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06) !important;
+  background: #ffffff !important;
+  border-color: #cbd5e1 !important;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.06) !important;
 }
 
 .agenda-date-wrapper svg {
@@ -456,51 +456,59 @@ body {
 .top-bar-actions .form-control[type="date"]:hover,
 .top-bar-actions input[type="date"]:hover,
 .agenda-date-picker:hover {
-  background: rgba(255, 255, 255, 0.95);
-  border-color: rgba(0, 0, 0, 0.18) !important;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+  background: #ffffff;
+  border-color: #cbd5e1 !important;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.06);
 }
 
 .top-bar-actions .form-control[type="date"]:focus,
 .top-bar-actions input[type="date"]:focus,
 .agenda-date-picker:focus {
-  border-color: #141414 !important;
-  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.08);
+  border-color: var(--orange, #ff6900) !important;
+  box-shadow: 0 0 0 3px rgba(255, 105, 0, 0.15);
 }
 
-/* Botões Estilo Ultra-Modernos */
-.btn-falcon {
+/* ==========================================================================
+   SISTEMA DE BOTÕES PADRONIZADO (DESIGN SYSTEM BELLASYNC)
+   ========================================================================== */
+
+/* 1. Base Universal de Botões (.btn-falcon e .btn) */
+.btn-falcon,
+.btn {
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
   gap: 8px !important;
-  height: 42px !important;
-  min-height: 42px !important;
-  max-height: 42px !important;
-  padding: 0 18px !important;
-  border-radius: 999px !important;
-  font-size: 0.88rem !important;
-  font-weight: 500 !important;
+  height: 40px;
+  min-height: 40px;
+  padding: 0 16px;
+  border-radius: 10px !important;
+  font-family: var(--font-stack, "Poppins", sans-serif);
+  font-size: 0.88rem;
+  font-weight: 600;
   cursor: pointer;
-  border: 1px solid transparent;
-  transition: all 0.2s var(--ease);
+  border: 1.5px solid transparent;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
   text-decoration: none;
-  font-family: var(--font-stack);
   letter-spacing: -0.01em;
   box-sizing: border-box !important;
   line-height: 1 !important;
   white-space: nowrap !important;
-  flex-shrink: 0 !important;
+  user-select: none;
+  flex-shrink: 0;
 }
 
 .btn-falcon span,
-.btn-falcon strong {
+.btn-falcon strong,
+.btn span,
+.btn strong {
   white-space: nowrap !important;
   line-height: 1 !important;
   display: inline-block !important;
 }
 
-.btn-falcon svg {
+.btn-falcon svg,
+.btn svg {
   width: 15px !important;
   height: 15px !important;
   flex-shrink: 0 !important;
@@ -508,46 +516,189 @@ body {
   vertical-align: middle;
 }
 
+/* Modificadores de Tamanho Padronizados */
+.btn-sm,
+.btn-falcon.btn-sm {
+  height: 32px !important;
+  min-height: 32px !important;
+  padding: 0 12px !important;
+  font-size: 0.80rem !important;
+  border-radius: 8px !important;
+  gap: 5px !important;
+}
+
+.btn-sm svg,
+.btn-falcon.btn-sm svg {
+  width: 13px !important;
+  height: 13px !important;
+}
+
+.btn-lg,
+.btn-falcon.btn-lg {
+  height: 48px !important;
+  min-height: 48px !important;
+  padding: 0 24px !important;
+  font-size: 0.95rem !important;
+  font-weight: 700 !important;
+  border-radius: 12px !important;
+  gap: 10px !important;
+}
+
+.btn-lg svg,
+.btn-falcon.btn-lg svg {
+  width: 18px !important;
+  height: 18px !important;
+}
+
+.btn-block,
+.btn-falcon.btn-block {
+  width: 100% !important;
+}
+
+/* 2. Variantes de Cores Padronizadas */
+
+/* Primário (Ação Principal da Marca - Laranja BellaSync) */
 .btn-primary {
-  background: #141414;
-  color: #ffffff;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
+  background: linear-gradient(135deg, #ff6900 0%, #ff5200 100%) !important;
+  color: #ffffff !important;
+  border: 1px solid #ea580c !important;
+  box-shadow: 0 3px 12px rgba(255, 105, 0, 0.28) !important;
 }
 
 .btn-primary:hover {
-  background: #000000;
+  background: linear-gradient(135deg, #ea580c 0%, #d9480f 100%) !important;
+  border-color: #c2410c !important;
   transform: translateY(-1px);
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.28);
+  box-shadow: 0 6px 18px rgba(255, 105, 0, 0.38) !important;
 }
 
+.btn-primary:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 6px rgba(255, 105, 0, 0.2) !important;
+}
+
+/* Secundário (Ação Neutra / Cancelar / Voltar / Filtros) */
 .btn-secondary {
-  background: rgba(255, 255, 255, 0.82);
-  color: var(--ink);
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  backdrop-filter: var(--blur-sm);
-  -webkit-backdrop-filter: var(--blur-sm);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+  background: #ffffff !important;
+  color: #1e293b !important;
+  border: 1.5px solid #e2e8f0 !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
 }
 
 .btn-secondary:hover {
-  background: #ffffff;
-  border-color: rgba(0, 0, 0, 0.16);
+  background: #f8fafc !important;
+  border-color: #cbd5e1 !important;
+  color: #0f172a !important;
   transform: translateY(-1px);
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.06) !important;
 }
 
+.btn-secondary:active {
+  transform: translateY(0);
+  background: #f1f5f9 !important;
+}
+
+/* Sucesso (Positivo / Confirmado / WhatsApp) */
 .btn-success {
-  background: rgba(46, 133, 64, 0.12);
-  color: #1a6636;
-  border: 1px solid rgba(46, 133, 64, 0.2);
-  font-weight: 600;
-  backdrop-filter: var(--blur-sm);
+  background: #ecfdf5 !important;
+  color: #047857 !important;
+  border: 1.5px solid #a7f3d0 !important;
 }
 
 .btn-success:hover {
-  background: rgba(46, 133, 64, 0.2);
+  background: #059669 !important;
+  color: #ffffff !important;
+  border-color: #059669 !important;
   transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(5, 150, 105, 0.25) !important;
+}
+
+.btn-success:active {
+  transform: translateY(0);
+}
+
+/* Perigo / Destrutivo (Excluir / Cancelar Agendamento / Desbloquear) */
+.btn-danger {
+  background: #fef2f2 !important;
+  color: #dc2626 !important;
+  border: 1.5px solid #fecaca !important;
+}
+
+.btn-danger:hover {
+  background: #dc2626 !important;
+  color: #ffffff !important;
+  border-color: #dc2626 !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(220, 38, 38, 0.25) !important;
+}
+
+.btn-danger:active {
+  transform: translateY(0);
+}
+
+/* Brand Soft (Destaque Suave / Marcar Todos / Seleção) */
+.btn-brand-soft {
+  background: #fff7ed !important;
+  color: #c2410c !important;
+  border: 1.5px solid #fed7aa !important;
+}
+
+.btn-brand-soft:hover {
+  background: #ffedd5 !important;
+  border-color: #fdba74 !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(255, 105, 0, 0.15) !important;
+}
+
+.btn-brand-soft:active {
+  transform: translateY(0);
+}
+
+/* Escuro / Dark */
+.btn-dark {
+  background: #0f172a !important;
+  color: #ffffff !important;
+  border: 1.5px solid #0f172a !important;
+  box-shadow: 0 3px 10px rgba(15, 23, 42, 0.2) !important;
+}
+
+.btn-dark:hover {
+  background: #1e293b !important;
+  border-color: #1e293b !important;
+  transform: translateY(-1px);
+  box-shadow: 0 5px 14px rgba(15, 23, 42, 0.3) !important;
+}
+
+.btn-dark:active {
+  transform: translateY(0);
+}
+
+/* Ghost / Transparente */
+.btn-ghost {
+  background: transparent !important;
+  color: #64748b !important;
+  border: 1.5px solid transparent !important;
+}
+
+.btn-ghost:hover {
+  background: #f1f5f9 !important;
+  color: #0f172a !important;
+}
+
+/* Estado Desabilitado Universal */
+.btn-falcon:disabled,
+.btn-falcon[disabled],
+.btn:disabled,
+.btn[disabled],
+.btn-primary:disabled,
+.btn-secondary:disabled,
+.btn-success:disabled,
+.btn-danger:disabled {
+  opacity: 0.55 !important;
+  cursor: not-allowed !important;
+  transform: none !important;
+  box-shadow: none !important;
+  pointer-events: none !important;
 }
 
 /* Conteúdo das Views */
@@ -992,58 +1143,61 @@ td.cell-agendado {
   margin-top: 4px;
 }
 
-.btn-delete-app {
-  background: rgba(211, 47, 47, 0.1);
-  color: #d32f2f;
-  border: 1px solid rgba(211, 47, 47, 0.2);
-  border-radius: 8px;
-  padding: 4px 8px;
+.btn-delete-app,
+.btn-cancel-app {
+  background: #fef2f2 !important;
+  color: #dc2626 !important;
+  border: 1.5px solid #fecaca !important;
+  border-radius: 8px !important;
+  padding: 0 8px !important;
   cursor: pointer;
-  font-size: 0.75rem;
-  font-weight: var(--weight-semibold);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  transition: all 0.2s ease;
+  font-size: 0.76rem !important;
+  font-weight: 600 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 4px !important;
+  transition: all 0.18s ease;
   min-width: 28px;
-  height: 26px;
+  height: 28px !important;
   box-sizing: border-box;
 }
 
-.btn-delete-app:hover {
-  background: #d32f2f;
-  color: #fff;
-  border-color: #d32f2f;
+.btn-delete-app:hover,
+.btn-cancel-app:hover {
+  background: #dc2626 !important;
+  color: #ffffff !important;
+  border-color: #dc2626 !important;
 }
 
-.btn-delete-app svg {
+.btn-delete-app svg,
+.btn-cancel-app svg {
   flex-shrink: 0;
 }
 
 .btn-remind-app {
-  background: rgba(37, 211, 102, 0.12);
-  color: #15803d;
-  border: 1px solid rgba(37, 211, 102, 0.35);
-  border-radius: 8px;
-  padding: 4px 8px;
+  background: #f0fdf4 !important;
+  color: #15803d !important;
+  border: 1.5px solid #bbf7d0 !important;
+  border-radius: 8px !important;
+  padding: 0 8px !important;
   cursor: pointer;
-  font-size: 0.75rem;
-  font-weight: var(--weight-semibold);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  transition: all 0.2s ease;
+  font-size: 0.76rem !important;
+  font-weight: 600 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 4px !important;
+  transition: all 0.18s ease;
   min-width: 28px;
-  height: 26px;
+  height: 28px !important;
   box-sizing: border-box;
 }
 
 .btn-remind-app:hover {
-  background: #22c55e;
-  color: #fff;
-  border-color: #22c55e;
+  background: #16a34a !important;
+  color: #ffffff !important;
+  border-color: #16a34a !important;
 }
 
 .btn-remind-app svg {
@@ -1167,21 +1321,21 @@ td.cell-agendado {
   bottom: 32px;
   width: 58px;
   height: 58px;
-  border-radius: 50%;
-  background: #111;
-  color: #fff;
-  border: none;
+  border-radius: 50% !important;
+  background: linear-gradient(135deg, #ff6900 0%, #ff5200 100%) !important;
+  color: #ffffff !important;
+  border: 2px solid rgba(255, 255, 255, 0.35) !important;
   display: grid;
   place-items: center;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 8px 24px rgba(255, 105, 0, 0.38) !important;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   z-index: 90;
 }
 
 .fab-button:hover {
-  transform: scale(1.08);
-  background: var(--orange);
+  transform: scale(1.08) translateY(-2px) !important;
+  box-shadow: 0 12px 30px rgba(255, 105, 0, 0.5) !important;
 }
 
 /* Bloqueio absoluto de rolagem na página de fundo quando qualquer modal estiver aberto */
@@ -1288,10 +1442,10 @@ body:has(.modal-backdrop.active) .data-list {
 
 .form-control {
   width: 100%;
-  padding: 11px 15px;
-  border: 1px solid rgba(0, 0, 0, 0.1);
-  border-radius: 12px;
-  font-size: 0.95rem;
+  padding: 10px 14px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
+  font-size: 0.92rem;
   font-family: var(--font-stack);
   outline: none;
   background: #ffffff !important;
@@ -1299,13 +1453,13 @@ body:has(.modal-backdrop.active) .data-list {
   color-scheme: light !important;
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
-  transition: border-color 0.2s var(--ease), box-shadow 0.2s var(--ease);
+  transition: border-color 0.18s var(--ease), box-shadow 0.18s var(--ease);
 }
 
 .form-control:focus {
   background: #ffffff !important;
-  border-color: #141414;
-  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.08);
+  border-color: var(--orange, #ff6900) !important;
+  box-shadow: 0 0 0 3px rgba(255, 105, 0, 0.15) !important;
 }
 
 select,
@@ -1503,26 +1657,27 @@ input[type="date"].form-control {
   .btn-date-picker-trigger,
   .top-bar-actions .btn-falcon,
   .btn-notif-toggle {
-    height: 42px !important;
-    min-height: 42px !important;
-    max-height: 42px !important;
+    height: 40px !important;
+    min-height: 40px !important;
+    max-height: 40px !important;
     display: inline-flex !important;
     align-items: center !important;
     justify-content: center !important;
     box-sizing: border-box !important;
     vertical-align: middle !important;
     margin: 0 !important;
+    border-radius: 10px !important;
   }
 
   .btn-notif-toggle {
-    width: 42px !important;
-    min-width: 42px !important;
-    border-radius: 50% !important;
+    width: 40px !important;
+    min-width: 40px !important;
+    border-radius: 10px !important;
     background: #ffffff !important;
-    border: 1px solid rgba(0, 0, 0, 0.1) !important;
+    border: 1.5px solid #e2e8f0 !important;
     cursor: pointer !important;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03) !important;
-    transition: all 0.2s ease !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
+    transition: all 0.18s ease !important;
   }
 }
 
@@ -2078,83 +2233,86 @@ input[type="date"].form-control {
 }
 
 .btn-card-action {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 6px 14px;
-  border-radius: 10px;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 6px !important;
+  height: 32px !important;
+  min-height: 32px !important;
+  padding: 0 12px !important;
+  border-radius: 8px !important;
   font-family: var(--font-stack, "Poppins", sans-serif);
-  font-size: 0.8rem;
-  font-weight: 600;
-  border: 1px solid transparent;
+  font-size: 0.80rem !important;
+  font-weight: 600 !important;
+  border: 1.5px solid transparent !important;
   cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
   text-decoration: none;
-  line-height: 1.2;
-  white-space: nowrap;
+  line-height: 1 !important;
+  white-space: nowrap !important;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  box-sizing: border-box !important;
 }
 
 .btn-card-action svg {
-  width: 14px;
-  height: 14px;
+  width: 14px !important;
+  height: 14px !important;
   flex-shrink: 0;
 }
 
-/* Editar: Azul / Indigo elegante */
+/* Editar: Azul elegante */
 .btn-card-action.edit {
-  background: rgba(99, 102, 241, 0.1);
-  color: #4f46e5;
-  border-color: rgba(99, 102, 241, 0.2);
+  background: #eff6ff !important;
+  color: #2563eb !important;
+  border-color: #bfdbfe !important;
 }
 .btn-card-action.edit:hover {
-  background: #4f46e5;
-  color: #ffffff;
-  border-color: #4f46e5;
-  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25);
+  background: #2563eb !important;
+  color: #ffffff !important;
+  border-color: #2563eb !important;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
   transform: translateY(-1px);
 }
 
 /* Excluir: Rosa / Vermelho elegante */
 .btn-card-action.delete {
-  background: rgba(244, 63, 94, 0.1);
-  color: #e11d48;
-  border-color: rgba(244, 63, 94, 0.2);
+  background: #fef2f2 !important;
+  color: #dc2626 !important;
+  border-color: #fecaca !important;
 }
 .btn-card-action.delete:hover {
-  background: #e11d48;
-  color: #ffffff;
-  border-color: #e11d48;
-  box-shadow: 0 4px 12px rgba(225, 29, 72, 0.25);
+  background: #dc2626 !important;
+  color: #ffffff !important;
+  border-color: #dc2626 !important;
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.25);
   transform: translateY(-1px);
 }
 
 /* Pagar: Verde Esmeralda */
 .btn-card-action.pay {
-  background: rgba(16, 185, 129, 0.1);
-  color: #059669;
-  border-color: rgba(16, 185, 129, 0.2);
+  background: #ecfdf5 !important;
+  color: #059669 !important;
+  border-color: #a7f3d0 !important;
 }
 .btn-card-action.pay:hover {
-  background: #10b981;
-  color: #ffffff;
-  border-color: #10b981;
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
+  background: #059669 !important;
+  color: #ffffff !important;
+  border-color: #059669 !important;
+  box-shadow: 0 4px 12px rgba(5, 150, 105, 0.25);
   transform: translateY(-1px);
 }
 
 /* WhatsApp: Verde WhatsApp */
 .btn-card-action.whatsapp {
-  background: rgba(37, 211, 102, 0.12);
-  color: #16a34a;
-  border-color: rgba(37, 211, 102, 0.25);
+  background: #f0fdf4 !important;
+  color: #16a34a !important;
+  border-color: #bbf7d0 !important;
 }
 .btn-card-action.whatsapp:hover {
-  background: #25d366;
-  color: #ffffff;
-  border-color: #25d366;
-  box-shadow: 0 4px 12px rgba(37, 211, 102, 0.3);
+  background: #16a34a !important;
+  color: #ffffff !important;
+  border-color: #16a34a !important;
+  box-shadow: 0 4px 12px rgba(22, 163, 74, 0.25);
   transform: translateY(-1px);
 }
 
