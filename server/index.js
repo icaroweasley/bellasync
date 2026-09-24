@@ -499,6 +499,7 @@ app.get('/api/public/salon/:slug', (req, res) => {
       role: p.role,
       avatar: p.avatar,
       phone: p.phone,
+      serviceIds: Array.isArray(p.serviceIds) ? p.serviceIds : [],
       requireDeposit: !!p.requireDeposit,
       depositPercent: Number(p.depositPercent) || 30,
       pixBank: p.pixBank || 'Pix',
@@ -1286,6 +1287,7 @@ app.post('/api/professionals', requireManager, (req, res) => {
     pixKey: req.body.pixKey || '',
     pixKeyType: req.body.pixKeyType || 'Chave Pix',
     pixName: req.body.pixName || req.body.name,
+    serviceIds: Array.isArray(req.body.serviceIds) ? req.body.serviceIds : [],
     active: true
   };
   db.professionals.push(newProf);
@@ -1333,6 +1335,7 @@ app.put('/api/professionals/:id', requireManager, (req, res) => {
   if (req.body.pixKeyType !== undefined) prof.pixKeyType = req.body.pixKeyType;
   if (req.body.pixName !== undefined) prof.pixName = req.body.pixName;
   if (req.body.monthlyGoal !== undefined) prof.monthlyGoal = Number(req.body.monthlyGoal) || 0;
+  if (req.body.serviceIds !== undefined) prof.serviceIds = Array.isArray(req.body.serviceIds) ? req.body.serviceIds : [];
 
   // Atualizar dados de usuário correspondente se existirem
   const user = (db.users || []).find(u => u.professionalId === prof.id && u.tenantId === tenantId);

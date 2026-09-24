@@ -2215,6 +2215,11 @@ function renderProfessionals(container, actions) {
             ` : ''}
           </div>
           <p style="margin: 2px 0 0 0; font-size: 0.82rem; color: var(--muted);">${p.role || 'Profissional'} • ${p.phone || 'Sem telefone'} • Acesso: <strong>${p.access || 'Profissional'}</strong></p>
+          <div style="margin-top: 5px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+            <span style="font-size:0.74rem; font-weight:600; color:#1e40af; background:#dbeafe; padding:2px 8px; border-radius:6px; display:inline-flex; align-items:center; gap:4px;" title="Serviços que este profissional atende no agendamento online">
+              ✂️ ${Array.isArray(p.serviceIds) ? `${p.serviceIds.length} serviços atribuídos` : 'Todos os serviços'}
+            </span>
+          </div>
         </div>
       </div>
       <div class="item-actions-group prof-actions-group">
@@ -3971,11 +3976,12 @@ window.openNewAppointmentModal = function(defaultTime = "10:00") {
   const html = `
     <div class="form-group">
       <label>Profissional</label>
-      <select class="form-control" id="modalAppProf" ${(!isManager && currentUser?.professionalId) ? 'disabled style="background:#f1f5f9; cursor:not-allowed;"' : ''}>${profOptions}</select>
+      <select class="form-control" id="modalAppProf" onchange="filterModalServicesByProf()" ${(!isManager && currentUser?.professionalId) ? 'disabled style="background:#f1f5f9; cursor:not-allowed;"' : ''}>${profOptions}</select>
     </div>
-    <div class="form-group">
+    <div class="form-group client-autocomplete-wrapper">
       <label>Nome do Cliente</label>
-      <input type="text" class="form-control" id="modalAppName" placeholder="Ex: Lucas Ferreira">
+      <input type="text" class="form-control" id="modalAppName" placeholder="Comece a digitar o nome do cliente..." autocomplete="off">
+      <div id="modalAppClientSuggestions" class="client-autocomplete-dropdown"></div>
     </div>
     <div class="form-group">
       <label>WhatsApp do Cliente</label>
@@ -3999,7 +4005,9 @@ window.openNewAppointmentModal = function(defaultTime = "10:00") {
 
   openModal('Novo Agendamento', html, async () => {
     const profId = document.getElementById('modalAppProf').value;
-    const clientName = document.getElementById('modalAppName').value.trim();
+    const nameInput = document.getElementById('modalAppName');
+    const clientName = nameInput.value.trim();
+    const clientId = nameInput.dataset.selectedClientId || null;
     const clientPhone = document.getElementById('modalAppPhone').value.trim();
     const serviceSelect = document.getElementById('modalAppService');
     const serviceId = serviceSelect.value;
@@ -4019,6 +4027,7 @@ window.openNewAppointmentModal = function(defaultTime = "10:00") {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         professionalId: profId,
+        clientId,
         clientName,
         clientPhone,
         serviceId,
@@ -4042,8 +4051,158 @@ window.openNewAppointmentModal = function(defaultTime = "10:00") {
     renderView('agenda');
   });
 
-  setTimeout(updateModalEndTime, 50);
+  setTimeout(() => {
+    filterModalServicesByProf();
+    updateModalEndTime();
+    initClientAppointmentAutocomplete();
+  }, 50);
 };
+
+window.filterModalServicesByProf = function() {
+  const profId = document.getElementById('modalAppProf')?.value;
+  const servSelect = document.getElementById('modalAppService');
+  if (!servSelect || !profId) return;
+
+  const prof = state.professionals.find(p => p.id === profId);
+  const eligibleServices = (prof && Array.isArray(prof.serviceIds) && prof.serviceIds.length > 0)
+    ? state.services.filter(s => prof.serviceIds.includes(s.id))
+    : state.services;
+
+  const prevVal = servSelect.value;
+  servSelect.innerHTML = eligibleServices.map(s => `<option value="${s.id}" data-price="${s.price}" data-duration="${s.durationMinutes}">${s.name} (${s.durationMinutes} min) - R$ ${Number(s.price).toFixed(2)}</option>`).join('');
+
+  if (eligibleServices.some(s => s.id === prevVal)) {
+    servSelect.value = prevVal;
+  }
+  updateModalEndTime();
+};
+
+function initClientAppointmentAutocomplete() {
+  const nameInput = document.getElementById('modalAppName');
+  const phoneInput = document.getElementById('modalAppPhone');
+  const suggestionsBox = document.getElementById('modalAppClientSuggestions');
+  let activeIndex = -1;
+
+  if (!nameInput || !suggestionsBox) return;
+
+  function closeDropdown() {
+    suggestionsBox.classList.remove('open');
+    suggestionsBox.innerHTML = '';
+    activeIndex = -1;
+  }
+
+  function selectClient(client) {
+    if (!client) return;
+    nameInput.value = client.name;
+    nameInput.dataset.selectedClientId = client.id;
+    if (phoneInput && client.phone) {
+      phoneInput.value = client.phone;
+    }
+    closeDropdown();
+  }
+
+  function renderSuggestions(matches) {
+    if (!matches || matches.length === 0) {
+      suggestionsBox.innerHTML = `
+        <div class="client-autocomplete-empty">
+          Nenhum cliente cadastrado encontrado.<br>
+          <small style="color:var(--muted)">O novo cliente será cadastrado automaticamente.</small>
+        </div>
+      `;
+      suggestionsBox.classList.add('open');
+      activeIndex = -1;
+      return;
+    }
+
+    suggestionsBox.innerHTML = matches.map((c, idx) => {
+      const initials = (c.name || 'C').split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
+      const phoneDisplay = c.phone || 'Sem telefone cadastrado';
+      return `
+        <div class="client-autocomplete-item ${idx === activeIndex ? 'active' : ''}" data-idx="${idx}">
+          <div class="client-autocomplete-avatar">${initials}</div>
+          <div class="client-autocomplete-info">
+            <div class="client-autocomplete-name">${c.name}</div>
+            <div class="client-autocomplete-phone">📱 ${phoneDisplay}</div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    suggestionsBox.classList.add('open');
+
+    const items = suggestionsBox.querySelectorAll('.client-autocomplete-item');
+    items.forEach((item, idx) => {
+      item.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        selectClient(matches[idx]);
+      });
+    });
+  }
+
+  function getFilteredClients(q) {
+    if (!q) return [];
+    const cleanQ = q.toLowerCase();
+    const digitsQ = q.replace(/\D/g, '');
+    const clients = state.clients || [];
+
+    return clients.filter(c => {
+      const nameMatch = (c.name || '').toLowerCase().includes(cleanQ);
+      const phoneMatch = digitsQ && (c.phone || '').replace(/\D/g, '').includes(digitsQ);
+      return nameMatch || phoneMatch;
+    }).slice(0, 8);
+  }
+
+  nameInput.addEventListener('input', () => {
+    delete nameInput.dataset.selectedClientId;
+    const q = nameInput.value.trim();
+    if (q.length === 0) {
+      closeDropdown();
+      return;
+    }
+    const matches = getFilteredClients(q);
+    renderSuggestions(matches);
+  });
+
+  nameInput.addEventListener('focus', () => {
+    const q = nameInput.value.trim();
+    if (q.length > 0) {
+      const matches = getFilteredClients(q);
+      renderSuggestions(matches);
+    }
+  });
+
+  nameInput.addEventListener('keydown', (e) => {
+    if (!suggestionsBox.classList.contains('open')) return;
+    const items = suggestionsBox.querySelectorAll('.client-autocomplete-item');
+    if (items.length === 0) return;
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      activeIndex = (activeIndex + 1) % items.length;
+      items.forEach((it, idx) => it.classList.toggle('active', idx === activeIndex));
+      items[activeIndex].scrollIntoView({ block: 'nearest' });
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      activeIndex = (activeIndex - 1 + items.length) % items.length;
+      items.forEach((it, idx) => it.classList.toggle('active', idx === activeIndex));
+      items[activeIndex].scrollIntoView({ block: 'nearest' });
+    } else if (e.key === 'Enter') {
+      if (activeIndex >= 0 && activeIndex < items.length) {
+        e.preventDefault();
+        items[activeIndex].click();
+      }
+    } else if (e.key === 'Escape') {
+      closeDropdown();
+    }
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!nameInput.contains(e.target) && !suggestionsBox.contains(e.target)) {
+      closeDropdown();
+    }
+  });
+}
 
 window.openBlockTimeModal = function(defaultStart = "12:00") {
   const profOptions = state.professionals.map(p => `<option value="${p.id}" ${p.id === selectedProfessionalId ? 'selected' : ''}>${p.name} (${p.role})</option>`).join('');
@@ -4797,6 +4956,37 @@ window.openNewProfessionalModal = function() {
         </div>
       </div>
     </div>
+
+    <!-- Seção de Serviços Atendidos por este Profissional -->
+    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 14px; padding: 14px; margin-top: 14px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+        <label style="margin:0; font-weight:700; color:var(--ink); font-size:0.9rem;">
+          Serviços Realizados pelo Profissional
+        </label>
+        <div style="display:flex; gap:6px;">
+          <button type="button" class="btn-falcon btn-secondary" onclick="document.querySelectorAll('.m-new-prof-service-cb').forEach(c => c.checked = true)" style="padding:3px 8px; font-size:0.72rem;">Marcar Todos</button>
+          <button type="button" class="btn-falcon btn-secondary" onclick="document.querySelectorAll('.m-new-prof-service-cb').forEach(c => c.checked = false)" style="padding:3px 8px; font-size:0.72rem;">Desmarcar Todos</button>
+        </div>
+      </div>
+      <p style="font-size:0.78rem; color:var(--muted); margin-bottom:10px; line-height:1.4;">
+        Marque os procedimentos que este profissional realiza. No link de agendamento online, apenas os profissionais marcados aparecerão quando o cliente escolher o serviço.
+      </p>
+      <div style="max-height:180px; overflow-y:auto; border:1px solid #cbd5e1; border-radius:10px; padding:6px; background:#fff; display:flex; flex-direction:column; gap:4px;">
+        ${(state.services && state.services.length > 0)
+          ? state.services.map(s => `
+            <label style="display:flex; align-items:center; justify-content:space-between; padding:7px 10px; border-radius:8px; border:1px solid #f1f5f9; background:#fff; cursor:pointer; margin:0; transition:all 0.15s ease;">
+              <div style="display:flex; align-items:center; gap:8px;">
+                <input type="checkbox" class="m-new-prof-service-cb" value="${s.id}" checked style="width:16px; height:16px; accent-color:var(--orange);">
+                <span style="font-size:0.84rem; font-weight:600; color:var(--ink);">${s.name}</span>
+                <span style="font-size:0.72rem; color:var(--muted); background:#f1f5f9; padding:2px 6px; border-radius:6px;">${s.category || 'Geral'}</span>
+              </div>
+              <span style="font-size:0.78rem; font-weight:700; color:#15803d;">R$ ${(Number(s.price) || 0).toFixed(2)}</span>
+            </label>
+          `).join('')
+          : '<div style="font-size:0.8rem; color:var(--muted); padding:10px; text-align:center;">Nenhum serviço cadastrado no salão.</div>'
+        }
+      </div>
+    </div>
   `;
 
   openModal('Cadastrar Profissional & Criar Login', html, async () => {
@@ -4819,6 +5009,8 @@ window.openNewProfessionalModal = function() {
 
     const avatar = document.getElementById('mProfAvatarValue')?.value || getButterflyAvatar(name);
 
+    const serviceIds = Array.from(document.querySelectorAll('.m-new-prof-service-cb:checked')).map(cb => cb.value);
+
     await tenantFetch('/api/professionals', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -4838,7 +5030,8 @@ window.openNewProfessionalModal = function() {
         pixBank,
         pixKeyType,
         pixKey,
-        pixName
+        pixName,
+        serviceIds
       })
     });
 
@@ -5051,6 +5244,40 @@ window.openEditProfessionalModal = function(profId) {
         </div>
       </div>
     </div>
+
+    <!-- Seção de Serviços Atendidos por este Profissional -->
+    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 14px; padding: 14px; margin-top: 14px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+        <label style="margin:0; font-weight:700; color:var(--ink); font-size:0.9rem;">
+          Serviços Realizados pelo Profissional
+        </label>
+        <div style="display:flex; gap:6px;">
+          <button type="button" class="btn-falcon btn-secondary" onclick="document.querySelectorAll('.m-edit-prof-service-cb').forEach(c => c.checked = true)" style="padding:3px 8px; font-size:0.72rem;">Marcar Todos</button>
+          <button type="button" class="btn-falcon btn-secondary" onclick="document.querySelectorAll('.m-edit-prof-service-cb').forEach(c => c.checked = false)" style="padding:3px 8px; font-size:0.72rem;">Desmarcar Todos</button>
+        </div>
+      </div>
+      <p style="font-size:0.78rem; color:var(--muted); margin-bottom:10px; line-height:1.4;">
+        Marque os procedimentos que este profissional realiza. No link de agendamento online, apenas os profissionais marcados aparecerão quando o cliente escolher o serviço.
+      </p>
+      <div style="max-height:180px; overflow-y:auto; border:1px solid #cbd5e1; border-radius:10px; padding:6px; background:#fff; display:flex; flex-direction:column; gap:4px;">
+        ${(state.services && state.services.length > 0)
+          ? state.services.map(s => {
+            const isChecked = Array.isArray(prof.serviceIds) ? prof.serviceIds.includes(s.id) : true;
+            return `
+              <label style="display:flex; align-items:center; justify-content:space-between; padding:7px 10px; border-radius:8px; border:1px solid #f1f5f9; background:#fff; cursor:pointer; margin:0; transition:all 0.15s ease;">
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <input type="checkbox" class="m-edit-prof-service-cb" value="${s.id}" ${isChecked ? 'checked' : ''} style="width:16px; height:16px; accent-color:var(--orange);">
+                  <span style="font-size:0.84rem; font-weight:600; color:var(--ink);">${s.name}</span>
+                  <span style="font-size:0.72rem; color:var(--muted); background:#f1f5f9; padding:2px 6px; border-radius:6px;">${s.category || 'Geral'}</span>
+                </div>
+                <span style="font-size:0.78rem; font-weight:700; color:#15803d;">R$ ${(Number(s.price) || 0).toFixed(2)}</span>
+              </label>
+            `;
+          }).join('')
+          : '<div style="font-size:0.8rem; color:var(--muted); padding:10px; text-align:center;">Nenhum serviço cadastrado no salão.</div>'
+        }
+      </div>
+    </div>
   `;
 
   openModal('Editar Profissional', html, async () => {
@@ -5076,6 +5303,7 @@ window.openEditProfessionalModal = function(profId) {
     }
 
     const avatar = document.getElementById('mEditProfAvatarValue')?.value || '';
+    const serviceIds = Array.from(document.querySelectorAll('.m-edit-prof-service-cb:checked')).map(cb => cb.value);
 
     const payload = {
       name,
@@ -5091,7 +5319,8 @@ window.openEditProfessionalModal = function(profId) {
       pixKeyType,
       pixKey,
       pixName,
-      avatar
+      avatar,
+      serviceIds
     };
     if (password) payload.password = password;
 

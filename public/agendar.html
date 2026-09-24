@@ -685,17 +685,17 @@
             </div>
           </div>
 
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; padding-bottom:10px; border-bottom: 1px solid #f1f5f9;">
-            <div style="display:flex; align-items:center; gap:8px;">
-              <div style="width:28px; height:28px; border-radius:8px; background:rgba(255,105,0,0.1); color:var(--orange); display:grid; place-items:center;">
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:10px; padding-bottom:10px; border-bottom: 1px solid #f1f5f9;">
+            <div style="display:flex; align-items:center; gap:8px; min-width:0; flex:1;">
+              <div style="width:28px; height:28px; border-radius:8px; background:rgba(255,105,0,0.1); color:var(--orange); display:grid; place-items:center; flex-shrink:0;">
                 <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
               </div>
-              <div>
-                <span style="font-weight:700; color:var(--ink); font-size:0.92rem;">Política de Agendamento</span>
-                <span style="font-size:0.75rem; color:var(--muted); display:block;">Garantia de vaga e bloqueio de horário</span>
+              <div style="min-width:0;">
+                <span style="font-weight:700; color:var(--ink); font-size:0.92rem; display:block;">Política de Agendamento</span>
+                <span style="font-size:0.75rem; color:var(--muted); display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Garantia de vaga e bloqueio de horário</span>
               </div>
             </div>
-            <span id="depositPercentBadge" style="background:#0f172a; color:#fff; font-size:0.72rem; font-weight:700; padding:3px 9px; border-radius:20px; letter-spacing:0.02em;">
+            <span id="depositPercentBadge" style="background:#0f172a; color:#fff; font-size:0.75rem; font-weight:700; padding:4px 11px; border-radius:20px; letter-spacing:0.02em; white-space:nowrap !important; flex-shrink:0 !important; display:inline-flex; align-items:center; justify-content:center;">
               30% Entrada
             </span>
           </div>
@@ -1302,7 +1302,12 @@
       const container = document.getElementById('editAppServicesList');
       if (!container) return;
 
-      container.innerHTML = services.map(s => {
+      const prof = currentEditingApp?.professional;
+      const profEligibleServices = (prof && Array.isArray(prof.serviceIds) && prof.serviceIds.length > 0)
+        ? services.filter(s => prof.serviceIds.includes(s.id))
+        : services;
+
+      container.innerHTML = profEligibleServices.map(s => {
         const isChecked = editSelectedServiceIds.includes(s.id);
         return `
           <label style="display: flex; align-items: center; justify-content: space-between; padding: 7px 8px; border-radius: 8px; margin-bottom: 4px; background: ${isChecked ? '#fff7ed' : '#ffffff'}; border: 1px solid ${isChecked ? 'var(--orange)' : '#e2e8f0'}; cursor: pointer;">
@@ -1366,21 +1371,22 @@
           headers: { 'x-tenant-id': currentTenantId }
         });
         const data = await res.json();
-        const slots = data.slots || [];
+        const rawSlots = (data.slots || []).filter(s => s.available);
+        const timeStrings = rawSlots.map(s => (typeof s === 'string' ? s : s.time)).filter(Boolean);
 
-        if (slots.length === 0) {
+        // Se for na mesma data do agendamento atual, o horário atual do agendamento é mantido como opção disponível
+        if (date === currentEditingApp.date && currentEditingApp.startTime && !timeStrings.includes(currentEditingApp.startTime)) {
+          timeStrings.push(currentEditingApp.startTime);
+        }
+        timeStrings.sort();
+
+        if (timeStrings.length === 0) {
           container.innerHTML = '<div style="padding: 12px; color: var(--muted); font-size: 0.82rem; text-align: center; grid-column: 1 / -1;">Nenhum horário livre para esta data.</div>';
           if (confirmBtn) confirmBtn.disabled = true;
           return;
         }
 
-        // Se for na mesma data do agendamento atual, o horário atual do agendamento é mantido como opção disponível
-        if (date === currentEditingApp.date && !slots.includes(currentEditingApp.startTime)) {
-          slots.push(currentEditingApp.startTime);
-          slots.sort();
-        }
-
-        container.innerHTML = slots.map(time => {
+        container.innerHTML = timeStrings.map(time => {
           const isSelected = editSelectedSlot === time;
           return `
             <button type="button" class="slot-btn ${isSelected ? 'selected' : ''}" onclick="selectEditSlot('${time}')" style="padding: 6px 10px; font-size: 0.82rem; font-weight: 600; border-radius: 8px;">
@@ -1389,7 +1395,7 @@
           `;
         }).join('');
 
-        if (editSelectedSlot && slots.includes(editSelectedSlot)) {
+        if (editSelectedSlot && timeStrings.includes(editSelectedSlot)) {
           if (notice) notice.innerText = `Horário selecionado: ${editSelectedSlot}`;
           if (confirmBtn) confirmBtn.disabled = false;
         } else {
@@ -1577,7 +1583,10 @@
         closeBookingModal();
       } else {
         refreshBookingModalContent();
-        fetchAvailableSlots();
+        const hasEligible = updateProfSelectOptions();
+        if (hasEligible) {
+          fetchAvailableSlots();
+        }
         updateDepositNotice();
       }
     }
@@ -1685,6 +1694,59 @@
       }
     }
 
+    function getEligibleProfessionalsForServices(selectedSrvs) {
+      if (!selectedSrvs || selectedSrvs.length === 0) return professionals;
+      return professionals.filter(p => {
+        // Se o profissional tem serviços configurados explicitamente
+        if (Array.isArray(p.serviceIds) && p.serviceIds.length > 0) {
+          // Deve realizar TODOS os serviços selecionados
+          return selectedSrvs.every(s => p.serviceIds.includes(s.id));
+        }
+        // Compatibilidade (se não tiver sido configurado ainda pelo gestor, permite)
+        if (p.serviceIds === undefined || p.serviceIds === null) {
+          return true;
+        }
+        // Se serviceIds foi explicitamente salvo como vazio []
+        return false;
+      });
+    }
+
+    function updateProfSelectOptions() {
+      const profSelect = document.getElementById('bookProfSelect');
+      if (!profSelect) return false;
+
+      const eligible = getEligibleProfessionalsForServices(selectedServices);
+
+      if (eligible.length === 0) {
+        profSelect.innerHTML = `<option value="" disabled selected>Nenhum profissional realiza estes serviços juntos</option>`;
+        updateSelectedProfCard();
+        const slotsContainer = document.getElementById('slotsContainer');
+        if (slotsContainer) {
+          slotsContainer.innerHTML = `
+            <div style="padding: 20px 14px; text-align: center; color: #dc2626; background: #fef2f2; border: 1px solid #fecaca; border-radius: 12px; margin: 8px 0;">
+              <strong style="display:block; font-size: 0.9rem; margin-bottom: 4px;">Profissionais diferentes para estes serviços</strong>
+              <span style="font-size: 0.78rem; color: #7f1d1d; line-height: 1.35; display:block;">Os serviços selecionados são atendidos por profissionais especialistas diferentes. Por favor, remova os serviços incompatíveis ou agende cada procedimento separadamente.</span>
+            </div>
+          `;
+        }
+        const confirmBtn = document.getElementById('btnConfirmBooking');
+        if (confirmBtn) confirmBtn.disabled = true;
+        return false;
+      }
+
+      const prevValue = profSelect.value;
+      profSelect.innerHTML = eligible.map(p => `<option value="${p.id}">${p.name} (${p.role || 'Profissional'})</option>`).join('');
+
+      if (eligible.some(p => p.id === prevValue)) {
+        profSelect.value = prevValue;
+      } else {
+        profSelect.value = eligible[0].id;
+      }
+
+      updateSelectedProfCard();
+      return true;
+    }
+
     function openBookingModal(serviceId) {
       if (serviceId) {
         const s = services.find(srv => srv.id === serviceId);
@@ -1705,12 +1767,8 @@
       updateCheckoutUI();
       refreshBookingModalContent();
 
-      const profSelect = document.getElementById('bookProfSelect');
-      if (profSelect && (!profSelect.value || profSelect.options.length === 0)) {
-        profSelect.innerHTML = professionals.map(p => `<option value="${p.id}">${p.name} (${p.role})</option>`).join('');
-      }
+      const hasEligible = updateProfSelectOptions();
 
-      updateSelectedProfCard();
       document.getElementById('bookingModal').classList.add('open');
       document.body.classList.add('modal-open');
       const bar = document.getElementById('checkoutFloatingBar');
@@ -1719,7 +1777,9 @@
         bar.classList.remove('active');
       }
       updateDepositNotice();
-      fetchAvailableSlots();
+      if (hasEligible) {
+        fetchAvailableSlots();
+      }
     }
 
     function closeBookingModal() {

@@ -2215,6 +2215,11 @@ function renderProfessionals(container, actions) {
             ` : ''}
           </div>
           <p style="margin: 2px 0 0 0; font-size: 0.82rem; color: var(--muted);">${p.role || 'Profissional'} • ${p.phone || 'Sem telefone'} • Acesso: <strong>${p.access || 'Profissional'}</strong></p>
+          <div style="margin-top: 5px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+            <span style="font-size:0.74rem; font-weight:600; color:#1e40af; background:#dbeafe; padding:2px 8px; border-radius:6px; display:inline-flex; align-items:center; gap:4px;" title="Serviços que este profissional atende no agendamento online">
+              ✂️ ${Array.isArray(p.serviceIds) ? `${p.serviceIds.length} serviços atribuídos` : 'Todos os serviços'}
+            </span>
+          </div>
         </div>
       </div>
       <div class="item-actions-group prof-actions-group">
@@ -3971,7 +3976,7 @@ window.openNewAppointmentModal = function(defaultTime = "10:00") {
   const html = `
     <div class="form-group">
       <label>Profissional</label>
-      <select class="form-control" id="modalAppProf" ${(!isManager && currentUser?.professionalId) ? 'disabled style="background:#f1f5f9; cursor:not-allowed;"' : ''}>${profOptions}</select>
+      <select class="form-control" id="modalAppProf" onchange="filterModalServicesByProf()" ${(!isManager && currentUser?.professionalId) ? 'disabled style="background:#f1f5f9; cursor:not-allowed;"' : ''}>${profOptions}</select>
     </div>
     <div class="form-group client-autocomplete-wrapper">
       <label>Nome do Cliente</label>
@@ -4047,9 +4052,29 @@ window.openNewAppointmentModal = function(defaultTime = "10:00") {
   });
 
   setTimeout(() => {
+    filterModalServicesByProf();
     updateModalEndTime();
     initClientAppointmentAutocomplete();
   }, 50);
+};
+
+window.filterModalServicesByProf = function() {
+  const profId = document.getElementById('modalAppProf')?.value;
+  const servSelect = document.getElementById('modalAppService');
+  if (!servSelect || !profId) return;
+
+  const prof = state.professionals.find(p => p.id === profId);
+  const eligibleServices = (prof && Array.isArray(prof.serviceIds) && prof.serviceIds.length > 0)
+    ? state.services.filter(s => prof.serviceIds.includes(s.id))
+    : state.services;
+
+  const prevVal = servSelect.value;
+  servSelect.innerHTML = eligibleServices.map(s => `<option value="${s.id}" data-price="${s.price}" data-duration="${s.durationMinutes}">${s.name} (${s.durationMinutes} min) - R$ ${Number(s.price).toFixed(2)}</option>`).join('');
+
+  if (eligibleServices.some(s => s.id === prevVal)) {
+    servSelect.value = prevVal;
+  }
+  updateModalEndTime();
 };
 
 function initClientAppointmentAutocomplete() {
@@ -4931,6 +4956,37 @@ window.openNewProfessionalModal = function() {
         </div>
       </div>
     </div>
+
+    <!-- Seção de Serviços Atendidos por este Profissional -->
+    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 14px; padding: 14px; margin-top: 14px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+        <label style="margin:0; font-weight:700; color:var(--ink); font-size:0.9rem;">
+          Serviços Realizados pelo Profissional
+        </label>
+        <div style="display:flex; gap:6px;">
+          <button type="button" class="btn-falcon btn-secondary" onclick="document.querySelectorAll('.m-new-prof-service-cb').forEach(c => c.checked = true)" style="padding:3px 8px; font-size:0.72rem;">Marcar Todos</button>
+          <button type="button" class="btn-falcon btn-secondary" onclick="document.querySelectorAll('.m-new-prof-service-cb').forEach(c => c.checked = false)" style="padding:3px 8px; font-size:0.72rem;">Desmarcar Todos</button>
+        </div>
+      </div>
+      <p style="font-size:0.78rem; color:var(--muted); margin-bottom:10px; line-height:1.4;">
+        Marque os procedimentos que este profissional realiza. No link de agendamento online, apenas os profissionais marcados aparecerão quando o cliente escolher o serviço.
+      </p>
+      <div style="max-height:180px; overflow-y:auto; border:1px solid #cbd5e1; border-radius:10px; padding:6px; background:#fff; display:flex; flex-direction:column; gap:4px;">
+        ${(state.services && state.services.length > 0)
+          ? state.services.map(s => `
+            <label style="display:flex; align-items:center; justify-content:space-between; padding:7px 10px; border-radius:8px; border:1px solid #f1f5f9; background:#fff; cursor:pointer; margin:0; transition:all 0.15s ease;">
+              <div style="display:flex; align-items:center; gap:8px;">
+                <input type="checkbox" class="m-new-prof-service-cb" value="${s.id}" checked style="width:16px; height:16px; accent-color:var(--orange);">
+                <span style="font-size:0.84rem; font-weight:600; color:var(--ink);">${s.name}</span>
+                <span style="font-size:0.72rem; color:var(--muted); background:#f1f5f9; padding:2px 6px; border-radius:6px;">${s.category || 'Geral'}</span>
+              </div>
+              <span style="font-size:0.78rem; font-weight:700; color:#15803d;">R$ ${(Number(s.price) || 0).toFixed(2)}</span>
+            </label>
+          `).join('')
+          : '<div style="font-size:0.8rem; color:var(--muted); padding:10px; text-align:center;">Nenhum serviço cadastrado no salão.</div>'
+        }
+      </div>
+    </div>
   `;
 
   openModal('Cadastrar Profissional & Criar Login', html, async () => {
@@ -4953,6 +5009,8 @@ window.openNewProfessionalModal = function() {
 
     const avatar = document.getElementById('mProfAvatarValue')?.value || getButterflyAvatar(name);
 
+    const serviceIds = Array.from(document.querySelectorAll('.m-new-prof-service-cb:checked')).map(cb => cb.value);
+
     await tenantFetch('/api/professionals', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -4972,7 +5030,8 @@ window.openNewProfessionalModal = function() {
         pixBank,
         pixKeyType,
         pixKey,
-        pixName
+        pixName,
+        serviceIds
       })
     });
 
@@ -5185,6 +5244,40 @@ window.openEditProfessionalModal = function(profId) {
         </div>
       </div>
     </div>
+
+    <!-- Seção de Serviços Atendidos por este Profissional -->
+    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 14px; padding: 14px; margin-top: 14px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+        <label style="margin:0; font-weight:700; color:var(--ink); font-size:0.9rem;">
+          Serviços Realizados pelo Profissional
+        </label>
+        <div style="display:flex; gap:6px;">
+          <button type="button" class="btn-falcon btn-secondary" onclick="document.querySelectorAll('.m-edit-prof-service-cb').forEach(c => c.checked = true)" style="padding:3px 8px; font-size:0.72rem;">Marcar Todos</button>
+          <button type="button" class="btn-falcon btn-secondary" onclick="document.querySelectorAll('.m-edit-prof-service-cb').forEach(c => c.checked = false)" style="padding:3px 8px; font-size:0.72rem;">Desmarcar Todos</button>
+        </div>
+      </div>
+      <p style="font-size:0.78rem; color:var(--muted); margin-bottom:10px; line-height:1.4;">
+        Marque os procedimentos que este profissional realiza. No link de agendamento online, apenas os profissionais marcados aparecerão quando o cliente escolher o serviço.
+      </p>
+      <div style="max-height:180px; overflow-y:auto; border:1px solid #cbd5e1; border-radius:10px; padding:6px; background:#fff; display:flex; flex-direction:column; gap:4px;">
+        ${(state.services && state.services.length > 0)
+          ? state.services.map(s => {
+            const isChecked = Array.isArray(prof.serviceIds) ? prof.serviceIds.includes(s.id) : true;
+            return `
+              <label style="display:flex; align-items:center; justify-content:space-between; padding:7px 10px; border-radius:8px; border:1px solid #f1f5f9; background:#fff; cursor:pointer; margin:0; transition:all 0.15s ease;">
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <input type="checkbox" class="m-edit-prof-service-cb" value="${s.id}" ${isChecked ? 'checked' : ''} style="width:16px; height:16px; accent-color:var(--orange);">
+                  <span style="font-size:0.84rem; font-weight:600; color:var(--ink);">${s.name}</span>
+                  <span style="font-size:0.72rem; color:var(--muted); background:#f1f5f9; padding:2px 6px; border-radius:6px;">${s.category || 'Geral'}</span>
+                </div>
+                <span style="font-size:0.78rem; font-weight:700; color:#15803d;">R$ ${(Number(s.price) || 0).toFixed(2)}</span>
+              </label>
+            `;
+          }).join('')
+          : '<div style="font-size:0.8rem; color:var(--muted); padding:10px; text-align:center;">Nenhum serviço cadastrado no salão.</div>'
+        }
+      </div>
+    </div>
   `;
 
   openModal('Editar Profissional', html, async () => {
@@ -5210,6 +5303,7 @@ window.openEditProfessionalModal = function(profId) {
     }
 
     const avatar = document.getElementById('mEditProfAvatarValue')?.value || '';
+    const serviceIds = Array.from(document.querySelectorAll('.m-edit-prof-service-cb:checked')).map(cb => cb.value);
 
     const payload = {
       name,
@@ -5225,7 +5319,8 @@ window.openEditProfessionalModal = function(profId) {
       pixKeyType,
       pixKey,
       pixName,
-      avatar
+      avatar,
+      serviceIds
     };
     if (password) payload.password = password;
 
