@@ -4914,15 +4914,15 @@ window.openNewProfessionalModal = function() {
       <label>Comissão Padrão (%)</label>
       <input type="number" class="form-control" id="mProfComm" value="50">
     </div>
-    <div class="form-group" style="display:flex; align-items:center; gap:8px; margin-top:8px;">
-      <input type="checkbox" id="mProfBooking" checked>
-      <label for="mProfBooking" style="margin:0; font-size:0.88rem;">Exibir na página pública de agendamento online</label>
-    </div>
+    <label style="display: flex; flex-direction: row; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 12px; border: 1.5px solid #fed7aa; background: #ffffff; cursor: pointer; margin-top: 12px; transition: all 0.15s ease;">
+      <input type="checkbox" id="mProfBooking" checked onchange="this.closest('label').style.borderColor = this.checked ? '#fed7aa' : '#e2e8f0'; this.closest('label').style.background = this.checked ? '#ffffff' : '#f8fafc';" style="width: 18px; height: 18px; accent-color: var(--orange); flex-shrink: 0; cursor: pointer; margin: 0;">
+      <span style="font-size: 0.88rem; font-weight: 600; color: var(--ink);">Exibir na página pública de agendamento online</span>
+    </label>
 
     <!-- Seção de Sinal de Adiantamento (InfinitePay / Pix) -->
     <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 14px; padding: 14px; margin-top: 14px;">
-      <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">
-        <input type="checkbox" id="mProfRequireDeposit" onchange="document.getElementById('mProfDepositFields').style.display = this.checked ? 'block' : 'none'">
+      <div style="display:flex; flex-direction: row; align-items:center; gap:10px; margin-bottom:10px;">
+        <input type="checkbox" id="mProfRequireDeposit" onchange="document.getElementById('mProfDepositFields').style.display = this.checked ? 'block' : 'none'" style="width: 18px; height: 18px; accent-color: var(--orange); flex-shrink: 0; cursor: pointer; margin: 0;">
         <label for="mProfRequireDeposit" style="margin:0; font-weight:700; color:var(--ink); font-size:0.9rem; cursor:pointer;">
           Exigir Sinal de Adiantamento para Agendar
         </label>
@@ -5220,15 +5220,15 @@ window.openEditProfessionalModal = function(profId) {
       <label>Comissão Padrão (%)</label>
       <input type="number" class="form-control" id="mEditProfComm" value="${prof.commissionDefault || 50}">
     </div>
-    <div class="form-group" style="display:flex; align-items:center; gap:8px; margin-top:8px;">
-      <input type="checkbox" id="mEditProfBooking" ${prof.showInBooking !== false ? 'checked' : ''}>
-      <label for="mEditProfBooking" style="margin:0; font-size:0.88rem;">Exibir na página pública de agendamento online</label>
-    </div>
+    <label style="display: flex; flex-direction: row; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 12px; border: 1.5px solid ${prof.showInBooking !== false ? '#fed7aa' : '#e2e8f0'}; background: ${prof.showInBooking !== false ? '#ffffff' : '#f8fafc'}; cursor: pointer; margin-top: 12px; transition: all 0.15s ease;">
+      <input type="checkbox" id="mEditProfBooking" ${prof.showInBooking !== false ? 'checked' : ''} onchange="this.closest('label').style.borderColor = this.checked ? '#fed7aa' : '#e2e8f0'; this.closest('label').style.background = this.checked ? '#ffffff' : '#f8fafc';" style="width: 18px; height: 18px; accent-color: var(--orange); flex-shrink: 0; cursor: pointer; margin: 0;">
+      <span style="font-size: 0.88rem; font-weight: 600; color: var(--ink);">Exibir na página pública de agendamento online</span>
+    </label>
 
     <!-- Seção de Sinal de Adiantamento (InfinitePay / Pix) -->
     <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 14px; padding: 14px; margin-top: 14px;">
-      <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">
-        <input type="checkbox" id="mEditProfRequireDeposit" ${prof.requireDeposit ? 'checked' : ''} onchange="document.getElementById('mEditProfDepositFields').style.display = this.checked ? 'block' : 'none'">
+      <div style="display:flex; flex-direction: row; align-items:center; gap:10px; margin-bottom:10px;">
+        <input type="checkbox" id="mEditProfRequireDeposit" ${prof.requireDeposit ? 'checked' : ''} onchange="document.getElementById('mEditProfDepositFields').style.display = this.checked ? 'block' : 'none'" style="width: 18px; height: 18px; accent-color: var(--orange); flex-shrink: 0; cursor: pointer; margin: 0;">
         <label for="mEditProfRequireDeposit" style="margin:0; font-weight:700; color:var(--ink); font-size:0.9rem; cursor:pointer;">
           Exigir Sinal de Adiantamento para Agendar
         </label>

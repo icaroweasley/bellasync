@@ -1485,6 +1485,11 @@ input[type="date"].form-control {
   -webkit-backdrop-filter: none !important;
 }
 
+input[type="checkbox"] {
+  accent-color: var(--orange, #ff6900);
+  cursor: pointer;
+}
+
 .modal-footer {
   padding: 16px 24px;
   border-top: 1px solid rgba(0, 0, 0, 0.06);
