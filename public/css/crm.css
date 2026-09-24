@@ -3038,6 +3038,90 @@ input[type="date"].form-control {
   background: #0f172a;
 }
 
+/* Autocomplete de Clientes no Agendamento */
+.client-autocomplete-wrapper {
+  position: relative;
+}
+
+.client-autocomplete-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px -3px rgba(0, 0, 0, 0.12), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  max-height: 220px;
+  overflow-y: auto;
+  z-index: 10050;
+  display: none;
+}
+
+.client-autocomplete-dropdown.open {
+  display: block;
+}
+
+.client-autocomplete-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  cursor: pointer;
+  border-bottom: 1px solid #f1f5f9;
+  transition: background 0.15s ease;
+}
+
+.client-autocomplete-item:last-child {
+  border-bottom: none;
+}
+
+.client-autocomplete-item:hover,
+.client-autocomplete-item.active {
+  background: rgba(255, 105, 0, 0.08);
+}
+
+.client-autocomplete-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #ffedd5;
+  color: var(--orange, #ff6900);
+  font-weight: 700;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.client-autocomplete-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.client-autocomplete-name {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--ink, #0f172a);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.client-autocomplete-phone {
+  font-size: 0.75rem;
+  color: var(--muted, #64748b);
+}
+
+.client-autocomplete-empty {
+  padding: 12px 14px;
+  font-size: 0.82rem;
+  color: var(--muted, #64748b);
+  text-align: center;
+}
+
+
 
 
 

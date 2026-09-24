@@ -206,7 +206,20 @@
       padding-bottom: 96px;
     }
     .modal-backdrop {
-      z-index: 2000 !important;
+      z-index: 2000;
+    }
+    #consultModal,
+    #bookingModal {
+      z-index: 2100;
+    }
+    #clientEditModal {
+      z-index: 2500;
+    }
+    #customConfirmModal {
+      z-index: 10000 !important;
+    }
+    #customAlertModal {
+      z-index: 10001 !important;
     }
     .checkout-floating-bar {
       position: fixed;
@@ -414,6 +427,20 @@
       }
       .consult-app-card {
         padding: 12px 10px;
+      }
+      .pix-copy-container {
+        gap: 6px !important;
+      }
+      .pix-copy-container input {
+        font-size: 0.78rem !important;
+        padding: 7px 8px !important;
+      }
+      .btn-copy-pix {
+        padding: 7px 10px !important;
+        font-size: 0.76rem !important;
+        gap: 4px !important;
+        flex-shrink: 0 !important;
+        white-space: nowrap !important;
       }
     }
   </style>
@@ -715,11 +742,11 @@
               </span>
               <span style="font-size:0.72rem; font-weight:500; color:#64748b;" id="depositTitularDisplay">Favorecido: Profissional</span>
             </div>
-            <div style="display:flex; gap:8px; align-items:center;">
-              <input type="text" id="depositPixKeyInput" readonly style="font-size:0.82rem; font-family:monospace; padding:8px 12px; border-radius:10px; border:1px solid #cbd5e1; background:#f8fafc; flex:1; font-weight:700; color:#0f172a; letter-spacing:0.03em;">
-              <button type="button" class="btn-falcon btn-primary" onclick="copyDepositPixKey()" style="padding:8px 14px; font-size:0.8rem; font-weight:600; display:inline-flex; align-items:center; gap:6px; white-space:nowrap;">
+            <div class="pix-copy-container" style="display:flex; gap:8px; align-items:center; width:100%; box-sizing:border-box;">
+              <input type="text" id="depositPixKeyInput" readonly style="font-size:0.82rem; font-family:monospace; padding:8px 10px; border-radius:10px; border:1px solid #cbd5e1; background:#f8fafc; flex:1 1 0%; min-width:0; width:0; text-overflow:ellipsis; overflow:hidden; font-weight:700; color:#0f172a; letter-spacing:0.02em;">
+              <button type="button" class="btn-falcon btn-primary btn-copy-pix" onclick="copyDepositPixKey()" style="padding:8px 12px; font-size:0.78rem; font-weight:600; display:inline-flex; align-items:center; gap:5px; white-space:nowrap; flex-shrink:0;">
                 <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-                Copiar Chave
+                <span>Copiar Chave</span>
               </button>
             </div>
             <small style="display:block; margin-top:6px; font-size:0.72rem; color:#94a3b8; text-align:center;">
@@ -1224,7 +1251,7 @@
       if (dateInput) {
         dateInput.value = app.date;
         dateInput.min = new Date().toISOString().split('T')[0];
-        const maxDays = salonSettings.advanceBookingDays || 60;
+        const maxDays = (settings && Number(settings.maxBookingDaysAhead)) || 60;
         const maxDate = new Date();
         maxDate.setDate(maxDate.getDate() + maxDays);
         dateInput.max = maxDate.toISOString().split('T')[0];
@@ -1244,6 +1271,12 @@
       renderEditServicesChecklist();
       fetchEditAvailableSlots();
 
+      // Esconde o consultModal temporariamente para não sobrepor telas no mobile
+      const consultModal = document.getElementById('consultModal');
+      if (consultModal) {
+        consultModal.classList.remove('open');
+      }
+
       modal.classList.add('open');
       modal.classList.add('active');
       document.body.classList.add('modal-open');
@@ -1257,7 +1290,10 @@
       }
       currentEditingApp = null;
       const consultModal = document.getElementById('consultModal');
-      if (!consultModal || !consultModal.classList.contains('open')) {
+      if (consultModal && lastSearchedPhone) {
+        consultModal.classList.add('open');
+        document.body.classList.add('modal-open');
+      } else {
         document.body.classList.remove('modal-open');
       }
     }
