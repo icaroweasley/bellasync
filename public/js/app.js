@@ -2385,8 +2385,15 @@ function renderServices(container, actions) {
   const servsHtml = state.services.map(s => `
     <div class="data-item-card">
       <div class="item-main-info">
-        <h4>${s.name}</h4>
-        <p>Categoria: <strong>${s.category}</strong> • Duração: <strong>${formatDurationHours(s.durationMinutes)}</strong> • Comissão: ${s.commissionPercent}%</p>
+        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+          <h4 style="margin: 0; font-size: 1.02rem;">${s.name}</h4>
+          ${s.showPriceInBooking === false ? `
+            <span style="font-size:0.72rem; font-weight:700; color:#64748b; background:#f1f5f9; border:1px solid #e2e8f0; padding:2px 8px; border-radius:6px; display:inline-flex; align-items:center; gap:4px;" title="Preço oculto para clientes no agendamento online (aparece 'A consultar')">
+              🔒 Preço Oculto p/ Clientes
+            </span>
+          ` : ''}
+        </div>
+        <p style="margin-top: 4px;">Categoria: <strong>${s.category}</strong> • Duração: <strong>${formatDurationHours(s.durationMinutes)}</strong> • Comissão: ${s.commissionPercent}%</p>
       </div>
       <div class="item-actions-group">
         <span class="item-badge-price" style="margin-right: 6px;">R$ ${s.price.toFixed(2)}</span>
@@ -4669,6 +4676,13 @@ window.openNewServiceModal = function() {
       <label>Preço (R$)</label>
       <input type="number" class="form-control" id="mServPrice" placeholder="80.00" step="0.50">
     </div>
+    <label style="display: flex; flex-direction: row; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 12px; border: 1.5px solid #fed7aa; background: #ffffff; cursor: pointer; margin-top: 4px; margin-bottom: 8px; transition: all 0.15s ease;">
+      <input type="checkbox" id="mServShowPrice" checked onchange="this.closest('label').style.borderColor = this.checked ? '#fed7aa' : '#e2e8f0'; this.closest('label').style.background = this.checked ? '#ffffff' : '#f8fafc';" style="width: 18px; height: 18px; accent-color: var(--orange); flex-shrink: 0; cursor: pointer; margin: 0;">
+      <div>
+        <span style="font-size: 0.88rem; font-weight: 600; color: var(--ink); display: block;">Exibir preço para o cliente no agendamento online</span>
+        <span style="font-size: 0.75rem; color: var(--muted); display: block; margin-top: 1px;">Se desmarcado, o cliente verá "A consultar" no lugar do valor.</span>
+      </div>
+    </label>
     <div class="form-group">
       <label>Duração do Serviço</label>
       <select class="form-control" id="mServDuration">
@@ -4695,12 +4709,13 @@ window.openNewServiceModal = function() {
     const name = document.getElementById('mServName').value;
     const category = document.getElementById('mServCat').value;
     const price = Number(document.getElementById('mServPrice').value);
+    const showPriceInBooking = document.getElementById('mServShowPrice') ? document.getElementById('mServShowPrice').checked : true;
     const durationMinutes = Number(document.getElementById('mServDuration').value);
     const commissionPercent = Number(document.getElementById('mServComm').value);
     const isPackage = document.getElementById('mServIsPkg')?.checked || category.toLowerCase().includes('pacote');
     const sessionsCount = isPackage ? (parseInt(document.getElementById('mServSessions')?.value, 10) || 5) : 1;
 
-    if (!name || !price) {
+    if (!name || isNaN(price)) {
       asyncAlert('Nome e Preço são obrigatórios!');
       return;
     }
@@ -4708,7 +4723,7 @@ window.openNewServiceModal = function() {
     await tenantFetch('/api/services', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, category, price, durationMinutes, commissionPercent, isPackage, sessionsCount })
+      body: JSON.stringify({ name, category, price, durationMinutes, commissionPercent, isPackage, sessionsCount, showPriceInBooking })
     });
 
     closeModal();
@@ -5482,6 +5497,13 @@ window.openEditServiceModal = function(serviceId) {
       <label>Preço (R$)</label>
       <input type="number" class="form-control" id="mEditServPrice" value="${serv.price || 0}" step="0.50">
     </div>
+    <label style="display: flex; flex-direction: row; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 12px; border: 1.5px solid ${serv.showPriceInBooking !== false ? '#fed7aa' : '#e2e8f0'}; background: ${serv.showPriceInBooking !== false ? '#ffffff' : '#f8fafc'}; cursor: pointer; margin-top: 4px; margin-bottom: 8px; transition: all 0.15s ease;">
+      <input type="checkbox" id="mEditServShowPrice" ${serv.showPriceInBooking !== false ? 'checked' : ''} onchange="this.closest('label').style.borderColor = this.checked ? '#fed7aa' : '#e2e8f0'; this.closest('label').style.background = this.checked ? '#ffffff' : '#f8fafc';" style="width: 18px; height: 18px; accent-color: var(--orange); flex-shrink: 0; cursor: pointer; margin: 0;">
+      <div>
+        <span style="font-size: 0.88rem; font-weight: 600; color: var(--ink); display: block;">Exibir preço para o cliente no agendamento online</span>
+        <span style="font-size: 0.75rem; color: var(--muted); display: block; margin-top: 1px;">Se desmarcado, o cliente verá "A consultar" no lugar do valor.</span>
+      </div>
+    </label>
     <div class="form-group">
       <label>Duração do Serviço</label>
       <select class="form-control" id="mEditServDuration">
@@ -5508,6 +5530,7 @@ window.openEditServiceModal = function(serviceId) {
     const name = document.getElementById('mEditServName').value.trim();
     const category = document.getElementById('mEditServCat').value.trim();
     const price = Number(document.getElementById('mEditServPrice').value);
+    const showPriceInBooking = document.getElementById('mEditServShowPrice') ? document.getElementById('mEditServShowPrice').checked : true;
     const durationMinutes = Number(document.getElementById('mEditServDuration').value);
     const commissionPercent = Number(document.getElementById('mEditServComm').value);
     const isPackage = document.getElementById('mEditServIsPkg')?.checked || category.toLowerCase().includes('pacote');
@@ -5521,7 +5544,7 @@ window.openEditServiceModal = function(serviceId) {
     const res = await tenantFetch(`/api/services/${serviceId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, category, price, durationMinutes, commissionPercent, isPackage, sessionsCount })
+      body: JSON.stringify({ name, category, price, durationMinutes, commissionPercent, isPackage, sessionsCount, showPriceInBooking })
     });
 
     if (!res.ok) {

@@ -1144,7 +1144,16 @@
                 </div>
                 <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 6px;">
                   <span style="font-size: 0.78rem; color: var(--muted); flex: 1; min-width: 0; line-height: 1.35; overflow-wrap: break-word;">Atendimento com: <strong>${profName}</strong></span>
-                  <strong style="font-size: 0.95rem; font-weight: 800; color: #15803d; white-space: nowrap !important; flex-shrink: 0 !important;">R$ ${(Number(app.price) || 0).toFixed(2)}</strong>
+                  ${(() => {
+                    const appService = services.find(s => s.id === app.serviceId);
+                    const isPriceHidden = (appService && appService.showPriceInBooking === false) || (Array.isArray(app.servicesList) && app.servicesList.length > 0 && app.servicesList.every(item => {
+                      const matched = services.find(s => s.id === item.id);
+                      return matched ? matched.showPriceInBooking === false : false;
+                    }));
+                    return isPriceHidden 
+                      ? '<strong style="font-size: 0.85rem; font-weight: 700; color: #64748b; white-space: nowrap !important; flex-shrink: 0 !important;">A consultar</strong>' 
+                      : `<strong style="font-size: 0.95rem; font-weight: 800; color: #15803d; white-space: nowrap !important; flex-shrink: 0 !important;">R$ ${(Number(app.price) || 0).toFixed(2)}</strong>`;
+                  })()}
                 </div>
               </div>
 
@@ -1319,7 +1328,7 @@
               <span style="font-size: 0.84rem; font-weight: 600; color: var(--ink);">${s.name}</span>
             </div>
             <div style="text-align: right;">
-              <span style="font-size: 0.78rem; font-weight: 700; color: #15803d;">R$ ${(Number(s.price) || 0).toFixed(2)}</span>
+              <span style="font-size: 0.78rem; font-weight: 700; color: ${s.showPriceInBooking === false ? '#64748b' : '#15803d'};">${s.showPriceInBooking === false ? 'A consultar' : `R$ ${(Number(s.price) || 0).toFixed(2)}`}</span>
               <span style="font-size: 0.72rem; color: var(--muted); margin-left: 4px;">(${formatDuration(s.durationMinutes)})</span>
             </div>
           </label>
@@ -1350,8 +1359,21 @@
       if (!summaryEl) return;
       const selected = services.filter(s => editSelectedServiceIds.includes(s.id));
       const totalDur = selected.reduce((sum, s) => sum + (Number(s.durationMinutes) || 0), 0);
-      const totalVal = selected.reduce((sum, s) => sum + (Number(s.price) || 0), 0);
-      summaryEl.innerText = `${formatDuration(totalDur)} • ${totalVal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`;
+      const visible = selected.filter(s => s.showPriceInBooking !== false);
+      const allHidden = selected.length > 0 && visible.length === 0;
+      const hasHidden = selected.some(s => s.showPriceInBooking === false);
+      const totalVal = visible.reduce((sum, s) => sum + (Number(s.price) || 0), 0);
+      
+      let priceText = '';
+      if (allHidden) {
+        priceText = 'A consultar';
+      } else if (hasHidden) {
+        priceText = `${totalVal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} (+ a consultar)`;
+      } else {
+        priceText = totalVal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+      }
+
+      summaryEl.innerText = `${formatDuration(totalDur)} • ${priceText}`;
     }
 
     async function fetchEditAvailableSlots() {
@@ -1516,7 +1538,11 @@
                 ${s.observation ? `<small style="color:#718096; font-size:0.75rem; display:block; line-height: 1.35;">${s.observation}</small>` : ''}
               </div>
               <div class="service-book-cta">
-                <span class="item-badge-price">R$ ${(Number(s.price) || 0).toFixed(2)}</span>
+                ${s.showPriceInBooking === false ? `
+                  <span class="item-badge-price" style="background:#f1f5f9; color:#64748b; font-size:0.78rem; font-weight:700;">A consultar</span>
+                ` : `
+                  <span class="item-badge-price">R$ ${(Number(s.price) || 0).toFixed(2)}</span>
+                `}
                 <div class="service-actions-row">
                   <button type="button" class="btn-toggle-service ${isSel ? 'selected' : ''}" id="btn-toggle-${s.id}" onclick="toggleServiceSelection('${s.id}')" title="Adicionar ou remover do checkout">
                     ${isSel ? '<svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"></polyline></svg> Adicionado' : '<svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg> Adicionar'}
@@ -1601,7 +1627,10 @@
       const totalDurEl = document.getElementById('cartTotalDuration');
 
       const totalCount = selectedServices.length;
-      const totalPrice = selectedServices.reduce((sum, s) => sum + (Number(s.price) || 0), 0);
+      const visibleServices = selectedServices.filter(s => s.showPriceInBooking !== false);
+      const allHidden = selectedServices.length > 0 && visibleServices.length === 0;
+      const hasHidden = selectedServices.some(s => s.showPriceInBooking === false);
+      const totalPrice = visibleServices.reduce((sum, s) => sum + (Number(s.price) || 0), 0);
       const totalDuration = selectedServices.reduce((sum, s) => sum + (Number(s.durationMinutes) || 0), 0);
 
       const isAnyModalOpen = !!document.querySelector('.modal-backdrop.open, .modal-backdrop.active');
@@ -1618,7 +1647,15 @@
           }
         }
         if (countNum) countNum.innerText = totalCount;
-        if (totalPriceEl) totalPriceEl.innerText = totalPrice.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        if (totalPriceEl) {
+          if (allHidden) {
+            totalPriceEl.innerText = 'A consultar';
+          } else if (hasHidden) {
+            totalPriceEl.innerText = `${totalPrice.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} (+ a consultar)`;
+          } else {
+            totalPriceEl.innerText = totalPrice.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+          }
+        }
         if (totalDurEl) totalDurEl.innerText = `• ${formatDuration(totalDuration)}`;
       } else {
         document.body.classList.remove('has-cart-bar');
@@ -1651,7 +1688,10 @@
 
     function refreshBookingModalContent() {
       const totalCount = selectedServices.length;
-      const totalPrice = selectedServices.reduce((sum, s) => sum + (Number(s.price) || 0), 0);
+      const visibleServices = selectedServices.filter(s => s.showPriceInBooking !== false);
+      const allHidden = selectedServices.length > 0 && visibleServices.length === 0;
+      const hasHidden = selectedServices.some(s => s.showPriceInBooking === false);
+      const totalPrice = visibleServices.reduce((sum, s) => sum + (Number(s.price) || 0), 0);
       const totalDuration = selectedServices.reduce((sum, s) => sum + (Number(s.durationMinutes) || 0), 0);
 
       const titleEl = document.getElementById('bModalTitle');
@@ -1676,7 +1716,13 @@
         totalBadgeEl.innerText = `${totalCount} serviço${totalCount > 1 ? 's' : ''}`;
       }
       if (summaryTotalEl) {
-        summaryTotalEl.innerText = totalPrice.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        if (allHidden) {
+          summaryTotalEl.innerText = 'A consultar';
+        } else if (hasHidden) {
+          summaryTotalEl.innerText = `${totalPrice.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} (+ a consultar)`;
+        } else {
+          summaryTotalEl.innerText = totalPrice.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        }
       }
 
       if (itemsContainer) {
@@ -1686,7 +1732,9 @@
               <div class="checkout-item-title">${s.name}</div>
               <div style="display:flex; align-items:center; gap:8px; margin-top:2px;">
                 <span class="duration-badge" style="font-size:0.7rem; padding:2px 7px;">${formatDuration(s.durationMinutes)}</span>
-                <span style="font-size:0.8rem; font-weight:700; color:#15803d;">R$ ${(Number(s.price) || 0).toFixed(2)}</span>
+                ${s.showPriceInBooking === false 
+                  ? `<span style="font-size:0.8rem; font-weight:700; color:#64748b;">A consultar</span>` 
+                  : `<span style="font-size:0.8rem; font-weight:700; color:#15803d;">R$ ${(Number(s.price) || 0).toFixed(2)}</span>`}
               </div>
             </div>
             <button type="button" class="checkout-item-remove-btn" onclick="removeServiceFromCheckout('${s.id}')" title="Remover este serviço">
@@ -1915,7 +1963,10 @@
       const box = document.getElementById('depositNoticeBox');
       const confirmBtn = document.getElementById('btnConfirmBooking');
 
-      if (!prof || !prof.requireDeposit || selectedServices.length === 0) {
+      const visibleServices = selectedServices.filter(s => s.showPriceInBooking !== false);
+      const allHidden = selectedServices.length > 0 && visibleServices.length === 0;
+
+      if (!prof || !prof.requireDeposit || selectedServices.length === 0 || allHidden) {
         if (box) box.style.display = 'none';
         if (confirmBtn) confirmBtn.innerText = 'Confirmar Agendamento';
         return;
@@ -1933,7 +1984,7 @@
       const basePct = Number(prof.depositPercent) || 30;
       const pct = clientPenaltyActive ? clientPenaltyPct : basePct;
 
-      const totalPrice = selectedServices.reduce((sum, s) => sum + (Number(s.price) || 0), 0);
+      const totalPrice = visibleServices.reduce((sum, s) => sum + (Number(s.price) || 0), 0);
       const depositVal = (totalPrice * pct) / 100;
       const remainVal = Math.max(0, totalPrice - depositVal);
 
@@ -2007,6 +2058,10 @@
       btn.disabled = true;
       btn.innerText = 'Agendando...';
 
+      const visibleServices = selectedServices.filter(s => s.showPriceInBooking !== false);
+      const allHidden = selectedServices.length > 0 && visibleServices.length === 0;
+      const hasHidden = selectedServices.some(s => s.showPriceInBooking === false);
+      const visiblePrice = visibleServices.reduce((sum, s) => sum + (Number(s.price) || 0), 0);
       const totalPrice = selectedServices.reduce((sum, s) => sum + (Number(s.price) || 0), 0);
       const totalDuration = selectedServices.reduce((sum, s) => sum + (Number(s.durationMinutes) || 0), 0);
       const joinedServiceNames = selectedServices.map(s => s.name).join(' + ');
@@ -2015,11 +2070,11 @@
       let hasDeposit = false;
       let depositAmount = 0;
 
-      if (prof && prof.requireDeposit && selectedServices.length > 0) {
+      if (prof && prof.requireDeposit && selectedServices.length > 0 && !allHidden) {
         hasDeposit = true;
         const pct = clientPenaltyActive ? clientPenaltyPct : (Number(prof.depositPercent) || 30);
-        depositAmount = (totalPrice * pct) / 100;
-        const remainVal = Math.max(0, totalPrice - depositAmount);
+        depositAmount = (visiblePrice * pct) / 100;
+        const remainVal = Math.max(0, visiblePrice - depositAmount);
         const tipoSinal = clientPenaltyActive ? 'Taxa Reagendamento (Reincidência)' : 'Sinal de Adiantamento';
         depositNotes = ` | ${tipoSinal} ${pct}%: R$ ${depositAmount.toFixed(2)} (${prof.pixBank || 'InfinitePay'}) - Restante no salão: R$ ${remainVal.toFixed(2)}`;
       }
@@ -2068,6 +2123,15 @@
         selectedServices = [];
         updateCheckoutUI();
 
+        let totalDisplayStr = '';
+        if (allHidden) {
+          totalDisplayStr = 'A consultar no salão';
+        } else if (hasHidden) {
+          totalDisplayStr = `R$ ${visiblePrice.toFixed(2)} (+ serviços a consultar no salão)`;
+        } else {
+          totalDisplayStr = `R$ ${totalPrice.toFixed(2)}`;
+        }
+
         // Se houver exigência de sinal, convida o cliente a enviar o comprovante no WhatsApp da profissional
         if (hasDeposit && prof.phone) {
           const cleanProfPhone = prof.phone.replace(/\D/g, '');
@@ -2077,7 +2141,7 @@
             `• *Serviços:* ${joinedServiceNames}\n` +
             `• *Duração:* ${formatDuration(totalDuration)}\n` +
             `• *Data:* ${dateBr} às ${selectedSlot.time}\n` +
-            `• *Valor Total:* R$ ${totalPrice.toFixed(2)}\n` +
+            `• *Valor Total:* ${totalDisplayStr}\n` +
             `• *Sinal de Adiantamento:* R$ ${depositAmount.toFixed(2)} via ${prof.pixBank || 'InfinitePay'}\n\n` +
             `Segue em anexo o comprovante do Pix para validação do meu horário!`;
 
@@ -2091,7 +2155,7 @@
             window.open(waUrl, '_blank');
           }
         } else {
-          await asyncAlert(`Agendamento confirmado com sucesso!\n\nCliente: ${name}\nProfissional: ${prof.name}\nServiços: ${joinedServiceNames} (${formatDuration(totalDuration)})\nData: ${date} das ${selectedSlot.time} às ${selectedSlot.endTime}\nValor Total: R$ ${totalPrice.toFixed(2)}`, 'Agendado com Sucesso', 'success');
+          await asyncAlert(`Agendamento confirmado com sucesso!\n\nCliente: ${name}\nProfissional: ${prof.name}\nServiços: ${joinedServiceNames} (${formatDuration(totalDuration)})\nData: ${date} das ${selectedSlot.time} às ${selectedSlot.endTime}\nValor Total: ${totalDisplayStr}`, 'Agendado com Sucesso', 'success');
         }
       } catch (err) {
         console.error(err);
