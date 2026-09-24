@@ -312,6 +312,72 @@
     </div>
   </div>
 
+  <!-- Modal Seletor de Categoria (Escolha Rápida com Radio Buttons) -->
+  <div class="modal-backdrop" id="categoryPickerModal" style="z-index: 10010;">
+    <div class="modal-dialog" style="max-width: 380px; border-radius: 20px; padding: 20px 22px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+        <h3 style="font-size: 1.15rem; font-weight: 700; color: var(--ink); margin: 0;">Categoria</h3>
+        <button type="button" onclick="closeCategoryPickerModal()" style="background: none; border: none; font-size: 1.4rem; color: var(--muted); cursor: pointer; line-height: 1;">&times;</button>
+      </div>
+
+      <div style="margin-bottom: 10px;">
+        <input type="text" id="categoryPickerSearch" class="form-control" placeholder="Buscar ou filtrar categoria..." oninput="filterCategoryPickerList()" style="font-size: 0.85rem; padding: 8px 12px; border-radius: 10px;">
+      </div>
+
+      <div id="categoryPickerList" style="max-height: 250px; overflow-y: auto; margin-bottom: 14px; border: 1px solid #e2e8f0; border-radius: 12px; padding: 6px; background: #fafafa;">
+        <!-- Lista dinâmica de categorias com botões de rádio -->
+      </div>
+
+      <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 10px; border-top: 1px solid #f1f5f9;">
+        <button type="button" onclick="openCategoriesManagerModal(true)" style="background: none; border: none; color: var(--orange); font-size: 0.82rem; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; padding: 4px 0;">
+          ⚙️ Gerenciar
+        </button>
+        <div style="display: flex; gap: 8px;">
+          <button type="button" class="btn-falcon btn-secondary" onclick="closeCategoryPickerModal()" style="padding: 7px 14px; font-size: 0.84rem; font-weight: 600;">CANCELAR</button>
+          <button type="button" class="btn-falcon btn-primary" onclick="confirmCategoryPickerSelection()" style="padding: 7px 18px; font-size: 0.84rem; font-weight: 600;">OK</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Gerenciador de Categorias (Visualizar, Criar, Editar e Excluir) -->
+  <div class="modal-backdrop" id="categoryManagerModal" style="z-index: 10015;">
+    <div class="modal-dialog" style="max-width: 480px; border-radius: 20px; padding: 22px 24px;">
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px;">
+        <div>
+          <h3 style="font-size: 1.18rem; font-weight: 700; color: var(--ink); margin: 0;">Gerenciar Categorias</h3>
+          <p style="font-size: 0.8rem; color: var(--muted); margin: 3px 0 0 0;">Crie, renomeie ou exclua as categorias de serviços do salão.</p>
+        </div>
+        <button type="button" onclick="closeCategoryManagerModal()" style="background: none; border: none; font-size: 1.4rem; color: var(--muted); cursor: pointer; line-height: 1;">&times;</button>
+      </div>
+
+      <!-- Formulário de Nova Categoria -->
+      <div style="background: #f8fafc; border: 1.5px solid #fed7aa; border-radius: 12px; padding: 12px; margin-bottom: 16px;">
+        <label style="font-size: 0.8rem; font-weight: 700; color: var(--ink); display: block; margin-bottom: 6px;">Nova Categoria</label>
+        <div style="display: flex; gap: 8px;">
+          <input type="text" id="newCategoryInput" class="form-control" placeholder="Ex: Estética Facial, Sobrancelhas..." style="flex: 1; font-size: 0.85rem; padding: 8px 12px; border-radius: 10px;" onkeydown="if(event.key==='Enter'){event.preventDefault();addNewCategoryFromManager();}">
+          <button type="button" class="btn-falcon btn-primary" onclick="addNewCategoryFromManager()" style="padding: 8px 14px; font-size: 0.84rem; font-weight: 600; white-space: nowrap; border-radius: 10px;">
+            + Adicionar
+          </button>
+        </div>
+      </div>
+
+      <!-- Lista de Categorias Cadastradas -->
+      <div style="margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center;">
+        <span style="font-size: 0.8rem; font-weight: 700; color: var(--ink);">Categorias Cadastradas</span>
+        <span id="categoryCountBadge" style="font-size: 0.75rem; color: var(--muted); font-weight: 600;"></span>
+      </div>
+
+      <div id="categoryManagerList" style="max-height: 270px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 12px; padding: 6px; margin-bottom: 16px; background: #ffffff;">
+        <!-- Itens de categoria com botões de Editar e Excluir -->
+      </div>
+
+      <div style="display: flex; justify-content: flex-end;">
+        <button type="button" class="btn-falcon btn-secondary" onclick="closeCategoryManagerModal()" style="padding: 8px 20px; font-size: 0.85rem; font-weight: 600;">Fechar</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Modal Editar Perfil / Foto do Gestor ou Profissional -->
   <div class="modal-backdrop" id="userProfileModal" style="z-index: 9999;">
     <div class="modal-dialog" style="max-width: 440px;">

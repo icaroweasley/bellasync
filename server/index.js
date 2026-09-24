@@ -1407,6 +1407,19 @@ app.post('/api/services', requireManager, (req, res) => {
     isPackage,
     sessionsCount
   };
+  if (req.body.category && req.body.category.trim()) {
+    const catName = req.body.category.trim();
+    if (!db.serviceCategories) db.serviceCategories = [];
+    const exists = db.serviceCategories.some(c => c.tenantId === tenantId && c.name.toLowerCase() === catName.toLowerCase());
+    if (!exists) {
+      db.serviceCategories.push({
+        id: 'cat_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+        tenantId,
+        name: catName
+      });
+    }
+  }
+
   db.services.push(newServ);
   saveDb(db);
   res.status(201).json(newServ);
@@ -1421,7 +1434,18 @@ app.put('/api/services/:id', requireManager, (req, res) => {
   }
 
   if (req.body.name) serv.name = req.body.name;
-  if (req.body.category) serv.category = req.body.category;
+  if (req.body.category) {
+    serv.category = req.body.category.trim();
+    if (!db.serviceCategories) db.serviceCategories = [];
+    const exists = db.serviceCategories.some(c => c.tenantId === tenantId && c.name.toLowerCase() === serv.category.toLowerCase());
+    if (!exists) {
+      db.serviceCategories.push({
+        id: 'cat_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+        tenantId,
+        name: serv.category
+      });
+    }
+  }
   if (req.body.price !== undefined) serv.price = Number(req.body.price) || 0;
   if (req.body.durationMinutes !== undefined) serv.durationMinutes = Number(req.body.durationMinutes) || 60;
   if (req.body.commissionPercent !== undefined) serv.commissionPercent = Number(req.body.commissionPercent) || 50;
@@ -1445,6 +1469,130 @@ app.delete('/api/services/:id', requireManager, (req, res) => {
   const removed = db.services.splice(idx, 1)[0];
   saveDb(db);
   res.json({ message: 'Serviço excluído com sucesso.', removed });
+});
+
+// 3.1 Categorias de Serviços
+app.get('/api/categories', (req, res) => {
+  const db = getDb();
+  const tenantId = getTenantId(req);
+  if (!db.serviceCategories) db.serviceCategories = [];
+
+  const explicit = db.serviceCategories.filter(c => c.tenantId === tenantId);
+  const serviceCategories = (db.services || [])
+    .filter(s => s.tenantId === tenantId && s.category)
+    .map(s => s.category.trim())
+    .filter(Boolean);
+
+  const allNames = Array.from(new Set([
+    ...explicit.map(c => c.name.trim()),
+    ...serviceCategories
+  ])).filter(Boolean);
+
+  let modified = false;
+  allNames.forEach(name => {
+    const exists = explicit.some(c => c.name.toLowerCase() === name.toLowerCase());
+    if (!exists) {
+      const newCat = { id: 'cat_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5), tenantId, name };
+      db.serviceCategories.push(newCat);
+      explicit.push(newCat);
+      modified = true;
+    }
+  });
+
+  if (modified) saveDb(db);
+
+  const result = explicit.map(cat => {
+    const servicesCount = (db.services || []).filter(s => s.tenantId === tenantId && s.category && s.category.toLowerCase() === cat.name.toLowerCase()).length;
+    return {
+      id: cat.id,
+      name: cat.name,
+      servicesCount
+    };
+  }).sort((a, b) => a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' }));
+
+  res.json(result);
+});
+
+app.post('/api/categories', requireManager, (req, res) => {
+  const db = getDb();
+  const tenantId = getTenantId(req);
+  const name = (req.body.name || '').trim();
+  if (!name) {
+    return res.status(400).json({ error: 'O nome da categoria é obrigatório.' });
+  }
+
+  if (!db.serviceCategories) db.serviceCategories = [];
+  const existing = db.serviceCategories.find(c => c.tenantId === tenantId && c.name.toLowerCase() === name.toLowerCase());
+  if (existing) {
+    const servicesCount = (db.services || []).filter(s => s.tenantId === tenantId && s.category && s.category.toLowerCase() === existing.name.toLowerCase()).length;
+    return res.json({ id: existing.id, name: existing.name, servicesCount });
+  }
+
+  const newCat = {
+    id: 'cat_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+    tenantId,
+    name
+  };
+  db.serviceCategories.push(newCat);
+  saveDb(db);
+
+  res.status(201).json({ id: newCat.id, name: newCat.name, servicesCount: 0 });
+});
+
+app.put('/api/categories/:id', requireManager, (req, res) => {
+  const db = getDb();
+  const tenantId = getTenantId(req);
+  const newName = (req.body.name || req.body.newName || '').trim();
+  if (!newName) {
+    return res.status(400).json({ error: 'O novo nome da categoria é obrigatório.' });
+  }
+
+  if (!db.serviceCategories) db.serviceCategories = [];
+  const cat = db.serviceCategories.find(c => (c.id === req.params.id || c.name.toLowerCase() === req.params.id.toLowerCase()) && c.tenantId === tenantId);
+
+  if (!cat) {
+    return res.status(404).json({ error: 'Categoria não encontrada.' });
+  }
+
+  const oldName = cat.name;
+  cat.name = newName;
+
+  let affectedServices = 0;
+  (db.services || []).forEach(s => {
+    if (s.tenantId === tenantId && s.category && s.category.toLowerCase() === oldName.toLowerCase()) {
+      s.category = newName;
+      affectedServices++;
+    }
+  });
+
+  saveDb(db);
+  res.json({ id: cat.id, name: cat.name, oldName, affectedServices });
+});
+
+app.delete('/api/categories/:id', requireManager, (req, res) => {
+  const db = getDb();
+  const tenantId = getTenantId(req);
+  const fallbackCategory = (req.query.fallbackCategory || req.body.fallbackCategory || 'Geral').trim();
+
+  if (!db.serviceCategories) db.serviceCategories = [];
+  const idx = db.serviceCategories.findIndex(c => (c.id === req.params.id || c.name.toLowerCase() === req.params.id.toLowerCase()) && c.tenantId === tenantId);
+
+  if (idx === -1) {
+    return res.status(404).json({ error: 'Categoria não encontrada.' });
+  }
+
+  const removed = db.serviceCategories.splice(idx, 1)[0];
+
+  let affectedServices = 0;
+  (db.services || []).forEach(s => {
+    if (s.tenantId === tenantId && s.category && s.category.toLowerCase() === removed.name.toLowerCase()) {
+      s.category = fallbackCategory;
+      affectedServices++;
+    }
+  });
+
+  saveDb(db);
+  res.json({ message: 'Categoria excluída com sucesso.', removed, affectedServices });
 });
 
 // 4. Clientes

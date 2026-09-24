@@ -1056,7 +1056,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 async function loadInitialData() {
   try {
-    const [settings, profs, servs, clis, apps, prods, exps, comms, pkgs] = await Promise.all([
+    const [settings, profs, servs, clis, apps, prods, exps, comms, pkgs, cats] = await Promise.all([
       tenantFetch('/api/settings').then(r => r.json()),
       tenantFetch('/api/professionals').then(r => r.json()),
       tenantFetch('/api/services').then(r => r.json()),
@@ -1065,7 +1065,8 @@ async function loadInitialData() {
       tenantFetch('/api/products').then(r => r.json()),
       tenantFetch('/api/expenses').then(r => r.json()),
       tenantFetch('/api/commissions').then(r => r.json()),
-      tenantFetch('/api/packages').then(r => r.json()).catch(() => [])
+      tenantFetch('/api/packages').then(r => r.json()).catch(() => []),
+      tenantFetch('/api/categories').then(r => r.json()).catch(() => [])
     ]);
 
     state = {
@@ -1077,7 +1078,8 @@ async function loadInitialData() {
       products: prods,
       expenses: exps,
       commissions: comms,
-      packages: pkgs || []
+      packages: pkgs || [],
+      categories: cats || []
     };
 
     checkAndNotifyNewAppointments(apps);
@@ -2367,7 +2369,12 @@ function renderClients(container, actions) {
 
 // 5. Render Serviços
 function renderServices(container, actions) {
-  actions.innerHTML = '';
+  actions.innerHTML = isManager ? `
+    <button class="btn-falcon btn-secondary" onclick="openCategoriesManagerModal()" style="display:inline-flex; align-items:center; gap:6px; font-size:0.84rem; padding:6px 14px; height:38px; border-radius:10px; cursor:pointer;" title="Gerenciar Categorias de Serviços">
+      <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+      Categorias
+    </button>
+  ` : '';
 
   if (!state.services || state.services.length === 0) {
     container.innerHTML = renderEmptyStateHtml({
@@ -2411,7 +2418,17 @@ function renderServices(container, actions) {
     </div>
   `).join('');
 
+  const headerActionsHtml = isManager ? `
+    <div style="display: flex; justify-content: flex-end; align-items: center; margin-bottom: 12px;">
+      <button type="button" class="btn-falcon btn-secondary" onclick="openCategoriesManagerModal()" style="display:inline-flex; align-items:center; gap:6px; font-size:0.82rem; font-weight:600; padding:6px 12px; border-radius:10px;">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+        Gerenciar Categorias
+      </button>
+    </div>
+  ` : '';
+
   container.innerHTML = `
+    ${headerActionsHtml}
     <div class="data-list">${servsHtml}</div>
   `;
 }
@@ -4658,6 +4675,493 @@ window.updateModalEndTime = function() {
   endInput.value = `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
 };
 
+// ==========================================
+// GESTÃO E AUTOCOMPLETE DE CATEGORIAS
+// ==========================================
+
+function getSystemCategories() {
+  const fromState = Array.isArray(state.categories) ? state.categories : [];
+  const fromServices = (state.services || []).map(s => s.category).filter(Boolean);
+  
+  const map = new Map();
+  
+  fromState.forEach(c => {
+    const name = (typeof c === 'string' ? c : c.name || '').trim();
+    if (!name) return;
+    const lower = name.toLowerCase();
+    if (!map.has(lower)) {
+      map.set(lower, {
+        id: typeof c === 'object' && c.id ? c.id : 'cat_' + lower,
+        name: name,
+        servicesCount: (state.services || []).filter(s => s.category && s.category.toLowerCase() === lower).length
+      });
+    }
+  });
+
+  fromServices.forEach(rawName => {
+    const name = rawName.trim();
+    if (!name) return;
+    const lower = name.toLowerCase();
+    if (!map.has(lower)) {
+      map.set(lower, {
+        id: 'cat_' + lower,
+        name: name,
+        servicesCount: (state.services || []).filter(s => s.category && s.category.toLowerCase() === lower).length
+      });
+    }
+  });
+
+  const list = Array.from(map.values());
+  return list.sort((a, b) => a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' }));
+}
+
+window.initCategoryAutocomplete = function(inputId, suggestionsBoxId) {
+  const input = document.getElementById(inputId);
+  const box = document.getElementById(suggestionsBoxId);
+  if (!input || !box) return;
+
+  let activeIndex = -1;
+
+  function closeDropdown() {
+    box.classList.remove('open');
+    box.innerHTML = '';
+    activeIndex = -1;
+  }
+
+  function render(matches, query) {
+    if (!matches || matches.length === 0) {
+      if (query && query.trim()) {
+        const cleanQ = query.trim();
+        box.innerHTML = `
+          <div class="category-autocomplete-item" onclick="selectCategoryDirectly('${inputId}', '${cleanQ.replace(/'/g, "\\'")}', '${suggestionsBoxId}')">
+            <div>
+              <span class="category-autocomplete-item-name">+ Usar "${cleanQ}"</span>
+              <div style="font-size:0.73rem; color:var(--muted); margin-top:1px;">Será cadastrada como nova categoria</div>
+            </div>
+            <span style="font-size:0.75rem; font-weight:700; color:var(--orange);">Novo</span>
+          </div>
+        `;
+        box.classList.add('open');
+        activeIndex = 0;
+        return;
+      }
+      box.innerHTML = `<div class="category-autocomplete-empty">Nenhuma categoria cadastrada ainda.</div>`;
+      box.classList.add('open');
+      activeIndex = -1;
+      return;
+    }
+
+    box.innerHTML = matches.map((c, idx) => `
+      <div class="category-autocomplete-item ${idx === activeIndex ? 'active' : ''}" data-idx="${idx}" onclick="selectCategoryDirectly('${inputId}', '${c.name.replace(/'/g, "\\'")}', '${suggestionsBoxId}')">
+        <span class="category-autocomplete-item-name">${c.name}</span>
+        <span class="category-autocomplete-item-badge">${c.servicesCount} serviço${c.servicesCount === 1 ? '' : 's'}</span>
+      </div>
+    `).join('');
+
+    box.classList.add('open');
+  }
+
+  function getFiltered(q) {
+    const all = getSystemCategories();
+    if (!q || !q.trim()) return all;
+    const cleanQ = q.trim().toLowerCase();
+    return all.filter(c => c.name.toLowerCase().includes(cleanQ));
+  }
+
+  input.addEventListener('focus', () => {
+    const q = input.value;
+    const matches = getFiltered(q);
+    render(matches, q);
+  });
+
+  input.addEventListener('input', () => {
+    const q = input.value;
+    const matches = getFiltered(q);
+    render(matches, q);
+  });
+
+  input.addEventListener('keydown', (e) => {
+    if (!box.classList.contains('open')) return;
+    const items = box.querySelectorAll('.category-autocomplete-item');
+    if (items.length === 0) return;
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      activeIndex = (activeIndex + 1) % items.length;
+      items.forEach((it, i) => it.classList.toggle('active', i === activeIndex));
+      items[activeIndex]?.scrollIntoView({ block: 'nearest' });
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      activeIndex = (activeIndex - 1 + items.length) % items.length;
+      items.forEach((it, i) => it.classList.toggle('active', i === activeIndex));
+      items[activeIndex]?.scrollIntoView({ block: 'nearest' });
+    } else if (e.key === 'Enter') {
+      if (activeIndex >= 0 && items[activeIndex]) {
+        e.preventDefault();
+        items[activeIndex].click();
+      }
+    } else if (e.key === 'Escape') {
+      closeDropdown();
+    }
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!input.contains(e.target) && !box.contains(e.target)) {
+      closeDropdown();
+    }
+  });
+};
+
+window.selectCategoryDirectly = function(inputId, catName, suggestionsBoxId) {
+  const input = document.getElementById(inputId);
+  const box = document.getElementById(suggestionsBoxId);
+  if (input) input.value = catName;
+  if (box) {
+    box.classList.remove('open');
+    box.innerHTML = '';
+  }
+};
+
+window.toggleCategoryQuickDropdown = function(inputId, suggestionsBoxId) {
+  const input = document.getElementById(inputId);
+  const box = document.getElementById(suggestionsBoxId);
+  if (!input || !box) return;
+
+  if (box.classList.contains('open')) {
+    box.classList.remove('open');
+    box.innerHTML = '';
+  } else {
+    input.focus();
+    const all = getSystemCategories();
+    box.innerHTML = (all.length > 0 ? all.map((c, idx) => `
+      <div class="category-autocomplete-item" onclick="selectCategoryDirectly('${inputId}', '${c.name.replace(/'/g, "\\'")}', '${suggestionsBoxId}')">
+        <span class="category-autocomplete-item-name">${c.name}</span>
+        <span class="category-autocomplete-item-badge">${c.servicesCount} serviço${c.servicesCount === 1 ? '' : 's'}</span>
+      </div>
+    `).join('') : '<div class="category-autocomplete-empty">Nenhuma categoria cadastrada ainda.</div>');
+    box.classList.add('open');
+  }
+};
+
+// ==========================================
+// POPUP SELETOR DE CATEGORIA (ESCOLHA RÁPIDA)
+// ==========================================
+window.activeCategoryTargetInputId = null;
+window.selectedCategoryInPicker = '';
+
+window.openCategoryPickerModal = function(targetInputId) {
+  window.activeCategoryTargetInputId = targetInputId;
+  const input = document.getElementById(targetInputId);
+  window.selectedCategoryInPicker = input ? input.value.trim() : '';
+
+  const searchInput = document.getElementById('categoryPickerSearch');
+  if (searchInput) searchInput.value = '';
+
+  renderCategoryPickerList();
+
+  const modal = document.getElementById('categoryPickerModal');
+  if (modal) {
+    modal.classList.add('open');
+    modal.classList.add('active');
+  }
+  updateBodyScrollLock();
+};
+
+window.closeCategoryPickerModal = function() {
+  const modal = document.getElementById('categoryPickerModal');
+  if (modal) {
+    modal.classList.remove('open');
+    modal.classList.remove('active');
+  }
+  updateBodyScrollLock();
+};
+
+window.filterCategoryPickerList = function() {
+  const searchInput = document.getElementById('categoryPickerSearch');
+  const q = searchInput ? searchInput.value.trim().toLowerCase() : '';
+  renderCategoryPickerList(q);
+};
+
+window.renderCategoryPickerList = function(query = '') {
+  const container = document.getElementById('categoryPickerList');
+  if (!container) return;
+
+  const all = getSystemCategories();
+  const filtered = query ? all.filter(c => c.name.toLowerCase().includes(query)) : all;
+
+  if (filtered.length === 0) {
+    if (query) {
+      container.innerHTML = `
+        <div style="padding: 14px; text-align: center;">
+          <p style="font-size: 0.84rem; color: var(--muted); margin: 0 0 10px 0;">Nenhuma categoria existente com esse nome.</p>
+          <button type="button" class="btn-falcon btn-primary" onclick="selectPickerNewCustom('${query.replace(/'/g, "\\'")}')" style="font-size: 0.8rem; padding: 6px 12px;">
+            + Usar "${query}"
+          </button>
+        </div>
+      `;
+      return;
+    }
+    container.innerHTML = `<div style="padding: 16px; text-align: center; color: var(--muted); font-size: 0.84rem;">Nenhuma categoria encontrada.</div>`;
+    return;
+  }
+
+  container.innerHTML = filtered.map(c => {
+    const isChecked = window.selectedCategoryInPicker.toLowerCase() === c.name.toLowerCase();
+    return `
+      <label class="category-picker-row ${isChecked ? 'selected' : ''}" onclick="pickCategoryRadio(this, '${c.name.replace(/'/g, "\\'")}')" ondblclick="confirmCategoryPickerSelection('${c.name.replace(/'/g, "\\'")}')">
+        <input type="radio" name="catPickerRadio" value="${c.name}" ${isChecked ? 'checked' : ''}>
+        <span class="category-picker-row-text">${c.name}</span>
+        <span style="font-size: 0.72rem; color: var(--muted); background: rgba(0,0,0,0.04); padding: 2px 7px; border-radius: 6px;">${c.servicesCount}</span>
+      </label>
+    `;
+  }).join('');
+};
+
+window.pickCategoryRadio = function(labelEl, catName) {
+  window.selectedCategoryInPicker = catName;
+  document.querySelectorAll('.category-picker-row').forEach(l => l.classList.remove('selected'));
+  labelEl.classList.add('selected');
+  const radio = labelEl.querySelector('input[type="radio"]');
+  if (radio) radio.checked = true;
+};
+
+window.selectPickerNewCustom = function(catName) {
+  window.selectedCategoryInPicker = catName;
+  confirmCategoryPickerSelection();
+};
+
+window.confirmCategoryPickerSelection = function(directCatName) {
+  const chosen = directCatName || window.selectedCategoryInPicker;
+  if (!chosen) {
+    asyncAlert('Por favor selecione ou informe uma categoria.');
+    return;
+  }
+  if (window.activeCategoryTargetInputId) {
+    const target = document.getElementById(window.activeCategoryTargetInputId);
+    if (target) {
+      target.value = chosen;
+    }
+  }
+  closeCategoryPickerModal();
+};
+
+// ==========================================
+// GERENCIADOR DE CATEGORIAS (CRUD COMPLETO)
+// ==========================================
+window.categoryManagerOpenedFromPicker = false;
+
+window.openCategoriesManagerModal = function(fromPicker = false) {
+  window.categoryManagerOpenedFromPicker = !!fromPicker;
+  if (fromPicker) {
+    closeCategoryPickerModal();
+  }
+  const modal = document.getElementById('categoryManagerModal');
+  if (modal) {
+    modal.classList.add('open');
+    modal.classList.add('active');
+  }
+  renderCategoryManagerList();
+  updateBodyScrollLock();
+};
+
+window.closeCategoryManagerModal = function() {
+  const modal = document.getElementById('categoryManagerModal');
+  if (modal) {
+    modal.classList.remove('open');
+    modal.classList.remove('active');
+  }
+  updateBodyScrollLock();
+  if (window.categoryManagerOpenedFromPicker && window.activeCategoryTargetInputId) {
+    openCategoryPickerModal(window.activeCategoryTargetInputId);
+  }
+};
+
+window.renderCategoryManagerList = function() {
+  const container = document.getElementById('categoryManagerList');
+  const badge = document.getElementById('categoryCountBadge');
+  if (!container) return;
+
+  const all = getSystemCategories();
+  if (badge) badge.innerText = `${all.length} categoria${all.length === 1 ? '' : 's'}`;
+
+  if (all.length === 0) {
+    container.innerHTML = `<div style="padding: 20px; text-align: center; color: var(--muted); font-size: 0.85rem;">Nenhuma categoria cadastrada ainda. Adicione uma no campo acima.</div>`;
+    return;
+  }
+
+  container.innerHTML = all.map(c => `
+    <div id="catManagerRow_${c.id}" style="display: flex; align-items: center; justify-content: space-between; padding: 9px 12px; border-radius: 10px; margin-bottom: 4px; background: #ffffff; border: 1px solid #f1f5f9; transition: background 0.15s ease;">
+      <div style="flex: 1; min-width: 0; padding-right: 8px;">
+        <strong style="font-size: 0.88rem; color: var(--ink); display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${c.name}</strong>
+        <span style="font-size: 0.73rem; color: var(--muted);">${c.servicesCount} serviço${c.servicesCount === 1 ? '' : 's'} vinculado${c.servicesCount === 1 ? '' : 's'}</span>
+      </div>
+      <div style="display: flex; gap: 6px; align-items: center; flex-shrink: 0;">
+        <button type="button" onclick="startInlineEditCategory('${c.id}', '${c.name.replace(/'/g, "\\'")}')" title="Renomear Categoria" style="background: #f1f5f9; border: 1px solid #e2e8f0; color: var(--ink); border-radius: 8px; padding: 5px 9px; font-size: 0.75rem; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
+          <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+          Editar
+        </button>
+        <button type="button" onclick="deleteCategoryAction('${c.id}', '${c.name.replace(/'/g, "\\'")}', ${c.servicesCount})" title="Excluir Categoria" style="background: #fef2f2; border: 1px solid #fecaca; color: #dc2626; border-radius: 8px; padding: 5px 9px; font-size: 0.75rem; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
+          <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+          Excluir
+        </button>
+      </div>
+    </div>
+  `).join('');
+};
+
+window.addNewCategoryFromManager = async function() {
+  const input = document.getElementById('newCategoryInput');
+  if (!input) return;
+  const name = input.value.trim();
+  if (!name) {
+    asyncAlert('Por favor digite o nome da categoria.');
+    return;
+  }
+
+  try {
+    const res = await tenantFetch('/api/categories', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name })
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      asyncAlert(err.error || 'Erro ao adicionar categoria.');
+      return;
+    }
+    const created = await res.json();
+    if (!state.categories) state.categories = [];
+    if (!state.categories.some(c => c.name.toLowerCase() === created.name.toLowerCase())) {
+      state.categories.push(created);
+    }
+    input.value = '';
+    renderCategoryManagerList();
+  } catch (e) {
+    console.error(e);
+    asyncAlert('Erro ao comunicar com o servidor.');
+  }
+};
+
+window.startInlineEditCategory = function(id, currentName) {
+  const row = document.getElementById(`catManagerRow_${id}`);
+  if (!row) return;
+
+  row.innerHTML = `
+    <div style="display: flex; gap: 6px; width: 100%; align-items: center;">
+      <input type="text" id="inlineEditCatInput_${id}" value="${currentName}" class="form-control" style="flex: 1; font-size: 0.85rem; padding: 6px 10px; height: 34px; border-radius: 8px;" onkeydown="if(event.key==='Enter'){event.preventDefault();saveInlineCategoryEdit('${id}', '${currentName.replace(/'/g, "\\'")}');} else if(event.key==='Escape'){renderCategoryManagerList();}">
+      <button type="button" class="btn-falcon btn-primary" onclick="saveInlineCategoryEdit('${id}', '${currentName.replace(/'/g, "\\'")}')" style="padding: 6px 12px; font-size: 0.78rem; height: 34px; border-radius: 8px;">Salvar</button>
+      <button type="button" class="btn-falcon btn-secondary" onclick="renderCategoryManagerList()" style="padding: 6px 10px; font-size: 0.78rem; height: 34px; border-radius: 8px;">Cancelar</button>
+    </div>
+  `;
+  setTimeout(() => {
+    const inp = document.getElementById(`inlineEditCatInput_${id}`);
+    if (inp) {
+      inp.focus();
+      inp.select();
+    }
+  }, 50);
+};
+
+window.saveInlineCategoryEdit = async function(id, oldName) {
+  const input = document.getElementById(`inlineEditCatInput_${id}`);
+  if (!input) return;
+  const newName = input.value.trim();
+  if (!newName) {
+    asyncAlert('O nome da categoria não pode ser vazio.');
+    return;
+  }
+  if (newName.toLowerCase() === oldName.toLowerCase()) {
+    renderCategoryManagerList();
+    return;
+  }
+
+  try {
+    const res = await tenantFetch(`/api/categories/${encodeURIComponent(id)}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: newName, oldName })
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      asyncAlert(err.error || 'Erro ao renomear categoria.');
+      return;
+    }
+    const data = await res.json();
+    
+    if (Array.isArray(state.categories)) {
+      const found = state.categories.find(c => c.id === id || c.name.toLowerCase() === oldName.toLowerCase());
+      if (found) found.name = newName;
+    }
+    if (Array.isArray(state.services)) {
+      state.services.forEach(s => {
+        if (s.category && s.category.toLowerCase() === oldName.toLowerCase()) {
+          s.category = newName;
+        }
+      });
+    }
+
+    renderCategoryManagerList();
+
+    if (currentView === 'servicos') {
+      const container = document.getElementById('viewContainer');
+      const actions = document.getElementById('topBarActions');
+      if (container) renderServices(container, actions);
+    }
+
+    asyncAlert(`Categoria renomeada para "${newName}" com sucesso!${data.affectedServices > 0 ? ` (${data.affectedServices} serviço(s) atualizado(s))` : ''}`, 'Categoria Atualizada', 'success');
+  } catch (e) {
+    console.error(e);
+    asyncAlert('Erro ao atualizar categoria.');
+  }
+};
+
+window.deleteCategoryAction = async function(id, name, count) {
+  let msg = '';
+  if (count > 0) {
+    msg = `A categoria "${name}" possui ${count} serviço(s) vinculado(s).\n\nAo excluir esta categoria, os serviços vinculados serão mantidos e transferidos para a categoria "Geral".\n\nDeseja continuar com a exclusão?`;
+  } else {
+    msg = `Tem certeza que deseja excluir a categoria "${name}"?`;
+  }
+
+  const ok = await asyncConfirm(msg, 'Excluir Categoria');
+  if (!ok) return;
+
+  try {
+    const res = await tenantFetch(`/api/categories/${encodeURIComponent(id)}`, {
+      method: 'DELETE'
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      asyncAlert(err.error || 'Erro ao excluir categoria.');
+      return;
+    }
+
+    if (Array.isArray(state.categories)) {
+      state.categories = state.categories.filter(c => c.id !== id && c.name.toLowerCase() !== name.toLowerCase());
+    }
+    if (Array.isArray(state.services) && count > 0) {
+      state.services.forEach(s => {
+        if (s.category && s.category.toLowerCase() === name.toLowerCase()) {
+          s.category = 'Geral';
+        }
+      });
+    }
+
+    renderCategoryManagerList();
+
+    if (currentView === 'servicos') {
+      const container = document.getElementById('viewContainer');
+      const actions = document.getElementById('topBarActions');
+      if (container) renderServices(container, actions);
+    }
+
+    asyncAlert(`Categoria "${name}" excluída com sucesso.`, 'Categoria Excluída', 'success');
+  } catch (e) {
+    console.error(e);
+    asyncAlert('Erro ao excluir categoria.');
+  }
+};
+
 window.openNewServiceModal = function() {
   if (!isManager) {
     asyncAlert('Apenas gestores têm permissão para adicionar serviços.');
@@ -4668,9 +5172,21 @@ window.openNewServiceModal = function() {
       <label>Nome do Serviço</label>
       <input type="text" class="form-control" id="mServName" placeholder="Ex: Penteado Noiva">
     </div>
-    <div class="form-group">
-      <label>Categoria</label>
-      <input type="text" class="form-control" id="mServCat" placeholder="Ex: Cortes, Tranças, Barba">
+    <div class="form-group category-autocomplete-wrapper">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+        <label style="margin: 0;">Categoria</label>
+        <button type="button" onclick="openCategoryPickerModal('mServCat')" style="background: none; border: none; color: var(--orange); font-size: 0.8rem; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; padding: 0;">
+          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"></path></svg>
+          Ver Lista
+        </button>
+      </div>
+      <div style="position: relative; display: flex; align-items: center;">
+        <input type="text" class="form-control" id="mServCat" placeholder="Selecione ou digite uma categoria..." autocomplete="off" style="padding-right: 36px;">
+        <button type="button" onclick="toggleCategoryQuickDropdown('mServCat', 'mServCatSuggestions')" title="Ver categorias existentes" style="position: absolute; right: 6px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: var(--muted); padding: 4px; display: flex; align-items: center; justify-content: center;">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"></polyline></svg>
+        </button>
+      </div>
+      <div id="mServCatSuggestions" class="category-autocomplete-dropdown"></div>
     </div>
     <div class="form-group">
       <label>Preço (R$)</label>
@@ -4730,6 +5246,10 @@ window.openNewServiceModal = function() {
     await loadInitialData();
     renderView('servicos');
   });
+
+  setTimeout(() => {
+    initCategoryAutocomplete('mServCat', 'mServCatSuggestions');
+  }, 50);
 };
 
 window.openNewClientModal = function() {
@@ -5489,9 +6009,21 @@ window.openEditServiceModal = function(serviceId) {
       <label>Nome do Serviço</label>
       <input type="text" class="form-control" id="mEditServName" value="${serv.name || ''}">
     </div>
-    <div class="form-group">
-      <label>Categoria</label>
-      <input type="text" class="form-control" id="mEditServCat" value="${serv.category || ''}">
+    <div class="form-group category-autocomplete-wrapper">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+        <label style="margin: 0;">Categoria</label>
+        <button type="button" onclick="openCategoryPickerModal('mEditServCat')" style="background: none; border: none; color: var(--orange); font-size: 0.8rem; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; padding: 0;">
+          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"></path></svg>
+          Ver Lista
+        </button>
+      </div>
+      <div style="position: relative; display: flex; align-items: center;">
+        <input type="text" class="form-control" id="mEditServCat" value="${serv.category || ''}" placeholder="Selecione ou digite uma categoria..." autocomplete="off" style="padding-right: 36px;">
+        <button type="button" onclick="toggleCategoryQuickDropdown('mEditServCat', 'mEditServCatSuggestions')" title="Ver categorias existentes" style="position: absolute; right: 6px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: var(--muted); padding: 4px; display: flex; align-items: center; justify-content: center;">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"></polyline></svg>
+        </button>
+      </div>
+      <div id="mEditServCatSuggestions" class="category-autocomplete-dropdown"></div>
     </div>
     <div class="form-group">
       <label>Preço (R$)</label>
@@ -5557,6 +6089,10 @@ window.openEditServiceModal = function(serviceId) {
     await loadInitialData();
     renderView('servicos');
   });
+
+  setTimeout(() => {
+    initCategoryAutocomplete('mEditServCat', 'mEditServCatSuggestions');
+  }, 50);
 };
 
 window.deleteService = async function(serviceId) {

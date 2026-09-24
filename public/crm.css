@@ -3341,6 +3341,112 @@ input[type="checkbox"] {
   text-align: center;
 }
 
+/* Category Autocomplete & Picker */
+.category-autocomplete-wrapper {
+  position: relative;
+}
+
+.category-autocomplete-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: #ffffff;
+  border: 1.5px solid #fed7aa;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px -3px rgba(0, 0, 0, 0.12), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  max-height: 220px;
+  overflow-y: auto;
+  z-index: 10050;
+  display: none;
+}
+
+.category-autocomplete-dropdown.open {
+  display: block;
+}
+
+.category-autocomplete-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 14px;
+  cursor: pointer;
+  border-bottom: 1px solid #f8fafc;
+  transition: background 0.15s ease;
+}
+
+.category-autocomplete-item:last-child {
+  border-bottom: none;
+}
+
+.category-autocomplete-item:hover,
+.category-autocomplete-item.active {
+  background: #fff7ed;
+}
+
+.category-autocomplete-item-name {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--ink, #0f172a);
+}
+
+.category-autocomplete-item-badge {
+  font-size: 0.72rem;
+  color: var(--muted, #64748b);
+  background: #f1f5f9;
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+
+.category-autocomplete-empty {
+  padding: 12px 14px;
+  font-size: 0.82rem;
+  color: var(--muted, #64748b);
+  text-align: center;
+}
+
+/* Category Picker Radio List */
+.category-picker-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 0.15s ease;
+  margin-bottom: 3px;
+  user-select: none;
+}
+
+.category-picker-row:hover {
+  background: #ffffff;
+  border-color: #fed7aa;
+}
+
+.category-picker-row.selected {
+  background: #fff7ed;
+  border-color: #fdba74;
+}
+
+.category-picker-row input[type="radio"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--orange, #ff6900);
+  cursor: pointer;
+  margin: 0;
+  flex-shrink: 0;
+}
+
+.category-picker-row-text {
+  flex: 1;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--ink, #0f172a);
+}
+
+
 
 
 
