@@ -2203,13 +2203,13 @@ function renderProfessionals(container, actions) {
 
   const profsHtml = state.professionals.map(p => `
     <div class="data-item-card prof-item-card">
-      <div style="display: flex; align-items: center; gap: 14px; width: 100%;">
+      <div class="prof-info-col" style="display: flex; align-items: center; gap: 14px; min-width: 0;">
         <img src="${p.avatar || getButterflyAvatar(p.name)}" alt="${p.name}" style="width: 48px; height: 48px; border-radius: 50%; flex-shrink: 0;">
         <div class="item-main-info" style="flex: 1; min-width: 0;">
           <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
             <h4 style="margin: 0; font-size: 1.02rem;">${p.name}</h4>
             ${p.requireDeposit ? `
-              <span class="prof-deposit-badge" onclick="openEditProfessionalModal('${p.id}')" title="Sinal configurado: ${p.depositPercent || 30}% via ${p.pixBank || 'Pix'}">
+              <span class="prof-deposit-badge prof-deposit-badge-mobile" onclick="openEditProfessionalModal('${p.id}')" title="Sinal configurado: ${p.depositPercent || 30}% via ${p.pixBank || 'Pix'}">
                 💳 Sinal ${p.depositPercent || 30}% (${p.pixBank || 'Pix'})
               </span>
             ` : ''}
@@ -2219,6 +2219,11 @@ function renderProfessionals(container, actions) {
             <span style="font-size:0.74rem; font-weight:600; color:#1e40af; background:#dbeafe; padding:2px 8px; border-radius:6px; display:inline-flex; align-items:center; gap:4px;" title="Serviços que este profissional atende no agendamento online">
               ✂️ ${Array.isArray(p.serviceIds) ? `${p.serviceIds.length} serviços atribuídos` : 'Todos os serviços'}
             </span>
+            ${p.requireDeposit ? `
+              <span class="prof-deposit-badge prof-deposit-badge-desktop" onclick="openEditProfessionalModal('${p.id}')" title="Sinal configurado: ${p.depositPercent || 30}% via ${p.pixBank || 'Pix'}">
+                💳 Sinal ${p.depositPercent || 30}% (${p.pixBank || 'Pix'})
+              </span>
+            ` : ''}
           </div>
         </div>
       </div>
@@ -3224,7 +3229,7 @@ function renderExpenses(container, actions) {
 
   const expsHtml = state.expenses.map(e => `
     <div class="data-item-card expense-item-card">
-      <div class="item-main-info" style="width: 100%;">
+      <div class="item-main-info expense-info-col" style="min-width: 0;">
         <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;">
           <h4 style="margin: 0; font-size: 0.98rem; font-weight: 700; color: var(--ink); flex: 1;">${e.description}</h4>
           <span class="item-badge-price expense-price-mobile" style="color: ${e.status === 'pago' ? 'var(--green)' : 'var(--red)'}; font-size: 1.05rem; font-weight: 800; white-space: nowrap; flex-shrink: 0;">

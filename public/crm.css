@@ -855,6 +855,15 @@ body {
   background: rgba(124, 58, 237, 0.15);
 }
 
+/* Responsividade do badge de sinal do profissional:
+   No Desktop: exibido ao lado de 'Todos os serviços' e oculto ao lado do nome */
+.prof-deposit-badge-mobile {
+  display: none !important;
+}
+.prof-deposit-badge-desktop {
+  display: inline-flex !important;
+}
+
 /* Despesas - Preços responsivos */
 .expense-price-mobile {
   display: none;
@@ -2071,6 +2080,17 @@ input[type="checkbox"] {
   }
 
   /* 3. Despesas e Profissionais - Botões de ação em linha única sem quebrar */
+  .prof-deposit-badge-mobile {
+    display: inline-flex !important;
+  }
+  .prof-deposit-badge-desktop {
+    display: none !important;
+  }
+  .prof-info-col,
+  .expense-info-col {
+    width: 100% !important;
+  }
+
   .expense-price-mobile {
     display: inline-block !important;
   }
@@ -2235,6 +2255,43 @@ input[type="checkbox"] {
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
+}
+
+@media (min-width: 769px) {
+  .prof-item-card,
+  .expense-item-card {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 16px !important;
+  }
+
+  .prof-info-col,
+  .expense-info-col {
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+    width: auto !important;
+  }
+
+  .item-actions-group,
+  .prof-actions-group,
+  .expense-actions-group {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    flex-wrap: nowrap !important;
+    flex-shrink: 0 !important;
+    gap: 8px !important;
+    width: auto !important;
+  }
+
+  .item-actions-group .btn-card-action,
+  .prof-actions-group .btn-card-action,
+  .expense-actions-group .btn-card-action {
+    flex: 0 0 auto !important;
+    white-space: nowrap !important;
+  }
 }
 
 .btn-card-action {
