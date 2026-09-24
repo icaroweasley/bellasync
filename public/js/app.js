@@ -25,6 +25,46 @@ function getButterflyAvatar(name) {
   return `/images/butterflies/butterfly-${index}.svg`;
 }
 
+function formatDurationHours(min) {
+  min = Number(min) || 0;
+  if (min === 0) return '0 min';
+  if (min < 60) return `${min} min`;
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  if (m === 0) return h === 1 ? '1 hora' : `${h} horas`;
+  if (m === 30) return h === 1 ? '1h 30min' : `${h}h 30min`;
+  return `${h}h ${m}min`;
+}
+
+function getDurationOptionsHtml(selectedMinutes) {
+  const standardValues = [
+    30, 45, 60, 75, 90, 105, 120, 150, 180, 210, 240, 270, 300, 330, 360, 420, 480, 540, 600
+  ];
+  selectedMinutes = Number(selectedMinutes) || 60;
+  if (!standardValues.includes(selectedMinutes)) {
+    standardValues.push(selectedMinutes);
+    standardValues.sort((a, b) => a - b);
+  }
+  return standardValues.map(min => {
+    let label = '';
+    if (min < 60) {
+      label = `${min} minutos (0,5h)`;
+    } else {
+      const h = Math.floor(min / 60);
+      const m = min % 60;
+      if (m === 0) {
+        label = h === 1 ? '1 hora' : `${h} horas`;
+      } else if (m === 30) {
+        label = h === 1 ? '1 hora e meia (1,5h)' : `${h} horas e meia (${h},5h)`;
+      } else {
+        label = `${h}h ${m}min`;
+      }
+    }
+    const isSel = min === selectedMinutes ? 'selected' : '';
+    return `<option value="${min}" ${isSel}>${label}</option>`;
+  }).join('');
+}
+
 const VALID_VIEWS = ['agenda', 'comissões', 'profissionais', 'clientes', 'servicos', 'pacotes', 'produtos', 'despesas', 'aniversarios', 'balanco', 'configuracoes', 'superadmin'];
 
 const VIEW_ALIASES = {
@@ -2346,7 +2386,7 @@ function renderServices(container, actions) {
     <div class="data-item-card">
       <div class="item-main-info">
         <h4>${s.name}</h4>
-        <p>Categoria: <strong>${s.category}</strong> • Duração: ${s.durationMinutes} min • Comissão: ${s.commissionPercent}%</p>
+        <p>Categoria: <strong>${s.category}</strong> • Duração: <strong>${formatDurationHours(s.durationMinutes)}</strong> • Comissão: ${s.commissionPercent}%</p>
       </div>
       <div class="item-actions-group">
         <span class="item-badge-price" style="margin-right: 6px;">R$ ${s.price.toFixed(2)}</span>
@@ -2661,7 +2701,7 @@ function renderPackages(container, actions) {
               </span>
             </div>
             <p style="margin:2px 0 0 0; font-size:0.85rem; color:var(--muted);">
-              Duração: <strong>${s.durationMinutes || 60} min por sessão</strong> • Comissão: <strong>${s.commissionPercent || 50}%</strong>
+              Duração: <strong>${formatDurationHours(s.durationMinutes || 60)} por sessão</strong> • Comissão: <strong>${s.commissionPercent || 50}%</strong>
             </p>
             ${s.observation ? `<p style="font-size:0.78rem; color:var(--muted); margin-top:4px;">📝 ${s.observation}</p>` : ''}
           </div>
@@ -2838,8 +2878,10 @@ window.openNewPackageModal = function() {
       <small style="color:var(--muted); font-size:0.75rem;">Total de vezes que a cliente virá ao salão para este pacote.</small>
     </div>
     <div class="form-group">
-      <label>Duração por Sessão (minutos)</label>
-      <input type="number" class="form-control" id="mPkgDuration" value="60" min="10" step="5">
+      <label>Duração de Cada Sessão</label>
+      <select class="form-control" id="mPkgDuration">
+        ${getDurationOptionsHtml(60)}
+      </select>
     </div>
     <div class="form-group">
       <label>Valor Total do Pacote (R$)</label>
@@ -2915,8 +2957,10 @@ window.openEditPackageModal = function(serviceId) {
       <input type="number" class="form-control" id="mEditPkgSessions" value="${s.sessionsCount || 5}" min="1" max="50">
     </div>
     <div class="form-group">
-      <label>Duração por Sessão (minutos)</label>
-      <input type="number" class="form-control" id="mEditPkgDuration" value="${s.durationMinutes || 60}" min="10" step="5">
+      <label>Duração de Cada Sessão</label>
+      <select class="form-control" id="mEditPkgDuration">
+        ${getDurationOptionsHtml(s.durationMinutes || 60)}
+      </select>
     </div>
     <div class="form-group">
       <label>Valor Total do Pacote (R$)</label>
@@ -3976,7 +4020,7 @@ window.openNewAppointmentModal = function(defaultTime = "10:00") {
     profOptions = state.professionals.map(p => `<option value="${p.id}" ${p.id === selectedProfessionalId ? 'selected' : ''}>${p.name} (${p.role || 'Profissional'})</option>`).join('');
   }
 
-  const servOptions = state.services.map(s => `<option value="${s.id}" data-price="${s.price}" data-duration="${s.durationMinutes}">${s.name} (${s.durationMinutes} min) - R$ ${s.price.toFixed(2)}</option>`).join('');
+  const servOptions = state.services.map(s => `<option value="${s.id}" data-price="${s.price}" data-duration="${s.durationMinutes}">${s.name} (${formatDurationHours(s.durationMinutes)}) - R$ ${s.price.toFixed(2)}</option>`).join('');
 
   const html = `
     <div class="form-group">
@@ -4074,7 +4118,7 @@ window.filterModalServicesByProf = function() {
     : state.services;
 
   const prevVal = servSelect.value;
-  servSelect.innerHTML = eligibleServices.map(s => `<option value="${s.id}" data-price="${s.price}" data-duration="${s.durationMinutes}">${s.name} (${s.durationMinutes} min) - R$ ${Number(s.price).toFixed(2)}</option>`).join('');
+  servSelect.innerHTML = eligibleServices.map(s => `<option value="${s.id}" data-price="${s.price}" data-duration="${s.durationMinutes}">${s.name} (${formatDurationHours(s.durationMinutes)}) - R$ ${Number(s.price).toFixed(2)}</option>`).join('');
 
   if (eligibleServices.some(s => s.id === prevVal)) {
     servSelect.value = prevVal;
@@ -4626,8 +4670,10 @@ window.openNewServiceModal = function() {
       <input type="number" class="form-control" id="mServPrice" placeholder="80.00" step="0.50">
     </div>
     <div class="form-group">
-      <label>Duração Estimada (minutos)</label>
-      <input type="number" class="form-control" id="mServDuration" value="60">
+      <label>Duração do Serviço</label>
+      <select class="form-control" id="mServDuration">
+        ${getDurationOptionsHtml(60)}
+      </select>
     </div>
     <div class="form-group">
       <label>Comissão Padrão do Profissional (%)</label>
@@ -5008,7 +5054,7 @@ window.openNewProfessionalModal = function() {
                     <div style="font-size: 0.72rem; color: var(--muted); margin-top: 2px; display: flex; align-items: center; gap: 6px;">
                       <span style="background: #f1f5f9; padding: 1px 6px; border-radius: 4px; font-weight: 600;">${s.category || 'Geral'}</span>
                       <span>•</span>
-                      <span>${s.durationMinutes || 30} min</span>
+                      <span>${formatDurationHours(s.durationMinutes || 30)}</span>
                     </div>
                   </div>
                 </div>
@@ -5315,7 +5361,7 @@ window.openEditProfessionalModal = function(profId) {
                     <div style="font-size: 0.72rem; color: var(--muted); margin-top: 2px; display: flex; align-items: center; gap: 6px;">
                       <span style="background: #f1f5f9; padding: 1px 6px; border-radius: 4px; font-weight: 600;">${s.category || 'Geral'}</span>
                       <span>•</span>
-                      <span>${s.durationMinutes || 30} min</span>
+                      <span>${formatDurationHours(s.durationMinutes || 30)}</span>
                     </div>
                   </div>
                 </div>
@@ -5437,8 +5483,10 @@ window.openEditServiceModal = function(serviceId) {
       <input type="number" class="form-control" id="mEditServPrice" value="${serv.price || 0}" step="0.50">
     </div>
     <div class="form-group">
-      <label>Duração Estimada (minutos)</label>
-      <input type="number" class="form-control" id="mEditServDuration" value="${serv.durationMinutes || 60}">
+      <label>Duração do Serviço</label>
+      <select class="form-control" id="mEditServDuration">
+        ${getDurationOptionsHtml(serv.durationMinutes || 60)}
+      </select>
     </div>
     <div class="form-group">
       <label>Comissão Padrão do Profissional (%)</label>

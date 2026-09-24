@@ -605,7 +605,7 @@
       <div class="modal-header" style="padding: 16px 20px;">
         <div>
           <h3 id="bModalTitle" style="font-size: 1.15rem;">Reservar Horário</h3>
-          <span id="bModalDuration" class="duration-badge" style="margin-top:2px;">Duração: 60 min</span>
+          <span id="bModalDuration" class="duration-badge" style="margin-top:2px;">Duração: 1 hora</span>
         </div>
         <button onclick="closeBookingModal()" style="background:none;border:none;font-size:1.5rem;cursor:pointer;color:var(--muted);">&times;</button>
       </div>
@@ -799,13 +799,16 @@
       }
     }
 
-    // Formatador amigável de duração
+    // Formatador amigável de duração (sempre em horas quando >= 60 min)
     function formatDuration(min) {
       min = Number(min) || 0;
+      if (min === 0) return '0 min';
       if (min < 60) return `${min} min`;
       const h = Math.floor(min / 60);
       const m = min % 60;
-      return m > 0 ? `${h}h ${m}min` : `${h}h`;
+      if (m === 0) return h === 1 ? '1 hora' : `${h} horas`;
+      if (m === 30) return h === 1 ? '1h 30min' : `${h}h 30min`;
+      return `${h}h ${m}min`;
     }
 
     // Formatador amigável de data com dia da semana
@@ -1317,7 +1320,7 @@
             </div>
             <div style="text-align: right;">
               <span style="font-size: 0.78rem; font-weight: 700; color: #15803d;">R$ ${(Number(s.price) || 0).toFixed(2)}</span>
-              <span style="font-size: 0.72rem; color: var(--muted); margin-left: 4px;">(${s.durationMinutes}m)</span>
+              <span style="font-size: 0.72rem; color: var(--muted); margin-left: 4px;">(${formatDuration(s.durationMinutes)})</span>
             </div>
           </label>
         `;
@@ -1507,7 +1510,7 @@
                 <div style="display:flex; align-items:center; gap:6px; font-size:0.82rem; color:var(--muted); margin-bottom: 4px;">
                   <span class="duration-badge" style="display:inline-flex; align-items:center; gap:4px; font-size:0.75rem; padding:3px 8px;">
                     <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-                    ${s.durationMinutes} min
+                    ${formatDuration(s.durationMinutes)}
                   </span>
                 </div>
                 ${s.observation ? `<small style="color:#718096; font-size:0.75rem; display:block; line-height: 1.35;">${s.observation}</small>` : ''}
@@ -1660,7 +1663,7 @@
 
       if (totalCount === 1) {
         if (titleEl) titleEl.innerText = selectedServices[0].name;
-        if (durEl) durEl.innerText = `Duração: ${totalDuration} min`;
+        if (durEl) durEl.innerText = `Duração: ${formatDuration(totalDuration)}`;
       } else {
         if (titleEl) titleEl.innerText = `${totalCount} Serviços Selecionados`;
         if (durEl) durEl.innerText = `Duração Total: ${formatDuration(totalDuration)}`;
@@ -1682,7 +1685,7 @@
             <div style="flex:1; min-width:0;">
               <div class="checkout-item-title">${s.name}</div>
               <div style="display:flex; align-items:center; gap:8px; margin-top:2px;">
-                <span class="duration-badge" style="font-size:0.7rem; padding:2px 7px;">${s.durationMinutes} min</span>
+                <span class="duration-badge" style="font-size:0.7rem; padding:2px 7px;">${formatDuration(s.durationMinutes)}</span>
                 <span style="font-size:0.8rem; font-weight:700; color:#15803d;">R$ ${(Number(s.price) || 0).toFixed(2)}</span>
               </div>
             </div>
