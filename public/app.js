@@ -1418,7 +1418,7 @@ window.toggleCalendarPopover = function(e) {
   }
 
   const [y, m] = selectedDate.split('-').map(Number);
-  popoverMonthState = { year: y, month: m - 1 };
+  popoverMonthState = { year: y, month: m - 1, viewMode: 'days' };
 
   const triggerBtn = document.getElementById('agendaDatePickerTrigger');
   if (!triggerBtn) return;
@@ -1525,10 +1525,70 @@ window.toggleMobileActionsDropdown = function(e) {
 };
 
 function renderPopoverCalendarContent(popover) {
-  const { year, month } = popoverMonthState;
+  const { year, month, viewMode } = popoverMonthState;
   const monthNames = ['JANEIRO', 'FEVEREIRO', 'MARÇO', 'ABRIL', 'MAIO', 'JUNHO', 'JULHO', 'AGOSTO', 'SETEMBRO', 'OUTUBRO', 'NOVEMBRO', 'DEZEMBRO'];
   const monthLabel = `${monthNames[month].slice(0, 4)}. DE ${year}`;
 
+  const now = new Date();
+  const todayY = now.getFullYear();
+  const todayM = now.getMonth();
+  const todayName = monthNames[todayM].slice(0, 3);
+
+  // MODO SELETOR DE MÊS E ANO
+  if (viewMode === 'monthYear') {
+    const startYear = Math.min(2020, year - 4);
+    const endYear = Math.max(2035, year + 6);
+    const years = [];
+    for (let y = startYear; y <= endYear; y++) {
+      years.push(y);
+    }
+
+    popover.innerHTML = `
+      <div class="popover-month-header">
+        <button type="button" class="popover-month-title-btn active" onclick="togglePopoverMonthYearView(event)" title="Voltar para a seleção de dias">
+          <span>Escolher Mês e Ano</span>
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" style="transform: rotate(180deg);"><polyline points="6 9 12 15 18 9"></polyline></svg>
+        </button>
+        <button type="button" class="btn-date-nav" onclick="togglePopoverMonthYearView(event)" title="Voltar aos dias" style="font-size: 13px; font-weight: bold; width: 28px; height: 28px;">✕</button>
+      </div>
+
+      <div class="popover-year-selector-bar">
+        <button type="button" class="btn-date-nav" onclick="navigatePopoverYear(-1, event)" title="Ano anterior">‹</button>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span style="font-size:0.82rem; font-weight:600; color:var(--muted, #64748b);">Ano:</span>
+          <select class="popover-year-select" onchange="setPopoverYear(this.value, event)">
+            ${years.map(y => `<option value="${y}" ${y === year ? 'selected' : ''}>${y}</option>`).join('')}
+          </select>
+        </div>
+        <button type="button" class="btn-date-nav" onclick="navigatePopoverYear(1, event)" title="Próximo ano">›</button>
+      </div>
+
+      <div class="popover-months-grid">
+        ${monthNames.map((mName, mIdx) => {
+          const isCurMonth = mIdx === month;
+          const shortName = mName.slice(0, 3);
+          return `
+            <button type="button" 
+              class="popover-month-btn ${isCurMonth ? 'selected' : ''}" 
+              onclick="selectPopoverMonth(${mIdx}, event)" 
+              title="${mName}">
+              ${shortName}
+            </button>
+          `;
+        }).join('')}
+      </div>
+
+      <div class="popover-calendar-footer">
+        <button type="button" class="btn-popover-today" onclick="goToTodayInPopover(event)">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+          <span>Ir para Hoje (${todayName}/${todayY})</span>
+        </button>
+      </div>
+    `;
+    return;
+  }
+
+  // MODO PADRÃO DE DIAS
   const firstDay = new Date(year, month, 1).getDay();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const prevMonthDays = new Date(year, month, 0).getDate();
@@ -1574,10 +1634,13 @@ function renderPopoverCalendarContent(popover) {
 
   popover.innerHTML = `
     <div class="popover-month-header">
-      <span style="display:flex; align-items:center; gap:4px;">${monthLabel} ▾</span>
-      <div style="display:flex; align-items:center; gap:8px;">
-        <button class="btn-date-nav" onclick="navigatePopoverMonth(-1)">‹</button>
-        <button class="btn-date-nav" onclick="navigatePopoverMonth(1)">›</button>
+      <button type="button" class="popover-month-title-btn" onclick="togglePopoverMonthYearView(event)" title="Clique para escolher outro mês ou ano">
+        <span>${monthLabel}</span>
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"></polyline></svg>
+      </button>
+      <div style="display:flex; align-items:center; gap:6px;">
+        <button type="button" class="btn-date-nav" onclick="navigatePopoverMonth(-1, event)" title="Mês anterior">‹</button>
+        <button type="button" class="btn-date-nav" onclick="navigatePopoverMonth(1, event)" title="Próximo mês">›</button>
       </div>
     </div>
     <div class="popover-days-grid">
@@ -1590,10 +1653,56 @@ function renderPopoverCalendarContent(popover) {
       <div class="popover-weekday-label">S</div>
       ${cellsHtml}
     </div>
+    <div class="popover-calendar-footer">
+      <button type="button" class="btn-popover-today" onclick="goToTodayInPopover(event)">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+        <span>Ir para Hoje (${todayName}/${todayY})</span>
+      </button>
+    </div>
   `;
 }
 
-window.navigatePopoverMonth = function(delta) {
+window.togglePopoverMonthYearView = function(event) {
+  if (event) event.stopPropagation();
+  popoverMonthState.viewMode = popoverMonthState.viewMode === 'monthYear' ? 'days' : 'monthYear';
+  const popover = document.getElementById('calendarPopover');
+  if (popover) renderPopoverCalendarContent(popover);
+};
+
+window.navigatePopoverYear = function(delta, event) {
+  if (event) event.stopPropagation();
+  popoverMonthState.year += delta;
+  const popover = document.getElementById('calendarPopover');
+  if (popover) renderPopoverCalendarContent(popover);
+};
+
+window.setPopoverYear = function(newYear, event) {
+  if (event) event.stopPropagation();
+  popoverMonthState.year = parseInt(newYear, 10);
+  const popover = document.getElementById('calendarPopover');
+  if (popover) renderPopoverCalendarContent(popover);
+};
+
+window.selectPopoverMonth = function(monthIdx, event) {
+  if (event) event.stopPropagation();
+  popoverMonthState.month = monthIdx;
+  popoverMonthState.viewMode = 'days';
+  const popover = document.getElementById('calendarPopover');
+  if (popover) renderPopoverCalendarContent(popover);
+};
+
+window.goToTodayInPopover = function(event) {
+  if (event) event.stopPropagation();
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, '0');
+  const d = String(now.getDate()).padStart(2, '0');
+  const todayStr = `${y}-${m}-${d}`;
+  selectDateFromPopover(todayStr);
+};
+
+window.navigatePopoverMonth = function(delta, event) {
+  if (event) event.stopPropagation();
   let { year, month } = popoverMonthState;
   month += delta;
   if (month < 0) {
@@ -1603,7 +1712,7 @@ window.navigatePopoverMonth = function(delta) {
     month = 0;
     year++;
   }
-  popoverMonthState = { year, month };
+  popoverMonthState = { ...popoverMonthState, year, month };
   const popover = document.getElementById('calendarPopover');
   if (popover) renderPopoverCalendarContent(popover);
 };
@@ -2466,7 +2575,7 @@ window.togglePackageCalendarPopover = function(e) {
 
   const curDate = window.selectedPackageDate || new Date().toISOString().split('T')[0];
   const [y, m] = curDate.split('-').map(Number);
-  packagePopoverMonthState = { year: y, month: m - 1 };
+  packagePopoverMonthState = { year: y, month: m - 1, viewMode: 'days' };
 
   const triggerBtn = document.getElementById('packageDatePickerTrigger');
   if (!triggerBtn) return;
@@ -2499,10 +2608,70 @@ window.togglePackageCalendarPopover = function(e) {
 };
 
 function renderPackagePopoverCalendarContent(popover) {
-  const { year, month } = packagePopoverMonthState;
+  const { year, month, viewMode } = packagePopoverMonthState;
   const monthNames = ['JANEIRO', 'FEVEREIRO', 'MARÇO', 'ABRIL', 'MAIO', 'JUNHO', 'JULHO', 'AGOSTO', 'SETEMBRO', 'OUTUBRO', 'NOVEMBRO', 'DEZEMBRO'];
   const monthLabel = `${monthNames[month].slice(0, 4)}. DE ${year}`;
 
+  const now = new Date();
+  const todayY = now.getFullYear();
+  const todayM = now.getMonth();
+  const todayName = monthNames[todayM].slice(0, 3);
+
+  // MODO SELETOR DE MÊS E ANO PARA PACOTES
+  if (viewMode === 'monthYear') {
+    const startYear = Math.min(2020, year - 4);
+    const endYear = Math.max(2035, year + 6);
+    const years = [];
+    for (let y = startYear; y <= endYear; y++) {
+      years.push(y);
+    }
+
+    popover.innerHTML = `
+      <div class="popover-month-header">
+        <button type="button" class="popover-month-title-btn active" onclick="togglePackagePopoverMonthYearView(event)" title="Voltar para a seleção de dias">
+          <span>Escolher Mês e Ano</span>
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" style="transform: rotate(180deg);"><polyline points="6 9 12 15 18 9"></polyline></svg>
+        </button>
+        <button type="button" class="btn-date-nav" onclick="togglePackagePopoverMonthYearView(event)" title="Voltar aos dias" style="font-size: 13px; font-weight: bold; width: 28px; height: 28px;">✕</button>
+      </div>
+
+      <div class="popover-year-selector-bar">
+        <button type="button" class="btn-date-nav" onclick="navigatePackagePopoverYear(-1, event)" title="Ano anterior">‹</button>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span style="font-size:0.82rem; font-weight:600; color:var(--muted, #64748b);">Ano:</span>
+          <select class="popover-year-select" onchange="setPackagePopoverYear(this.value, event)">
+            ${years.map(y => `<option value="${y}" ${y === year ? 'selected' : ''}>${y}</option>`).join('')}
+          </select>
+        </div>
+        <button type="button" class="btn-date-nav" onclick="navigatePackagePopoverYear(1, event)" title="Próximo ano">›</button>
+      </div>
+
+      <div class="popover-months-grid">
+        ${monthNames.map((mName, mIdx) => {
+          const isCurMonth = mIdx === month;
+          const shortName = mName.slice(0, 3);
+          return `
+            <button type="button" 
+              class="popover-month-btn ${isCurMonth ? 'selected' : ''}" 
+              onclick="selectPackagePopoverMonth(${mIdx}, event)" 
+              title="${mName}">
+              ${shortName}
+            </button>
+          `;
+        }).join('')}
+      </div>
+
+      <div class="popover-calendar-footer">
+        <button type="button" class="btn-popover-today" onclick="goToTodayInPackagePopover(event)">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+          <span>Ir para Hoje (${todayName}/${todayY})</span>
+        </button>
+      </div>
+    `;
+    return;
+  }
+
+  // MODO PADRÃO DE DIAS PARA PACOTES
   const firstDay = new Date(year, month, 1).getDay();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const prevMonthDays = new Date(year, month, 0).getDate();
@@ -2551,10 +2720,13 @@ function renderPackagePopoverCalendarContent(popover) {
 
   popover.innerHTML = `
     <div class="popover-month-header">
-      <span style="display:flex; align-items:center; gap:4px;">${monthLabel} ▾</span>
-      <div style="display:flex; align-items:center; gap:8px;">
-        <button class="btn-date-nav" onclick="navigatePackagePopoverMonth(-1)">‹</button>
-        <button class="btn-date-nav" onclick="navigatePackagePopoverMonth(1)">›</button>
+      <button type="button" class="popover-month-title-btn" onclick="togglePackagePopoverMonthYearView(event)" title="Clique para escolher outro mês ou ano">
+        <span>${monthLabel}</span>
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"></polyline></svg>
+      </button>
+      <div style="display:flex; align-items:center; gap:6px;">
+        <button type="button" class="btn-date-nav" onclick="navigatePackagePopoverMonth(-1, event)" title="Mês anterior">‹</button>
+        <button type="button" class="btn-date-nav" onclick="navigatePackagePopoverMonth(1, event)" title="Próximo mês">›</button>
       </div>
     </div>
     <div class="popover-days-grid">
@@ -2567,10 +2739,56 @@ function renderPackagePopoverCalendarContent(popover) {
       <div class="popover-weekday-label">S</div>
       ${cellsHtml}
     </div>
+    <div class="popover-calendar-footer">
+      <button type="button" class="btn-popover-today" onclick="goToTodayInPackagePopover(event)">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+        <span>Ir para Hoje (${todayName}/${todayY})</span>
+      </button>
+    </div>
   `;
 }
 
-window.navigatePackagePopoverMonth = function(delta) {
+window.togglePackagePopoverMonthYearView = function(event) {
+  if (event) event.stopPropagation();
+  packagePopoverMonthState.viewMode = packagePopoverMonthState.viewMode === 'monthYear' ? 'days' : 'monthYear';
+  const popover = document.getElementById('packageCalendarPopover');
+  if (popover) renderPackagePopoverCalendarContent(popover);
+};
+
+window.navigatePackagePopoverYear = function(delta, event) {
+  if (event) event.stopPropagation();
+  packagePopoverMonthState.year += delta;
+  const popover = document.getElementById('packageCalendarPopover');
+  if (popover) renderPackagePopoverCalendarContent(popover);
+};
+
+window.setPackagePopoverYear = function(newYear, event) {
+  if (event) event.stopPropagation();
+  packagePopoverMonthState.year = parseInt(newYear, 10);
+  const popover = document.getElementById('packageCalendarPopover');
+  if (popover) renderPackagePopoverCalendarContent(popover);
+};
+
+window.selectPackagePopoverMonth = function(monthIdx, event) {
+  if (event) event.stopPropagation();
+  packagePopoverMonthState.month = monthIdx;
+  packagePopoverMonthState.viewMode = 'days';
+  const popover = document.getElementById('packageCalendarPopover');
+  if (popover) renderPackagePopoverCalendarContent(popover);
+};
+
+window.goToTodayInPackagePopover = function(event) {
+  if (event) event.stopPropagation();
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, '0');
+  const d = String(now.getDate()).padStart(2, '0');
+  const todayStr = `${y}-${m}-${d}`;
+  selectPackageDateFromPopover(todayStr);
+};
+
+window.navigatePackagePopoverMonth = function(delta, event) {
+  if (event) event.stopPropagation();
   let { year, month } = packagePopoverMonthState;
   month += delta;
   if (month < 0) {
@@ -2580,7 +2798,7 @@ window.navigatePackagePopoverMonth = function(delta) {
     month = 0;
     year++;
   }
-  packagePopoverMonthState = { year, month };
+  packagePopoverMonthState = { ...packagePopoverMonthState, year, month };
   const popover = document.getElementById('packageCalendarPopover');
   if (popover) renderPackagePopoverCalendarContent(popover);
 };

@@ -3056,6 +3056,142 @@ input[type="checkbox"] {
   background-color: #ffffff;
 }
 
+/* Popover Month Title Button (clickable month/year header) */
+.popover-month-title-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  padding: 4px 8px;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #1e293b;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.popover-month-title-btn:hover {
+  background: #f8fafc;
+  border-color: #e2e8f0;
+  color: var(--orange, #ff6900);
+}
+
+.popover-month-title-btn.active {
+  background: #fff7ed;
+  border-color: #fed7aa;
+  color: var(--orange, #ff6900);
+}
+
+.popover-month-title-btn svg {
+  transition: transform 0.2s ease;
+}
+
+/* Year Selector Bar */
+.popover-year-selector-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  padding: 6px 10px;
+  background: #f8fafc;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+}
+
+.popover-year-select {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #0f172a;
+  background: #ffffff;
+  border: 1.5px solid #fed7aa;
+  border-radius: 8px;
+  padding: 4px 8px;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.popover-year-select:focus {
+  border-color: var(--orange, #ff6900);
+  box-shadow: 0 0 0 3px rgba(255, 105, 0, 0.15);
+}
+
+/* Months Grid (4 columns x 3 rows) */
+.popover-months-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.popover-month-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 4px;
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: #1e293b;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.popover-month-btn:hover {
+  background: #fff7ed;
+  border-color: #fdba74;
+  color: #c2410c;
+  transform: translateY(-1px);
+}
+
+.popover-month-btn.selected {
+  background: linear-gradient(135deg, #ff6900 0%, #ff5200 100%) !important;
+  border-color: #ea580c !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  box-shadow: 0 4px 10px rgba(255, 105, 0, 0.25);
+}
+
+/* Popover Footer (Hoje button) */
+.popover-calendar-footer {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid #f1f5f9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-popover-today {
+  width: 100%;
+  padding: 7px 12px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 0.80rem;
+  font-weight: 600;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.btn-popover-today:hover {
+  background: #fff7ed;
+  color: var(--orange, #ff6900);
+  border-color: #fed7aa;
+}
+
 /* Modo Lista da Agenda (Screenshot 5) */
 .btn-add-appointment-banner {
   width: 100%;
