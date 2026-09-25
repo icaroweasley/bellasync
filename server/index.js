@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import path from 'path';
@@ -2022,28 +2023,47 @@ app.post('/api/appointments', (req, res) => {
     }
   }
 
-  // Se o cliente ainda não existir na base do salão, já cadastra automaticamente
-  if (clientName && clientPhone) {
-    const existingClient = (db.clients || []).find(
-      c => c.tenantId === tenantId && c.phone.replace(/\D/g, '') === clientPhone.replace(/\D/g, '')
-    );
-    if (!existingClient) {
+  // Sincroniza cliente no banco do salão e na agenda Google da dona do salão
+  let resolvedName = clientName;
+  let resolvedPhone = clientPhone;
+  let matchedClient = null;
+
+  if (clientId) {
+    matchedClient = (db.clients || []).find(c => c.id === clientId && c.tenantId === tenantId);
+    if (matchedClient) {
+      if (!resolvedName) resolvedName = matchedClient.name;
+      if (!resolvedPhone) resolvedPhone = matchedClient.phone;
+    }
+  }
+
+  if (resolvedPhone) {
+    const cleanDigits = resolvedPhone.replace(/\D/g, '');
+    if (!matchedClient) {
+      matchedClient = (db.clients || []).find(
+        c => c.tenantId === tenantId && c.phone && c.phone.replace(/\D/g, '') === cleanDigits
+      );
+    }
+
+    if (!matchedClient) {
       const createdCli = {
         id: 'cli_' + Date.now(),
         tenantId: tenantId,
-        name: clientName,
-        phone: clientPhone,
+        name: resolvedName || 'Cliente',
+        phone: resolvedPhone,
         birthday: '',
         status: 'ativo',
         balance: 0,
         notes: 'Cadastrado via Agendamento Online'
       };
       db.clients.push(createdCli);
+      matchedClient = createdCli;
+    }
 
-      // Sincronização automática em segundo plano com Google Contatos
-      const tenantObj = (db.tenants || []).find(t => t.id === tenantId);
-      if (tenantObj?.settings?.googleContacts?.connected && tenantObj.settings.googleContacts.autoSyncNewClients !== false) {
-        syncClientToGoogle(tenantId, db, createdCli).then(res => {
+    // Sincronização automática em segundo plano com Google Contatos da dona do salão
+    const tenantObj = (db.tenants || []).find(t => t.id === tenantId);
+    if (tenantObj?.settings?.googleContacts?.connected && tenantObj.settings.googleContacts.autoSyncNewClients !== false) {
+      if (!matchedClient.googleContactSynced) {
+        syncClientToGoogle(tenantId, db, matchedClient).then(res => {
           if (res.success) saveDb(db);
         }).catch(err => console.error('[Google Contacts AutoSync Error]', err));
       }

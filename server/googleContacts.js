@@ -53,11 +53,14 @@ export function getRedirectUri(req, gSettings) {
     return process.env.GOOGLE_REDIRECT_URI.trim();
   }
   if (req) {
-    const proto = req.headers['x-forwarded-proto'] || req.protocol || 'http';
-    const host = req.headers['x-forwarded-host'] || req.get('host') || '163.176.37.93:3010';
+    let proto = req.headers['x-forwarded-proto'] || (req.secure ? 'https' : 'http');
+    const host = req.headers['x-forwarded-host'] || req.get('host') || 'bellasync.online';
+    if (!host.includes('localhost') && !host.includes('127.0.0.1')) {
+      proto = 'https';
+    }
     return `${proto}://${host}/api/integrations/google/callback`;
   }
-  return 'http://163.176.37.93:3010/api/integrations/google/callback';
+  return 'https://bellasync.online/api/integrations/google/callback';
 }
 
 export function getAuthUrl(tenantId, db, req) {
