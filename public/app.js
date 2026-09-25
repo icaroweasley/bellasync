@@ -949,6 +949,8 @@ function checkAndNotifyBirthdays() {
 
 // Inicialização
 document.addEventListener('DOMContentLoaded', async () => {
+  checkGoogleAuthReturn();
+
   // Se as notificações já estiverem concedidas, garante a assinatura Web Push VAPID em segundo plano
   if ('Notification' in window && Notification.permission === 'granted') {
     subscribeUserToWebPush();
@@ -1060,7 +1062,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 async function loadInitialData() {
   try {
-    const [settings, profs, servs, clis, apps, prods, exps, comms, pkgs, cats] = await Promise.all([
+    const [settings, profs, servs, clis, apps, prods, exps, comms, pkgs, cats, gCfg] = await Promise.all([
       tenantFetch('/api/settings').then(r => r.json()),
       tenantFetch('/api/professionals').then(r => r.json()),
       tenantFetch('/api/services').then(r => r.json()),
@@ -1070,7 +1072,8 @@ async function loadInitialData() {
       tenantFetch('/api/expenses').then(r => r.json()),
       tenantFetch('/api/commissions').then(r => r.json()),
       tenantFetch('/api/packages').then(r => r.json()).catch(() => []),
-      tenantFetch('/api/categories').then(r => r.json()).catch(() => [])
+      tenantFetch('/api/categories').then(r => r.json()).catch(() => []),
+      tenantFetch('/api/integrations/google/config').then(r => r.json()).catch(() => null)
     ]);
 
     state = {
@@ -1083,7 +1086,8 @@ async function loadInitialData() {
       expenses: exps,
       commissions: comms,
       packages: pkgs || [],
-      categories: cats || []
+      categories: cats || [],
+      googleConfig: gCfg || settings?.googleContacts || {}
     };
 
     checkAndNotifyNewAppointments(apps);
@@ -2460,9 +2464,19 @@ function renderProfessionals(container, actions) {
 // 4. Render Clientes
 function renderClients(container, actions) {
   actions.innerHTML = `
-    <span style="font-size:0.84rem; font-weight:500; color:var(--muted); background:rgba(255,255,255,0.7); padding:6px 14px; border-radius:999px; border:1px solid rgba(0,0,0,0.06); height:38px; display:inline-flex; align-items:center; box-sizing:border-box;">
-      <strong style="color:var(--ink); margin-right:4px;">${state.clients.length}</strong> clientes
-    </span>
+    <div style="display:flex; align-items:center; gap:8px;">
+      <span style="font-size:0.84rem; font-weight:500; color:var(--muted); background:rgba(255,255,255,0.7); padding:6px 14px; border-radius:999px; border:1px solid rgba(0,0,0,0.06); height:38px; display:inline-flex; align-items:center; box-sizing:border-box;">
+        <strong style="color:var(--ink); margin-right:4px;">${state.clients.length}</strong> clientes
+      </span>
+      ${isManager ? `
+        <button class="btn-falcon btn-secondary" onclick="renderView('configuracoes')" style="display:inline-flex; align-items:center; gap:6px; font-size:0.82rem; font-weight:600; padding:6px 12px; height:38px; border-radius:10px; cursor:pointer;" title="Configurações de Sincronização com Google Contatos">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15h-2v-6h2v6zm4 0h-2v-6h2v6zm-2-8c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1z" fill="var(--orange)"/>
+          </svg>
+          Google Contatos
+        </button>
+      ` : ''}
+    </div>
   `;
 
   if (!state.clients || state.clients.length === 0) {
@@ -2479,17 +2493,29 @@ function renderClients(container, actions) {
   const clientsHtml = state.clients.map(c => `
     <div class="data-item-card">
       <div class="item-main-info">
-        <h4>
-          ${c.name}
-          ${c.hasNoShowHistory ? `<span style="font-size:0.72rem; font-weight:700; color:#b91c1c; background:#fee2e2; border:1px solid #fecaca; padding:2px 8px; border-radius:12px; margin-left:8px;">⚠️ Histórico de Falta (Taxa 50%)</span>` : ''}
-        </h4>
-        <p>WhatsApp: ${c.phone} ${c.birthday ? '• Aniversário: ' + c.birthday : ''}</p>
+        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+          <h4 style="margin:0;">${c.name}</h4>
+          ${c.googleContactSynced ? `
+            <span style="font-size:0.7rem; font-weight:700; color:#15803d; background:#dcfce7; border:1px solid #86efac; padding:2px 8px; border-radius:12px; display:inline-flex; align-items:center; gap:4px;" title="Sincronizado na sua conta do Google Contatos">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15h-2v-6h2v6zm4 0h-2v-6h2v6zm-2-8c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1z" fill="#16a34a"/></svg>
+              Google
+            </span>
+          ` : ''}
+          ${c.hasNoShowHistory ? `<span style="font-size:0.72rem; font-weight:700; color:#b91c1c; background:#fee2e2; border:1px solid #fecaca; padding:2px 8px; border-radius:12px;">⚠️ Histórico de Falta (Taxa 50%)</span>` : ''}
+        </div>
+        <p style="margin-top:4px;">WhatsApp: ${c.phone} ${c.birthday ? '• Aniversário: ' + c.birthday : ''}</p>
         ${c.notes ? `<p style="font-size:0.78rem; color:var(--muted); margin-top:2px;">Obs: ${c.notes}</p>` : ''}
       </div>
       <div class="item-actions-group">
         <a href="https://wa.me/55${c.phone.replace(/\D/g, '')}" target="_blank" class="btn-falcon btn-secondary">
           WhatsApp
         </a>
+        ${isManager ? `
+          <button class="btn-card-action" onclick="syncSingleClientToGoogle('${c.id}')" title="Enviar ou atualizar no Google Contatos" style="color:${c.googleContactSynced ? '#15803d' : 'var(--orange)'};">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15h-2v-6h2v6zm4 0h-2v-6h2v6zm-2-8c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1z" fill="currentColor"/></svg>
+            ${c.googleContactSynced ? 'Atualizar Google' : 'Salvar no Google'}
+          </button>
+        ` : ''}
         <button class="btn-card-action edit" onclick="openEditClientModal('${c.id}')" title="Editar Cliente">
           <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
           Editar
@@ -4119,11 +4145,294 @@ function renderSettings(container, actions) {
     ${salonCardHtml}
     ${agendaCardHtml}
     ${notificationCardHtml}
+    ${renderGoogleContactsCard()}
     <div style="margin-top: 20px;">
       <button class="btn-falcon btn-primary" onclick="saveSettings()">Salvar Configurações</button>
     </div>
   `;
 }
+
+function checkGoogleAuthReturn() {
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.get('google_connected') === '1') {
+    const email = urlParams.get('email') || '';
+    asyncAlert(`🎉 Conta Google conectada com sucesso!\n\nEmail: ${email}\n\nAgora seus clientes cadastrados e agendamentos serão salvos automaticamente na sua conta do Google Contatos.`, 'Google Contatos Conectado', 'success');
+    window.history.replaceState({}, document.title, window.location.pathname);
+  } else if (urlParams.get('google_error')) {
+    const err = urlParams.get('google_error');
+    asyncAlert(`Não foi possível conectar a conta Google:\n\n${err}`, 'Erro no Google Contatos', 'warning');
+    window.history.replaceState({}, document.title, window.location.pathname);
+  }
+}
+
+function renderGoogleContactsCard() {
+  const g = state.googleConfig || state.settings?.googleContacts || {};
+  const isConnected = !!(g.connected && (g.connectedEmail || g.tokens));
+  const redirectUri = g.redirectUri || `${window.location.origin}/api/integrations/google/callback`;
+
+  return `
+    <div class="card-shell" style="margin-bottom: 20px; border: 1.5px solid ${isConnected ? '#86efac' : '#fed7aa'}; background: ${isConnected ? 'linear-gradient(180deg, #f0fdf4 0%, #ffffff 100%)' : '#ffffff'};">
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 14px; flex-wrap: wrap;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <div style="width: 40px; height: 40px; border-radius: 10px; background: ${isConnected ? '#dcfce7' : 'rgba(255,105,0,0.1)'}; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15h-2v-6h2v6zm4 0h-2v-6h2v6zm-2-8c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1z" fill="${isConnected ? '#16a34a' : 'var(--orange)'}"/>
+            </svg>
+          </div>
+          <div>
+            <h3 style="margin: 0; font-size: 1.05rem; display: flex; align-items: center; gap: 8px;">
+              <span>Sincronização com Google Contatos</span>
+              ${isConnected ? `
+                <span style="font-size: 0.72rem; font-weight: 700; color: #15803d; background: #dcfce7; border: 1px solid #86efac; padding: 2px 8px; border-radius: 20px; letter-spacing: 0.02em;">Conectado</span>
+              ` : `
+                <span style="font-size: 0.72rem; font-weight: 700; color: #9a3412; background: #ffedd5; border: 1px solid #fed7aa; padding: 2px 8px; border-radius: 20px; letter-spacing: 0.02em;">Não Conectado</span>
+              `}
+            </h3>
+            <p style="font-size: 0.82rem; color: var(--muted); margin-top: 2px; margin-bottom: 0;">Salva automaticamente seus clientes na agenda/contatos da sua conta Google.</p>
+          </div>
+        </div>
+      </div>
+
+      ${isConnected ? `
+        <!-- Painel Conectado -->
+        <div style="background: #ffffff; border: 1px solid #bbf7d0; border-radius: 12px; padding: 14px 16px; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
+          <div>
+            <span style="font-size: 0.75rem; text-transform: uppercase; font-weight: 700; color: #166534; letter-spacing: 0.04em;">Conta Google Conectada:</span>
+            <div style="font-size: 1rem; font-weight: 800; color: #14532d; margin-top: 2px;">
+              ${g.connectedEmail || 'Conta Google Autorizada'}
+            </div>
+            ${g.connectedName ? `<span style="font-size: 0.8rem; color: #15803d;">${g.connectedName}</span>` : ''}
+          </div>
+          <button type="button" class="btn-falcon btn-danger" onclick="disconnectGoogleAccount()" style="padding: 6px 14px; font-size: 0.8rem;">
+            Desconectar
+          </button>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
+          <div class="form-group" style="margin-bottom: 0;">
+            <label style="font-size: 0.85rem; font-weight: 600;">Sufixo no Nome do Contato</label>
+            <input type="text" class="form-control" id="cfgGoogleNameSuffix" value="${g.nameSuffix !== undefined ? g.nameSuffix : ' (Cliente)'}" placeholder="Ex: (Cliente)" onchange="updateGoogleSuffix(this.value)">
+            <small style="color: var(--muted); font-size: 0.72rem; display: block; margin-top: 3px;">Ex: "Maria Silva${g.nameSuffix !== undefined ? g.nameSuffix : ' (Cliente)'}"</small>
+          </div>
+          <div style="display: flex; flex-direction: column; justify-content: center;">
+            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 0.85rem; font-weight: 600; color: var(--ink);">
+              <input type="checkbox" id="cfgGoogleAutoSync" ${g.autoSyncNewClients !== false ? 'checked' : ''} onchange="toggleGoogleAutoSync(this.checked)" style="width: 18px; height: 18px; accent-color: var(--orange);">
+              <span>Salvar novos clientes automaticamente</span>
+            </label>
+            <small style="color: var(--muted); font-size: 0.72rem; margin-top: 3px; margin-left: 26px;">Salva no Google no momento do cadastro ou agendamento online.</small>
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center; padding-top: 8px; border-top: 1px dashed #bbf7d0;">
+          <button type="button" class="btn-falcon btn-success" id="btnSyncAllGoogle" onclick="syncAllClientsToGoogleClick()" style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.85rem; font-weight: 700; padding: 8px 16px;">
+            <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path></svg>
+            <span>Sincronizar Todas as Clientes Agora</span>
+          </button>
+          <small style="color: var(--muted); font-size: 0.78rem;">Envia toda a sua lista atual de clientes para o Google Contatos.</small>
+        </div>
+      ` : `
+        <!-- Painel Não Conectado: Instruções e Configuração -->
+        <p style="font-size: 0.85rem; color: #4b5563; line-height: 1.5; margin-bottom: 14px;">
+          Conecte sua conta do Google para que toda cliente cadastrada no BellaSync seja salva imediatamente nos seus Contatos do Google, ficando disponível no celular para chamadas, identificador de chamadas e WhatsApp.
+        </p>
+
+        <div style="background: #fffbeb; border: 1px solid #fef3c7; border-radius: 12px; padding: 12px 14px; margin-bottom: 16px;">
+          <details style="cursor: pointer;">
+            <summary style="font-size: 0.85rem; font-weight: 700; color: #92400e; display: flex; align-items: center; gap: 6px;">
+              <span>ℹ️ Como obter o Client ID e Client Secret no Google Cloud (Passo a Passo)</span>
+            </summary>
+            <div style="font-size: 0.8rem; color: #78350f; line-height: 1.55; margin-top: 10px; padding-top: 10px; border-top: 1px dashed #fde68a;">
+              <ol style="margin: 0; padding-left: 20px;">
+                <li>Acesse o <a href="https://console.cloud.google.com/" target="_blank" style="color: #b45309; font-weight: 700; text-decoration: underline;">Google Cloud Console</a> com a conta Google do salão.</li>
+                <li>Crie um projeto (ex: <em>"BellaSync Salão"</em>).</li>
+                <li>No menu <strong>APIs e Serviços &gt; Biblioteca</strong>, procure por <strong>Google People API</strong> e clique em <strong>Ativar</strong>.</li>
+                <li>Em <strong>Tela de consentimento OAuth</strong>, selecione <em>Externo</em>, preencha o nome do app e salve.</li>
+                <li>Em <strong>Credenciais &gt; Criar Credenciais &gt; ID do cliente OAuth</strong>:
+                  <ul style="margin-top: 4px;">
+                    <li>Tipo de aplicativo: <strong>Aplicativo da Web</strong></li>
+                    <li>Em <strong>URIs de redirecionamento autorizados</strong>, adicione exatamente o link abaixo:</li>
+                  </ul>
+                  <div style="display: flex; gap: 8px; align-items: center; margin: 6px 0;">
+                    <input type="text" readonly value="${redirectUri}" id="gRedirectUriCopy" style="font-family: monospace; font-size: 0.75rem; padding: 4px 8px; border-radius: 6px; border: 1px solid #cbd5e1; background: #ffffff; flex: 1;">
+                    <button type="button" class="btn-falcon btn-secondary" onclick="navigator.clipboard.writeText(document.getElementById('gRedirectUriCopy').value); asyncAlert('URL copiada para a área de transferência!', 'Copiado', 'success');" style="padding: 4px 10px; font-size: 0.75rem;">Copiar Link</button>
+                  </div>
+                </li>
+                <li>Copie o <strong>ID do cliente</strong> e a <strong>Chave secreta do cliente</strong> gerados e cole nos campos abaixo.</li>
+              </ol>
+            </div>
+          </details>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+          <div class="form-group" style="margin-bottom: 0;">
+            <label style="font-size: 0.85rem; font-weight: 600;">Client ID do Google</label>
+            <input type="text" class="form-control" id="cfgGoogleClientId" value="${g.rawClientId || ''}" placeholder="Ex: 123456789-abcdef.apps.googleusercontent.com">
+          </div>
+          <div class="form-group" style="margin-bottom: 0;">
+            <label style="font-size: 0.85rem; font-weight: 600;">Client Secret do Google</label>
+            <input type="password" class="form-control" id="cfgGoogleClientSecret" value="${g.hasClientSecret ? '••••••••••••••••' : ''}" placeholder="Cole a Chave Secreta aqui">
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 16px;">
+          <label style="font-size: 0.85rem; font-weight: 600;">Sufixo no Nome do Contato</label>
+          <input type="text" class="form-control" id="cfgGoogleNameSuffix" value="${g.nameSuffix !== undefined ? g.nameSuffix : ' (Cliente)'}" placeholder="Ex: (Cliente)">
+          <small style="color: var(--muted); font-size: 0.72rem; display: block; margin-top: 3px;">Sufixo adicionado ao final do nome no Google Contatos (ex: "Maria Silva (Cliente)").</small>
+        </div>
+
+        <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+          <button type="button" class="btn-falcon btn-primary" onclick="connectGoogleAccount()" style="display: inline-flex; align-items: center; gap: 8px; font-weight: 700; padding: 10px 18px;">
+            <svg width="18" height="18" viewBox="0 0 24 24">
+              <path fill="#EA4335" d="M12 5c1.56 0 2.97.55 4.08 1.45l3.06-3.06C17.29 1.69 14.81 1 12 1 7.42 1 3.55 3.59 1.63 7.37l3.71 2.88C6.23 7.42 8.87 5 12 5z"/>
+              <path fill="#4285F4" d="M23.49 12.27c0-.79-.07-1.54-.19-2.27H12v4.51h6.47c-.28 1.48-1.11 2.74-2.37 3.58l3.68 2.86c2.15-1.99 3.41-4.92 3.41-8.68z"/>
+              <path fill="#FBBC05" d="M5.34 14.75c-.24-.72-.38-1.49-.38-2.28s.14-1.56.38-2.28L1.63 7.37C.59 9.44 0 11.66 0 14c0 2.34.59 4.56 1.63 6.63l3.71-2.88z"/>
+              <path fill="#34A853" d="M12 23c3.24 0 5.95-1.08 7.93-2.91l-3.68-2.86c-1.07.72-2.45 1.15-4.25 1.15-3.13 0-5.77-2.42-6.66-5.25L1.63 20.63C3.55 24.41 7.42 27 12 27z"/>
+            </svg>
+            <span>Conectar com Conta Google</span>
+          </button>
+          <button type="button" class="btn-falcon btn-secondary" onclick="saveGoogleCredentialsOnly()" style="font-size: 0.82rem; padding: 10px 14px;">
+            Apenas Salvar Credenciais
+          </button>
+        </div>
+      `}
+    </div>
+  `;
+}
+
+window.connectGoogleAccount = async function() {
+  const clientId = document.getElementById('cfgGoogleClientId')?.value.trim();
+  const clientSecret = document.getElementById('cfgGoogleClientSecret')?.value.trim();
+  const nameSuffix = document.getElementById('cfgGoogleNameSuffix')?.value;
+
+  if (clientId) {
+    const body = { clientId, nameSuffix };
+    if (clientSecret && !clientSecret.includes('••••')) {
+      body.clientSecret = clientSecret;
+    }
+    await tenantFetch('/api/integrations/google/config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+  }
+
+  try {
+    const res = await tenantFetch('/api/integrations/google/auth-url');
+    const data = await res.json();
+    if (!res.ok || !data.url) {
+      throw new Error(data.error || 'Não foi possível gerar link de conexão do Google.');
+    }
+    window.location.href = data.url;
+  } catch (err) {
+    asyncAlert(err.message, 'Atenção', 'warning');
+  }
+};
+
+window.saveGoogleCredentialsOnly = async function() {
+  const clientId = document.getElementById('cfgGoogleClientId')?.value.trim();
+  const clientSecret = document.getElementById('cfgGoogleClientSecret')?.value.trim();
+  const nameSuffix = document.getElementById('cfgGoogleNameSuffix')?.value;
+
+  if (!clientId) {
+    return asyncAlert('Por favor, informe ao menos o Client ID do Google.', 'Campo Obrigatório', 'warning');
+  }
+
+  const body = { clientId, nameSuffix };
+  if (clientSecret && !clientSecret.includes('••••')) {
+    body.clientSecret = clientSecret;
+  }
+
+  const res = await tenantFetch('/api/integrations/google/config', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+
+  if (res.ok) {
+    await loadInitialData();
+    renderView('configuracoes');
+    asyncAlert('Credenciais do Google salvas com sucesso! Agora você já pode clicar em "Conectar com Conta Google".', 'Sucesso', 'success');
+  } else {
+    const err = await res.json();
+    asyncAlert(err.error || 'Erro ao salvar credenciais.', 'Erro', 'error');
+  }
+};
+
+window.disconnectGoogleAccount = async function() {
+  const confirmed = await asyncConfirm(
+    'Deseja realmente desconectar a conta do Google Contatos?\n\nA sincronização automática de clientes será pausada até que você conecte novamente.',
+    'Desconectar Google Contatos'
+  );
+  if (!confirmed) return;
+
+  const res = await tenantFetch('/api/integrations/google/disconnect', { method: 'POST' });
+  if (res.ok) {
+    await loadInitialData();
+    renderView('configuracoes');
+    asyncAlert('Conta Google desconectada com sucesso.', 'Desconectado', 'info');
+  } else {
+    asyncAlert('Erro ao desconectar conta Google.', 'Erro', 'error');
+  }
+};
+
+window.updateGoogleSuffix = async function(val) {
+  await tenantFetch('/api/integrations/google/config', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ nameSuffix: val })
+  });
+};
+
+window.toggleGoogleAutoSync = async function(checked) {
+  await tenantFetch('/api/integrations/google/config', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ autoSyncNewClients: checked })
+  });
+};
+
+window.syncAllClientsToGoogleClick = async function() {
+  const btn = document.getElementById('btnSyncAllGoogle');
+  if (btn) {
+    btn.disabled = true;
+    btn.innerText = 'Sincronizando clientes...';
+  }
+
+  try {
+    const res = await tenantFetch('/api/integrations/google/sync-all', { method: 'POST' });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Falha ao sincronizar clientes');
+
+    await loadInitialData();
+    renderView('configuracoes');
+    asyncAlert(
+      `🎉 Sincronização Concluída!\n\n• Total no salão: ${data.stats.total}\n• Sincronizados com sucesso: ${data.stats.synced}\n• Erros: ${data.stats.errors}`,
+      'Google Contatos',
+      'success'
+    );
+  } catch (err) {
+    asyncAlert(err.message, 'Erro na Sincronização', 'error');
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerText = 'Sincronizar Todas as Clientes Agora';
+    }
+  }
+};
+
+window.syncSingleClientToGoogle = async function(clientId) {
+  try {
+    const res = await tenantFetch('/api/integrations/google/sync-client/' + clientId, { method: 'POST' });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Erro ao sincronizar com Google Contatos');
+
+    await loadInitialData();
+    renderView('clientes');
+    asyncAlert(data.message || 'Cliente sincronizado com sucesso no Google Contatos!', 'Google Contatos', 'success');
+  } catch (err) {
+    asyncAlert(err.message, 'Atenção', 'warning');
+  }
+};
 
 window.openAgendaViewModeModal = function() {
   let selectedMode = state.settings.agendaViewMode || 'calendar';

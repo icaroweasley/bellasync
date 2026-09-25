@@ -4,6 +4,15 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import webpush from 'web-push';
 import { getDb, saveDb } from './db/database.js';
+import {
+  getGoogleConfig,
+  saveGoogleConfig,
+  getAuthUrl,
+  handleAuthCallback,
+  disconnectGoogle,
+  syncClientToGoogle,
+  syncAllClientsToGoogle
+} from './googleContacts.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -1255,6 +1264,100 @@ app.put('/api/settings', requireManager, (req, res) => {
   }
 });
 
+// 1.1 Integração com Google Contatos (Google People API)
+app.get('/api/integrations/google/config', (req, res) => {
+  const db = getDb();
+  const tenantId = getTenantId(req);
+  const cfg = getGoogleConfig(tenantId, db, req);
+  res.json(cfg);
+});
+
+app.post('/api/integrations/google/config', requireManager, (req, res) => {
+  const db = getDb();
+  const tenantId = getTenantId(req);
+  try {
+    saveGoogleConfig(tenantId, db, req.body);
+    saveDb(db);
+    res.json({ message: 'Configurações do Google Contatos salvas.', config: getGoogleConfig(tenantId, db, req) });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+app.get('/api/integrations/google/auth-url', requireManager, (req, res) => {
+  const db = getDb();
+  const tenantId = getTenantId(req);
+  try {
+    const url = getAuthUrl(tenantId, db, req);
+    res.json({ url });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+app.get('/api/integrations/google/callback', async (req, res) => {
+  const db = getDb();
+  const { code, state, error } = req.query;
+
+  if (error) {
+    console.error('[Google Contacts Callback Error]:', error);
+    return res.redirect(`/?google_error=${encodeURIComponent(error)}`);
+  }
+
+  if (!code) {
+    return res.redirect('/?google_error=Codigo_de_autorizacao_ausente');
+  }
+
+  try {
+    const result = await handleAuthCallback(code, state, db, req);
+    saveDb(db);
+    res.redirect(`/?google_connected=1&email=${encodeURIComponent(result.email || '')}`);
+  } catch (err) {
+    console.error('[Google Contacts Callback Exception]:', err);
+    res.redirect(`/?google_error=${encodeURIComponent(err.message || 'Falha ao conectar com o Google')}`);
+  }
+});
+
+app.post('/api/integrations/google/disconnect', requireManager, (req, res) => {
+  const db = getDb();
+  const tenantId = getTenantId(req);
+  disconnectGoogle(tenantId, db);
+  saveDb(db);
+  res.json({ message: 'Conta Google desconectada com sucesso.' });
+});
+
+app.post('/api/integrations/google/sync-all', requireManager, async (req, res) => {
+  const db = getDb();
+  const tenantId = getTenantId(req);
+  try {
+    const stats = await syncAllClientsToGoogle(tenantId, db);
+    saveDb(db);
+    res.json({ message: 'Sincronização com o Google Contatos concluída!', stats });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/integrations/google/sync-client/:id', requireManager, async (req, res) => {
+  const db = getDb();
+  const tenantId = getTenantId(req);
+  const client = (db.clients || []).find(c => c.id === req.params.id && c.tenantId === tenantId);
+  if (!client) {
+    return res.status(404).json({ error: 'Cliente não encontrado.' });
+  }
+
+  try {
+    const result = await syncClientToGoogle(tenantId, db, client);
+    if (!result.success) {
+      return res.status(400).json({ error: result.error || result.reason || 'Erro ao sincronizar cliente.' });
+    }
+    saveDb(db);
+    res.json({ message: `Cliente "${client.name}" sincronizado com sucesso no Google Contatos!`, result });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // 2. Profissionais
 app.get('/api/professionals', (req, res) => {
   const db = getDb();
@@ -1628,6 +1731,15 @@ app.post('/api/clients', (req, res) => {
   };
   db.clients.push(newCli);
   saveDb(db);
+
+  // Sincronização automática em segundo plano com Google Contatos
+  const tenant = (db.tenants || []).find(t => t.id === tenantId);
+  if (tenant?.settings?.googleContacts?.connected && tenant.settings.googleContacts.autoSyncNewClients !== false) {
+    syncClientToGoogle(tenantId, db, newCli).then(res => {
+      if (res.success) saveDb(db);
+    }).catch(err => console.error('[Google Contacts AutoSync Error]', err));
+  }
+
   res.status(201).json(newCli);
 });
 
@@ -1916,7 +2028,7 @@ app.post('/api/appointments', (req, res) => {
       c => c.tenantId === tenantId && c.phone.replace(/\D/g, '') === clientPhone.replace(/\D/g, '')
     );
     if (!existingClient) {
-      db.clients.push({
+      const createdCli = {
         id: 'cli_' + Date.now(),
         tenantId: tenantId,
         name: clientName,
@@ -1925,7 +2037,16 @@ app.post('/api/appointments', (req, res) => {
         status: 'ativo',
         balance: 0,
         notes: 'Cadastrado via Agendamento Online'
-      });
+      };
+      db.clients.push(createdCli);
+
+      // Sincronização automática em segundo plano com Google Contatos
+      const tenantObj = (db.tenants || []).find(t => t.id === tenantId);
+      if (tenantObj?.settings?.googleContacts?.connected && tenantObj.settings.googleContacts.autoSyncNewClients !== false) {
+        syncClientToGoogle(tenantId, db, createdCli).then(res => {
+          if (res.success) saveDb(db);
+        }).catch(err => console.error('[Google Contacts AutoSync Error]', err));
+      }
     }
   }
 
