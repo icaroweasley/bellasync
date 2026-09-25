@@ -2402,8 +2402,8 @@ function renderProfessionals(container, actions) {
               ✂️ ${Array.isArray(p.serviceIds) ? `${p.serviceIds.length} serviços atribuídos` : 'Todos os serviços'}
             </span>
             ${p.requireDeposit ? `
-              <span class="prof-deposit-badge" onclick="openEditProfessionalModal('${p.id}')" title="Sinal configurado: ${p.depositPercent || 30}% via ${p.pixBank || 'Pix'}">
-                💳 Sinal ${p.depositPercent || 30}% (${p.pixBank || 'Pix'})
+              <span class="prof-deposit-badge" onclick="openEditProfessionalModal('${p.id}')" title="Sinal configurado: ${p.depositType === 'fixed' ? `R$ ${(Number(p.depositFixedAmount) || 50).toFixed(2)} fixos` : `${p.depositPercent || 30}%`} via ${p.pixBank || 'Pix'}">
+                💳 Sinal ${p.depositType === 'fixed' ? `R$ ${(Number(p.depositFixedAmount) || 50).toFixed(2)}` : `${p.depositPercent || 30}%`} (${p.pixBank || 'Pix'})
               </span>
             ` : ''}
           </div>
@@ -4346,8 +4346,17 @@ window.openNewAppointmentModal = function(defaultTime = "10:00") {
     const endTime = document.getElementById('modalAppEnd').value;
     const hasDeposit = document.getElementById('modalAppHasDeposit')?.checked || false;
     const prof = (state.professionals || []).find(p => p.id === profId);
-    const profDepositPct = prof ? (Number(prof.depositPercent) || 30) : 30;
-    const depositAmt = hasDeposit ? ((price * profDepositPct) / 100) : 0;
+    let profDepositPct = 30;
+    let depositAmt = 0;
+    if (prof) {
+      if (prof.depositType === 'fixed') {
+        profDepositPct = 0;
+        depositAmt = hasDeposit ? (Number(prof.depositFixedAmount) || 50) : 0;
+      } else {
+        profDepositPct = Number(prof.depositPercent) || 30;
+        depositAmt = hasDeposit ? ((price * profDepositPct) / 100) : 0;
+      }
+    }
 
     if (!clientName) {
       asyncAlert('Por favor informe o nome do cliente');
@@ -4414,12 +4423,14 @@ window.filterModalServicesByProf = function() {
   const depositCheckbox = document.getElementById('modalAppHasDeposit');
   const depositLabel = document.getElementById('modalAppDepositLabel');
   if (depositCheckbox && prof) {
+    const isFixed = prof.depositType === 'fixed';
+    const depStr = isFixed ? `R$ ${(Number(prof.depositFixedAmount) || 50).toFixed(2)} fixos` : `${prof.depositPercent || 30}%`;
     if (prof.requireDeposit) {
       depositCheckbox.checked = true;
-      if (depositLabel) depositLabel.innerText = `Cobrado Sinal Prévio de ${prof.depositPercent || 30}% (Gera taxa de garantia de 50% em caso de falta)`;
+      if (depositLabel) depositLabel.innerText = `Cobrado Sinal Prévio de ${depStr} (Gera taxa de garantia de 50% em caso de falta)`;
     } else {
       depositCheckbox.checked = false;
-      if (depositLabel) depositLabel.innerText = `Cobrado Sinal Prévio de 30% (Gera taxa de garantia de 50% em caso de falta)`;
+      if (depositLabel) depositLabel.innerText = `Cobrado Sinal Prévio (${depStr})`;
     }
   }
 };
@@ -5836,13 +5847,25 @@ window.openNewProfessionalModal = function() {
 
         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:10px;">
           <div class="form-group" style="margin:0;">
+            <label style="font-size:0.8rem;">Tipo de Cobrança do Sinal</label>
+            <select class="form-control" id="mProfDepositType" onchange="toggleProfDepositTypeInput('mProf')">
+              <option value="percent">Porcentagem (%)</option>
+              <option value="fixed">Valor Fixo (R$)</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin:0;" id="mProfDepositPercentGroup">
             <label style="font-size:0.8rem;">Porcentagem do Sinal (%)</label>
             <input type="number" class="form-control" id="mProfDepositPercent" value="30" min="5" max="100" placeholder="Ex: 30">
           </div>
-          <div class="form-group" style="margin:0;">
-            <label style="font-size:0.8rem;">Banco / Instituição</label>
-            <input type="text" class="form-control" id="mProfPixBank" placeholder="Ex: Nubank, Inter, Itaú, InfinitePay, Caixa...">
+          <div class="form-group" style="margin:0; display:none;" id="mProfDepositFixedGroup">
+            <label style="font-size:0.8rem;">Valor Fixo do Sinal (R$)</label>
+            <input type="number" step="0.01" class="form-control" id="mProfDepositFixedAmount" value="50" min="1" placeholder="Ex: 50.00">
           </div>
+        </div>
+
+        <div class="form-group" style="margin:0 0 10px 0;">
+          <label style="font-size:0.8rem;">Banco / Instituição</label>
+          <input type="text" class="form-control" id="mProfPixBank" placeholder="Ex: Nubank, Inter, Itaú, InfinitePay, Caixa...">
         </div>
 
         <div style="display:grid; grid-template-columns: 1fr 1.5fr; gap:10px; margin-bottom:10px;">
@@ -5932,7 +5955,9 @@ window.openNewProfessionalModal = function() {
     const showInBooking = document.getElementById('mProfBooking').checked;
 
     const requireDeposit = document.getElementById('mProfRequireDeposit').checked;
+    const depositType = document.getElementById('mProfDepositType')?.value || 'percent';
     const depositPercent = Number(document.getElementById('mProfDepositPercent').value) || 30;
+    const depositFixedAmount = Number(document.getElementById('mProfDepositFixedAmount')?.value) || 50;
     const pixBank = document.getElementById('mProfPixBank').value.trim() || 'InfinitePay';
     const pixKeyType = document.getElementById('mProfPixType').value;
     const pixKey = document.getElementById('mProfPixKey').value.trim();
@@ -5957,7 +5982,9 @@ window.openNewProfessionalModal = function() {
         commissionDefault,
         showInBooking,
         requireDeposit,
+        depositType,
         depositPercent,
+        depositFixedAmount,
         pixBank,
         pixKeyType,
         pixKey,
@@ -6066,6 +6093,16 @@ window.openWhatsApp = function(phone, name = '') {
   window.open(waUrl, '_blank');
 };
 
+window.toggleProfDepositTypeInput = function(prefix) {
+  const typeSelect = document.getElementById(`${prefix}DepositType`);
+  const pctGroup = document.getElementById(`${prefix}DepositPercentGroup`);
+  const fixedGroup = document.getElementById(`${prefix}DepositFixedGroup`);
+  if (!typeSelect) return;
+  const isFixed = typeSelect.value === 'fixed';
+  if (pctGroup) pctGroup.style.display = isFixed ? 'none' : 'block';
+  if (fixedGroup) fixedGroup.style.display = isFixed ? 'block' : 'none';
+};
+
 // 1. Profissionais: Editar e Excluir
 window.openEditProfessionalModal = function(profId) {
   if (!isManager) {
@@ -6142,13 +6179,25 @@ window.openEditProfessionalModal = function(profId) {
 
         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:10px;">
           <div class="form-group" style="margin:0;">
+            <label style="font-size:0.8rem;">Tipo de Cobrança do Sinal</label>
+            <select class="form-control" id="mEditProfDepositType" onchange="toggleProfDepositTypeInput('mEditProf')">
+              <option value="percent" ${prof.depositType !== 'fixed' ? 'selected' : ''}>Porcentagem (%)</option>
+              <option value="fixed" ${prof.depositType === 'fixed' ? 'selected' : ''}>Valor Fixo (R$)</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin:0; ${prof.depositType === 'fixed' ? 'display:none;' : ''}" id="mEditProfDepositPercentGroup">
             <label style="font-size:0.8rem;">Porcentagem do Sinal (%)</label>
             <input type="number" class="form-control" id="mEditProfDepositPercent" value="${prof.depositPercent || 30}" min="5" max="100" placeholder="Ex: 30">
           </div>
-          <div class="form-group" style="margin:0;">
-            <label style="font-size:0.8rem;">Banco / Instituição</label>
-            <input type="text" class="form-control" id="mEditProfPixBank" value="${prof.pixBank || ''}" placeholder="Ex: Nubank, Inter, Itaú, InfinitePay, Caixa...">
+          <div class="form-group" style="margin:0; ${prof.depositType !== 'fixed' ? 'display:none;' : ''}" id="mEditProfDepositFixedGroup">
+            <label style="font-size:0.8rem;">Valor Fixo do Sinal (R$)</label>
+            <input type="number" step="0.01" class="form-control" id="mEditProfDepositFixedAmount" value="${prof.depositFixedAmount !== undefined ? prof.depositFixedAmount : 50}" min="1" placeholder="Ex: 50.00">
           </div>
+        </div>
+
+        <div class="form-group" style="margin:0 0 10px 0;">
+          <label style="font-size:0.8rem;">Banco / Instituição</label>
+          <input type="text" class="form-control" id="mEditProfPixBank" value="${prof.pixBank || ''}" placeholder="Ex: Nubank, Inter, Itaú, InfinitePay, Caixa...">
         </div>
 
         <div style="display:grid; grid-template-columns: 1fr 1.5fr; gap:10px; margin-bottom:10px;">
@@ -6238,7 +6287,9 @@ window.openEditProfessionalModal = function(profId) {
     const showInBooking = document.getElementById('mEditProfBooking').checked;
 
     const requireDeposit = document.getElementById('mEditProfRequireDeposit').checked;
+    const depositType = document.getElementById('mEditProfDepositType')?.value || 'percent';
     const depositPercent = Number(document.getElementById('mEditProfDepositPercent').value) || 30;
+    const depositFixedAmount = Number(document.getElementById('mEditProfDepositFixedAmount')?.value) || 50;
     const pixBank = document.getElementById('mEditProfPixBank').value.trim() || 'InfinitePay';
     const pixKeyType = document.getElementById('mEditProfPixType').value;
     const pixKey = document.getElementById('mEditProfPixKey').value.trim();
@@ -6261,7 +6312,9 @@ window.openEditProfessionalModal = function(profId) {
       commissionDefault,
       showInBooking,
       requireDeposit,
+      depositType,
       depositPercent,
+      depositFixedAmount,
       pixBank,
       pixKeyType,
       pixKey,

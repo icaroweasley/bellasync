@@ -642,7 +642,7 @@
             <span style="font-size:0.85rem; line-height:1; color:#d97706; flex-shrink:0; margin-top:2px;">ℹ️</span>
             <div>
               <strong>Observações:</strong>
-              <div style="margin-top:2px; color:#78350f;">• O orçamento efetuado é uma média do valor do serviço, pois só é possível passar o valor exato do orçamento presencialmente.</div>
+              <div style="margin-top:2px; color:#78350f;">• O orçamento informado é uma média do valor do serviço. O valor a ser pago no salão no dia do agendamento pode variar conforme a avaliação presencial (comprimento, volume ou particularidades do cabelo). O valor de entrada será abatido do total final.</div>
             </div>
           </div>
         </div>
@@ -732,7 +732,7 @@
               <strong style="color:var(--ink); display:block; margin-bottom:3px;">Observações:</strong>
               <div style="display:flex; gap:6px; color:#475569;">
                 <span style="color:var(--orange); font-weight:bold;">•</span>
-                <div>O orçamento efetuado é uma média do valor do serviço, pois só é possível passar o valor exato do orçamento presencialmente.</div>
+                <div>O orçamento informado é uma média do valor do serviço. O valor a ser pago no salão no dia do agendamento pode variar conforme a avaliação presencial (comprimento, volume ou particularidades do cabelo). O valor de entrada será abatido do total final.</div>
               </div>
             </div>
           </div>
@@ -1997,23 +1997,39 @@
       if (depNameEl) depNameEl.innerText = prof.name;
       if (depRoleEl) depRoleEl.innerText = prof.role || 'Profissional';
       
+      const isFixedDeposit = prof.depositType === 'fixed';
+      let depositVal = 0;
+      let badgeText = '';
+      const baseFixed = Number(prof.depositFixedAmount) || 50;
       const basePct = Number(prof.depositPercent) || 30;
-      const pct = clientPenaltyActive ? clientPenaltyPct : basePct;
 
-      const totalPrice = visibleServices.reduce((sum, s) => sum + (Number(s.price) || 0), 0);
-      const depositVal = (totalPrice * pct) / 100;
+      if (isFixedDeposit) {
+        depositVal = clientPenaltyActive ? (baseFixed * 1.5) : baseFixed;
+        badgeText = clientPenaltyActive ? `R$ ${depositVal.toFixed(2)} Taxa Remarcação` : `R$ ${depositVal.toFixed(2)} Entrada Fixa`;
+      } else {
+        const pct = clientPenaltyActive ? clientPenaltyPct : basePct;
+        depositVal = (totalPrice * pct) / 100;
+        badgeText = `${pct}% ${clientPenaltyActive ? 'Taxa Remarcação' : 'Entrada'}`;
+      }
+
       const remainVal = Math.max(0, totalPrice - depositVal);
 
       const formatBRL = (val) => val.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
       const badgeEl = document.getElementById('depositPercentBadge');
       if (badgeEl) {
-        badgeEl.innerText = `${pct}% ${clientPenaltyActive ? 'Taxa Remarcação' : 'Entrada'}`;
+        badgeEl.innerText = badgeText;
         badgeEl.style.background = clientPenaltyActive ? '#dc2626' : '#0f172a';
       }
 
       const policyPctEl = document.getElementById('depositPolicyPct');
-      if (policyPctEl) policyPctEl.innerText = `${basePct}%`;
+      if (policyPctEl) {
+        if (isFixedDeposit) {
+          policyPctEl.innerText = `R$ ${baseFixed.toFixed(2)} fixos`;
+        } else {
+          policyPctEl.innerText = `${basePct}%`;
+        }
+      }
 
       const labelNowEl = document.getElementById('depositLabelNow');
       if (labelNowEl) {
@@ -2090,11 +2106,21 @@
 
       if (prof && prof.requireDeposit && selectedServices.length > 0 && !allHidden) {
         hasDeposit = true;
-        depositPercent = clientPenaltyActive ? clientPenaltyPct : (Number(prof.depositPercent) || 30);
-        depositAmount = (visiblePrice * depositPercent) / 100;
-        const remainVal = Math.max(0, visiblePrice - depositAmount);
-        tipoSinal = clientPenaltyActive ? 'Taxa Reagendamento (Reincidência)' : 'Sinal de Adiantamento';
-        depositNotes = ` | ${tipoSinal} ${depositPercent}%: R$ ${depositAmount.toFixed(2)} (${prof.pixBank || 'InfinitePay'}) - Restante no salão: R$ ${remainVal.toFixed(2)}`;
+        const isFixedDeposit = prof.depositType === 'fixed';
+        if (isFixedDeposit) {
+          const baseFixed = Number(prof.depositFixedAmount) || 50;
+          depositAmount = clientPenaltyActive ? (baseFixed * 1.5) : baseFixed;
+          depositPercent = 0;
+          tipoSinal = clientPenaltyActive ? 'Taxa Reagendamento (Reincidência)' : 'Sinal de Entrada Fixo';
+          const remainVal = Math.max(0, visiblePrice - depositAmount);
+          depositNotes = ` | ${tipoSinal}: R$ ${depositAmount.toFixed(2)} (${prof.pixBank || 'InfinitePay'}) - Restante no salão (estimado): R$ ${remainVal.toFixed(2)}`;
+        } else {
+          depositPercent = clientPenaltyActive ? clientPenaltyPct : (Number(prof.depositPercent) || 30);
+          depositAmount = (visiblePrice * depositPercent) / 100;
+          const remainVal = Math.max(0, visiblePrice - depositAmount);
+          tipoSinal = clientPenaltyActive ? 'Taxa Reagendamento (Reincidência)' : 'Sinal de Adiantamento';
+          depositNotes = ` | ${tipoSinal} ${depositPercent}%: R$ ${depositAmount.toFixed(2)} (${prof.pixBank || 'InfinitePay'}) - Restante no salão (estimado): R$ ${remainVal.toFixed(2)}`;
+        }
       }
 
       try {
@@ -2165,20 +2191,20 @@
             `• *Valor Total:* ${totalDisplayStr}\n` +
             `• *${tipoSinal}:* R$ ${depositAmount.toFixed(2)} via ${prof.pixBank || 'InfinitePay'}\n\n` +
             `*Observações:*\n` +
-            `• O orçamento efetuado é uma média do valor do serviço, pois só é possível passar o valor exato do orçamento presencialmente.\n\n` +
+            `• O orçamento informado é uma média do valor do serviço. O valor a ser pago no salão no dia do agendamento pode variar conforme a avaliação presencial (comprimento, volume ou particularidades do cabelo). O valor de entrada será abatido do total final.\n\n` +
             `Segue em anexo o comprovante do Pix para validação do meu horário!`;
 
           const waUrl = `https://wa.me/55${cleanProfPhone}?text=${encodeURIComponent(msg)}`;
           
           const openWa = await asyncConfirm(
-            `Agendamento realizado com sucesso!\n\nFoi gerada uma solicitação de ${tipoSinal.toLowerCase()} de R$ ${depositAmount.toFixed(2)} (${prof.pixBank || 'InfinitePay'}).\n\n📌 Observações:\n• O orçamento efetuado é uma média do valor do serviço, pois só é possível passar o valor exato do orçamento presencialmente.\n\nDeseja abrir o WhatsApp de ${prof.name} agora para enviar o comprovante?`,
+            `Agendamento realizado com sucesso!\n\nFoi gerada uma solicitação de ${tipoSinal.toLowerCase()} de R$ ${depositAmount.toFixed(2)} (${prof.pixBank || 'InfinitePay'}).\n\n📌 Observações:\n• O orçamento informado é uma média do valor do serviço. O valor a ser pago no salão no dia do agendamento pode variar conforme a avaliação presencial. O adiantamento será abatido do total final.\n\nDeseja abrir o WhatsApp de ${prof.name} agora para enviar o comprovante?`,
             'Enviar Comprovante por WhatsApp'
           );
           if (openWa) {
             window.open(waUrl, '_blank');
           }
         } else {
-          await asyncAlert(`Agendamento confirmado com sucesso!\n\nCliente: ${name}\nProfissional: ${prof.name}\nServiços: ${joinedServiceNames} (${formatDuration(totalDuration)})\nData: ${date} das ${selectedSlot.time} às ${selectedSlot.endTime}\nValor Total: ${totalDisplayStr}\n\n📌 Observações:\n• O orçamento efetuado é uma média do valor do serviço, pois só é possível passar o valor exato do orçamento presencialmente.`, 'Agendado com Sucesso', 'success');
+          await asyncAlert(`Agendamento confirmado com sucesso!\n\nCliente: ${name}\nProfissional: ${prof.name}\nServiços: ${joinedServiceNames} (${formatDuration(totalDuration)})\nData: ${date} das ${selectedSlot.time} às ${selectedSlot.endTime}\nValor Total Estimado: ${totalDisplayStr}\n\n📌 Observações:\n• O orçamento informado é uma média do valor do serviço. O valor a ser pago no salão no dia do agendamento pode variar conforme a avaliação presencial. O adiantamento será abatido do total final.`, 'Agendado com Sucesso', 'success');
         }
       } catch (err) {
         console.error(err);

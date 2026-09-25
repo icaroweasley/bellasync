@@ -263,7 +263,9 @@ app.get('/api/public/salon/:slug', (req, res) => {
       avatar: p.avatar,
       phone: p.phone,
       requireDeposit: !!p.requireDeposit,
+      depositType: p.depositType || 'percent',
       depositPercent: Number(p.depositPercent) || 30,
+      depositFixedAmount: p.depositFixedAmount !== undefined ? Number(p.depositFixedAmount) : 50,
       pixBank: p.pixBank || 'Pix',
       pixKey: p.pixKey || '',
       pixKeyType: p.pixKeyType || 'Chave Pix',
@@ -736,7 +738,9 @@ app.post('/api/professionals', requireManager, (req, res) => {
     showInBooking: req.body.showInBooking ?? true,
     commissionDefault: Number(req.body.commissionDefault) || 50,
     requireDeposit: !!req.body.requireDeposit,
+    depositType: req.body.depositType || 'percent',
     depositPercent: Number(req.body.depositPercent) || 30,
+    depositFixedAmount: req.body.depositFixedAmount !== undefined ? Number(req.body.depositFixedAmount) : 50,
     pixBank: req.body.pixBank || 'Pix',
     pixKey: req.body.pixKey || '',
     pixKeyType: req.body.pixKeyType || 'Chave Pix',
@@ -780,7 +784,9 @@ app.put('/api/professionals/:id', requireManager, (req, res) => {
   if (req.body.showInBooking !== undefined) prof.showInBooking = req.body.showInBooking;
   if (req.body.commissionDefault !== undefined) prof.commissionDefault = Number(req.body.commissionDefault) || 50;
   if (req.body.requireDeposit !== undefined) prof.requireDeposit = !!req.body.requireDeposit;
+  if (req.body.depositType !== undefined) prof.depositType = req.body.depositType || 'percent';
   if (req.body.depositPercent !== undefined) prof.depositPercent = Number(req.body.depositPercent) || 30;
+  if (req.body.depositFixedAmount !== undefined) prof.depositFixedAmount = Number(req.body.depositFixedAmount) || 50;
   if (req.body.pixBank !== undefined) prof.pixBank = req.body.pixBank;
   if (req.body.pixKey !== undefined) prof.pixKey = req.body.pixKey;
   if (req.body.pixKeyType !== undefined) prof.pixKeyType = req.body.pixKeyType;
