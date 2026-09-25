@@ -2539,6 +2539,11 @@ function renderServices(container, actions) {
               🔒 Preço Oculto p/ Clientes
             </span>
           ` : ''}
+          ${s.showVariableNotice ? `
+            <span style="font-size:0.72rem; font-weight:700; color:#92400e; background:#fef3c7; border:1px solid #fde68a; padding:2px 8px; border-radius:6px; display:inline-flex; align-items:center; gap:4px;" title="Aviso de orçamento médio/variável ativo no agendamento">
+              ⚠️ Orçamento Médio
+            </span>
+          ` : ''}
         </div>
         <p style="margin-top: 4px;">Categoria: <strong>${s.category}</strong> • Duração: <strong>${formatDurationHours(s.durationMinutes)}</strong> • Comissão: ${s.commissionPercent}%</p>
       </div>
@@ -5525,6 +5530,30 @@ window.openNewServiceModal = function() {
         <span style="font-size: 0.75rem; color: var(--muted); display: block; margin-top: 1px;">Se desmarcado, o cliente verá "A consultar" no lugar do valor.</span>
       </div>
     </label>
+    <div style="border: 1.5px solid #e2e8f0; background: #ffffff; border-radius: 12px; padding: 12px; margin-bottom: 10px; transition: all 0.15s ease;" id="mServVariableBox">
+      <label style="display: flex; flex-direction: row; align-items: center; gap: 10px; cursor: pointer; margin: 0;">
+        <input type="checkbox" id="mServShowVariableNotice" onchange="
+          const box = document.getElementById('mServVariableBox');
+          const txtBox = document.getElementById('mServVariableTextBox');
+          if (box) {
+            box.style.borderColor = this.checked ? '#fde68a' : '#e2e8f0';
+            box.style.background = this.checked ? '#fffdf7' : '#ffffff';
+          }
+          if (txtBox) {
+            txtBox.style.display = this.checked ? 'block' : 'none';
+          }
+        " style="width: 18px; height: 18px; accent-color: var(--orange); flex-shrink: 0; cursor: pointer; margin: 0;">
+        <div>
+          <span style="font-size: 0.88rem; font-weight: 600; color: var(--ink); display: block;">Exibir aviso de valor variável (orçamento médio)</span>
+          <span style="font-size: 0.75rem; color: var(--muted); display: block; margin-top: 1px;">Informa que o valor no agendamento é uma estimativa e pode variar na avaliação presencial.</span>
+        </div>
+      </label>
+      <div id="mServVariableTextBox" style="display: none; margin-top: 10px; padding-top: 10px; border-top: 1px dashed #fed7aa;">
+        <label style="font-size: 0.8rem; font-weight: 600; color: #92400e; display: block; margin-bottom: 4px;">Texto da Observação (Aviso no Checkout):</label>
+        <textarea class="form-control" id="mServVariableText" rows="3" style="font-size: 0.82rem; line-height: 1.4; color: #451a03; background: #fffbeb;" placeholder="Digite o texto da observação...">O orçamento informado é uma média do valor do serviço. O valor a ser pago no salão no dia do agendamento pode variar conforme a avaliação presencial (comprimento, volume ou particularidades do cabelo). O valor de entrada será abatido do total final.</textarea>
+        <small style="color: #b45309; font-size: 0.72rem; display: block; margin-top: 3px;">Você pode personalizar o texto acima ou manter o texto de exemplo padrão.</small>
+      </div>
+    </div>
     <div class="form-group">
       <label>Duração do Serviço</label>
       <select class="form-control" id="mServDuration">
@@ -5552,6 +5581,8 @@ window.openNewServiceModal = function() {
     const category = document.getElementById('mServCat').value;
     const price = Number(document.getElementById('mServPrice').value);
     const showPriceInBooking = document.getElementById('mServShowPrice') ? document.getElementById('mServShowPrice').checked : true;
+    const showVariableNotice = document.getElementById('mServShowVariableNotice') ? document.getElementById('mServShowVariableNotice').checked : false;
+    const variableNoticeText = (document.getElementById('mServVariableText')?.value || '').trim();
     const durationMinutes = Number(document.getElementById('mServDuration').value);
     const commissionPercent = Number(document.getElementById('mServComm').value);
     const isPackage = document.getElementById('mServIsPkg')?.checked || category.toLowerCase().includes('pacote');
@@ -5565,7 +5596,7 @@ window.openNewServiceModal = function() {
     await tenantFetch('/api/services', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, category, price, durationMinutes, commissionPercent, isPackage, sessionsCount, showPriceInBooking })
+      body: JSON.stringify({ name, category, price, durationMinutes, commissionPercent, isPackage, sessionsCount, showPriceInBooking, showVariableNotice, variableNoticeText })
     });
 
     closeModal();
@@ -6404,6 +6435,30 @@ window.openEditServiceModal = function(serviceId) {
         <span style="font-size: 0.75rem; color: var(--muted); display: block; margin-top: 1px;">Se desmarcado, o cliente verá "A consultar" no lugar do valor.</span>
       </div>
     </label>
+    <div style="border: 1.5px solid ${serv.showVariableNotice ? '#fde68a' : '#e2e8f0'}; background: ${serv.showVariableNotice ? '#fffdf7' : '#ffffff'}; border-radius: 12px; padding: 12px; margin-bottom: 10px; transition: all 0.15s ease;" id="mEditServVariableBox">
+      <label style="display: flex; flex-direction: row; align-items: center; gap: 10px; cursor: pointer; margin: 0;">
+        <input type="checkbox" id="mEditServShowVariableNotice" ${serv.showVariableNotice ? 'checked' : ''} onchange="
+          const box = document.getElementById('mEditServVariableBox');
+          const txtBox = document.getElementById('mEditServVariableTextBox');
+          if (box) {
+            box.style.borderColor = this.checked ? '#fde68a' : '#e2e8f0';
+            box.style.background = this.checked ? '#fffdf7' : '#ffffff';
+          }
+          if (txtBox) {
+            txtBox.style.display = this.checked ? 'block' : 'none';
+          }
+        " style="width: 18px; height: 18px; accent-color: var(--orange); flex-shrink: 0; cursor: pointer; margin: 0;">
+        <div>
+          <span style="font-size: 0.88rem; font-weight: 600; color: var(--ink); display: block;">Exibir aviso de valor variável (orçamento médio)</span>
+          <span style="font-size: 0.75rem; color: var(--muted); display: block; margin-top: 1px;">Informa que o valor no agendamento é uma estimativa e pode variar na avaliação presencial.</span>
+        </div>
+      </label>
+      <div id="mEditServVariableTextBox" style="display: ${serv.showVariableNotice ? 'block' : 'none'}; margin-top: 10px; padding-top: 10px; border-top: 1px dashed #fed7aa;">
+        <label style="font-size: 0.8rem; font-weight: 600; color: #92400e; display: block; margin-bottom: 4px;">Texto da Observação (Aviso no Checkout):</label>
+        <textarea class="form-control" id="mEditServVariableText" rows="3" style="font-size: 0.82rem; line-height: 1.4; color: #451a03; background: #fffbeb;" placeholder="Digite o texto da observação...">${serv.variableNoticeText || 'O orçamento informado é uma média do valor do serviço. O valor a ser pago no salão no dia do agendamento pode variar conforme a avaliação presencial (comprimento, volume ou particularidades do cabelo). O valor de entrada será abatido do total final.'}</textarea>
+        <small style="color: #b45309; font-size: 0.72rem; display: block; margin-top: 3px;">Você pode personalizar o texto acima ou manter o texto de exemplo padrão.</small>
+      </div>
+    </div>
     <div class="form-group">
       <label>Duração do Serviço</label>
       <select class="form-control" id="mEditServDuration">
@@ -6431,6 +6486,8 @@ window.openEditServiceModal = function(serviceId) {
     const category = document.getElementById('mEditServCat').value.trim();
     const price = Number(document.getElementById('mEditServPrice').value);
     const showPriceInBooking = document.getElementById('mEditServShowPrice') ? document.getElementById('mEditServShowPrice').checked : true;
+    const showVariableNotice = document.getElementById('mEditServShowVariableNotice') ? document.getElementById('mEditServShowVariableNotice').checked : false;
+    const variableNoticeText = (document.getElementById('mEditServVariableText')?.value || '').trim();
     const durationMinutes = Number(document.getElementById('mEditServDuration').value);
     const commissionPercent = Number(document.getElementById('mEditServComm').value);
     const isPackage = document.getElementById('mEditServIsPkg')?.checked || category.toLowerCase().includes('pacote');
@@ -6444,7 +6501,7 @@ window.openEditServiceModal = function(serviceId) {
     const res = await tenantFetch(`/api/services/${serviceId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, category, price, durationMinutes, commissionPercent, isPackage, sessionsCount, showPriceInBooking })
+      body: JSON.stringify({ name, category, price, durationMinutes, commissionPercent, isPackage, sessionsCount, showPriceInBooking, showVariableNotice, variableNoticeText })
     });
 
     if (!res.ok) {

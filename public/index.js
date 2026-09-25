@@ -843,6 +843,9 @@ app.post('/api/services', requireManager, (req, res) => {
     observation: req.body.observation || '',
     commissionPercent: Number(req.body.commissionPercent) || 50,
     assistantCommissionPercent: Number(req.body.assistantCommissionPercent) || 0,
+    showPriceInBooking: req.body.showPriceInBooking !== undefined ? !!req.body.showPriceInBooking : true,
+    showVariableNotice: req.body.showVariableNotice !== undefined ? !!req.body.showVariableNotice : false,
+    variableNoticeText: req.body.variableNoticeText ? String(req.body.variableNoticeText).trim() : '',
     isPackage,
     sessionsCount
   };
@@ -866,6 +869,9 @@ app.put('/api/services/:id', requireManager, (req, res) => {
   if (req.body.commissionPercent !== undefined) serv.commissionPercent = Number(req.body.commissionPercent) || 50;
   if (req.body.observation !== undefined) serv.observation = req.body.observation || '';
   if (req.body.assistantCommissionPercent !== undefined) serv.assistantCommissionPercent = Number(req.body.assistantCommissionPercent) || 0;
+  if (req.body.showPriceInBooking !== undefined) serv.showPriceInBooking = !!req.body.showPriceInBooking;
+  if (req.body.showVariableNotice !== undefined) serv.showVariableNotice = !!req.body.showVariableNotice;
+  if (req.body.variableNoticeText !== undefined) serv.variableNoticeText = String(req.body.variableNoticeText).trim();
   if (req.body.isPackage !== undefined) serv.isPackage = !!req.body.isPackage;
   if (req.body.sessionsCount !== undefined) serv.sessionsCount = Math.max(1, Number(req.body.sessionsCount) || 1);
 
