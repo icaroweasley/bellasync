@@ -545,12 +545,16 @@ window.openAppointmentDetailsModal = function(app) {
   }
 
   if (notesContainer) {
+    const hadDeposit = appointmentHadDeposit(app);
+    const depositBadge = hadDeposit 
+      ? `<div style="margin-bottom:6px;"><span style="font-size:0.75rem; font-weight:700; color:#7c3aed; background:#f5f3ff; border:1px solid #ddd6fe; padding:3px 8px; border-radius:8px; display:inline-flex; align-items:center; gap:4px;">💳 Com Sinal Prévio (Gera taxa de 50% em caso de falta)</span></div>`
+      : `<div style="margin-bottom:6px;"><span style="font-size:0.75rem; font-weight:600; color:#64748b; background:#f1f5f9; border:1px solid #e2e8f0; padding:3px 8px; border-radius:8px; display:inline-flex; align-items:center; gap:4px;">⚪ Sem Sinal Prévio (Falta não gera taxa de 50%)</span></div>`;
+
+    notesContainer.style.display = 'block';
     if (app.notes && app.notes.trim()) {
-      notesContainer.style.display = 'block';
-      notesContainer.innerHTML = `<strong>Observação:</strong> ${app.notes.trim()}`;
+      notesContainer.innerHTML = `${depositBadge}<strong>Observação:</strong> ${app.notes.trim()}`;
     } else {
-      notesContainer.style.display = 'none';
-      notesContainer.innerHTML = '';
+      notesContainer.innerHTML = depositBadge;
     }
   }
 
@@ -2129,6 +2133,23 @@ window.deleteAppointment = async function(appId, event) {
   }
 };
 
+window.appointmentHadDeposit = function(app) {
+  if (!app) return false;
+  if (app.hasDeposit === true || app.hasDeposit === 'true') return true;
+  if (Number(app.depositAmount) > 0) return true;
+  if (Number(app.depositPercent) > 0) return true;
+  if (app.noShowWithDeposit === true) return true;
+  const notes = (app.notes || '').toLowerCase();
+  if (notes.includes('sinal') || notes.includes('adiantamento') || notes.includes('taxa reagendamento') || notes.includes('taxa remarcação')) {
+    return true;
+  }
+  const prof = (state.professionals || []).find(p => p.id === (app.professionalId || app.profId));
+  if (prof && prof.requireDeposit && notes.includes('agendamento online')) {
+    return true;
+  }
+  return false;
+};
+
 window.markAppointmentNoShow = async function(appId, event) {
   if (event) event.stopPropagation();
   const app = (state.appointments || []).find(a => a.id === appId);
@@ -2138,8 +2159,16 @@ window.markAppointmentNoShow = async function(appId, event) {
   }
 
   const clientName = app ? app.clientName : 'este cliente';
+  const hadDeposit = appointmentHadDeposit(app);
+
+  let confirmMsg = '';
+  if (hadDeposit) {
+    confirmMsg = `Confirmar que ${clientName} Frizou / Faltou ao agendamento?\n\nComo este agendamento possuía sinal prévio (30%), o sistema registrará a taxa de garantia de 50% para futuros reagendamentos deste cliente.`;
+  } else {
+    confirmMsg = `Confirmar que ${clientName} Faltou ao agendamento?\n\nComo este agendamento NÃO possuía sinal prévio de 30%, o sistema registrará a falta como ausência normal, sem aplicar a taxa de remarcação de 50%.`;
+  }
   
-  const confirmed = await asyncConfirm(`Confirmar que ${clientName} Frizou / Faltou ao agendamento?\n\nIsso registrará histórico de ausência no sistema. Em caso de remarcação, a taxa de garantia de 50% será aplicada automaticamente pelo cruzamento de dados.`, "Registrar Falta / Ausência", { isDanger: true });
+  const confirmed = await asyncConfirm(confirmMsg, "Registrar Falta / Ausência", { isDanger: true });
   if (!confirmed) return;
 
   try {
@@ -2157,7 +2186,11 @@ window.markAppointmentNoShow = async function(appId, event) {
       return;
     }
 
-    await asyncAlert(`Falta registrada com sucesso para ${clientName}.\nO cruzamento de dados já ativou a proteção de 50% para remarcações.`, "Falta Registrada", "success");
+    if (hadDeposit) {
+      await asyncAlert(`Falta registrada com sucesso para ${clientName}.\nHistórico salvo: a taxa de garantia de 50% será aplicada em futuros agendamentos.`, "Falta Registrada", "success");
+    } else {
+      await asyncAlert(`Falta registrada com sucesso para ${clientName}.\nAusência registrada sem taxa extra de 50% (agendamento sem sinal prévio).`, "Falta Registrada", "success");
+    }
     await loadInitialData();
     updateScheduleView();
   } catch (err) {
@@ -4290,6 +4323,12 @@ window.openNewAppointmentModal = function(defaultTime = "10:00") {
         <input type="time" class="form-control" id="modalAppEnd" value="10:30">
       </div>
     </div>
+    <div class="form-group" style="margin-top: 10px; padding: 10px 14px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px;">
+      <label style="display:flex; align-items:center; gap:8px; margin:0; cursor:pointer; font-weight:600; font-size:0.86rem; color:#334155;">
+        <input type="checkbox" id="modalAppHasDeposit" style="width:16px; height:16px; accent-color:var(--orange); cursor:pointer;">
+        <span id="modalAppDepositLabel">Cobrado Sinal Prévio de 30% (Gera taxa de garantia de 50% em caso de falta)</span>
+      </label>
+    </div>
   `;
 
   openModal('Novo Agendamento', html, async () => {
@@ -4305,6 +4344,7 @@ window.openNewAppointmentModal = function(defaultTime = "10:00") {
     const price = Number(selectedOption.dataset.price) || 50;
     const startTime = document.getElementById('modalAppStart').value;
     const endTime = document.getElementById('modalAppEnd').value;
+    const hasDeposit = document.getElementById('modalAppHasDeposit')?.checked || false;
 
     if (!clientName) {
       asyncAlert('Por favor informe o nome do cliente');
@@ -4322,6 +4362,8 @@ window.openNewAppointmentModal = function(defaultTime = "10:00") {
         serviceId,
         serviceName,
         price,
+        hasDeposit,
+        depositPercent: hasDeposit ? 30 : 0,
         date: selectedDate,
         startTime,
         endTime,
@@ -4364,6 +4406,18 @@ window.filterModalServicesByProf = function() {
     servSelect.value = prevVal;
   }
   updateModalEndTime();
+
+  const depositCheckbox = document.getElementById('modalAppHasDeposit');
+  const depositLabel = document.getElementById('modalAppDepositLabel');
+  if (depositCheckbox && prof) {
+    if (prof.requireDeposit) {
+      depositCheckbox.checked = true;
+      if (depositLabel) depositLabel.innerText = `Cobrado Sinal Prévio de ${prof.depositPercent || 30}% (Gera taxa de garantia de 50% em caso de falta)`;
+    } else {
+      depositCheckbox.checked = false;
+      if (depositLabel) depositLabel.innerText = `Cobrado Sinal Prévio de 30% (Gera taxa de garantia de 50% em caso de falta)`;
+    }
+  }
 };
 
 function initClientAppointmentAutocomplete() {

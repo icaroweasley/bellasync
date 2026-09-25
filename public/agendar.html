@@ -2094,6 +2094,9 @@
             serviceName: joinedServiceNames,
             price: totalPrice,
             durationMinutes: totalDuration,
+            hasDeposit: hasDeposit,
+            depositPercent: hasDeposit ? pct : 0,
+            depositAmount: hasDeposit ? depositAmount : 0,
             servicesList: selectedServices.map(s => ({
               id: s.id,
               name: s.name,

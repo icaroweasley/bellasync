@@ -1854,6 +1854,9 @@ app.post('/api/appointments', (req, res) => {
     endTime,
     price,
     durationMinutes: duration,
+    hasDeposit: req.body.hasDeposit !== undefined ? Boolean(req.body.hasDeposit) : false,
+    depositPercent: req.body.depositPercent ? Number(req.body.depositPercent) : null,
+    depositAmount: req.body.depositAmount ? Number(req.body.depositAmount) : null,
     status: status || 'agendado', // agendado, indisponivel, concluido, cancelado
     notes: notes || '',
     createdAt: new Date().toISOString(),
@@ -1963,6 +1966,32 @@ function calculateLevenshteinSimilarity(s1, s2) {
   return (longerLength - costs[str2.length]) / parseFloat(longerLength);
 }
 
+// Helper para determinar se o agendamento possuía exigência/pagamento dos 30% de sinal prévio
+function appointmentHadDeposit(app, db) {
+  if (!app) return false;
+  if (app.hasDeposit === true || app.hasDeposit === 'true') return true;
+  if (Number(app.depositAmount) > 0) return true;
+  if (Number(app.depositPercent) > 0) return true;
+  if (app.noShowWithDeposit === true) return true;
+
+  // Checa se o texto de observação possui registro explícito de sinal ou taxa
+  const notes = (app.notes || '').toLowerCase();
+  if (notes.includes('sinal') || notes.includes('adiantamento') || notes.includes('taxa reagendamento') || notes.includes('taxa remarcação')) {
+    return true;
+  }
+
+  // Checa se o profissional do agendamento exige sinal (e o agendamento foi feito online pelo cliente)
+  const profs = db?.professionals || [];
+  const prof = profs.find(p => p.id === (app.professionalId || app.profId) && (p.tenantId === app.tenantId || !app.tenantId));
+  if (prof && prof.requireDeposit) {
+    if (notes.includes('agendamento online')) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 // Endpoint para cruzar informações e verificar histórico de faltas/reagendamento do cliente
 app.get('/api/appointments/check-policy', (req, res) => {
   const db = getDb();
@@ -1977,9 +2006,13 @@ app.get('/api/appointments/check-policy', (req, res) => {
     return res.json({ penalty: false, percent: 30, reason: null });
   }
 
-  // Busca todos os agendamentos do tenant que foram marcados como faltou/no-show
+  // Busca todos os agendamentos do tenant que foram marcados como faltou/no-show E QUE TINHAM SINAL (os 30% anteriores)
   const allApps = (db.appointments || []).filter(a => a.tenantId === tenantId);
-  const noShowApps = allApps.filter(a => a.status === 'faltou' || a.isNoShow === true);
+  const noShowApps = allApps.filter(a => {
+    if (a.status !== 'faltou' && a.isNoShow !== true) return false;
+    // O 50% a mais é cobrado apenas se a falta ocorreu em agendamento que JÁ TINHA os 30% anteriores
+    return appointmentHadDeposit(a, db);
+  });
 
   // Também checa se o cliente possui flag no cadastro
   const allClients = (db.clients || []).filter(c => c.tenantId === tenantId);
@@ -2014,13 +2047,20 @@ app.get('/api/appointments/check-policy', (req, res) => {
       const cliPhone = cliPhoneRaw.length > 8 ? cliPhoneRaw.slice(-8) : cliPhoneRaw;
       const cliName = (cli.name || '').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
-      if (cleanPhone && cliPhone && cleanPhone === cliPhone) {
-        matchFound = { type: 'client_phone', clientName: cli.name };
-        break;
-      }
-      if (rawName && cliName && calculateLevenshteinSimilarity(rawName, cliName) >= 0.70) {
-        matchFound = { type: 'client_name', clientName: cli.name };
-        break;
+      const isMatch = (cleanPhone && cliPhone && cleanPhone === cliPhone) ||
+                      (rawName && cliName && calculateLevenshteinSimilarity(rawName, cliName) >= 0.70);
+
+      if (isMatch) {
+        // Valida se o cliente de fato possui falta em agendamento com sinal prévio
+        const cliApps = allApps.filter(a => 
+          (a.clientId === cli.id || (cliPhone && (a.clientPhone || '').replace(/\D/g, '').includes(cliPhone.slice(-8)))) &&
+          (a.status === 'faltou' || a.isNoShow === true)
+        );
+        const hasNoShowWithDep = cliApps.some(a => appointmentHadDeposit(a, db));
+        if (hasNoShowWithDep || cli.noShowCountWithDeposit > 0) {
+          matchFound = { type: 'client_profile', clientName: cli.name };
+          break;
+        }
       }
     }
   }
@@ -2029,7 +2069,7 @@ app.get('/api/appointments/check-policy', (req, res) => {
     return res.json({
       penalty: true,
       percent: 50,
-      reason: 'Histórico de ausência ou remarcação anterior identificado por cruzamento de dados.',
+      reason: 'Histórico de ausência em agendamento com sinal prévio identificado por cruzamento de dados.',
       match: matchFound
     });
   }
@@ -2093,15 +2133,25 @@ app.patch('/api/appointments/:id/status', (req, res) => {
 
   app.status = status;
   if (status === 'faltou') {
+    const hadDeposit = appointmentHadDeposit(app, db);
     app.isNoShow = true;
-    // Marca histórico no cliente também se existir
-    if (app.clientPhone) {
+    app.hadDeposit = hadDeposit;
+    app.noShowWithDeposit = hadDeposit;
+
+    // Apenas marca o histórico de falta com taxa de 50% se o agendamento já tinha os 30% anteriores de sinal
+    if (hadDeposit && app.clientPhone) {
       const rawP = app.clientPhone.replace(/\D/g, '');
-      const cli = (db.clients || []).find(c => c.tenantId === tenantId && c.phone.replace(/\D/g, '').includes(rawP.slice(-8)));
+      const cli = (db.clients || []).find(c => c.tenantId === tenantId && c.phone && c.phone.replace(/\D/g, '').includes(rawP.slice(-8)));
       if (cli) {
         cli.hasNoShowHistory = true;
+        cli.noShowCountWithDeposit = (cli.noShowCountWithDeposit || 0) + 1;
       }
+    } else if (!hadDeposit) {
+      app.isNoShowWithoutDeposit = true;
     }
+  } else if (status === 'agendado' || status === 'concluido' || status === 'cancelado') {
+    app.isNoShow = false;
+    app.noShowWithDeposit = false;
   }
 
   saveDb(db);
