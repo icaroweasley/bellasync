@@ -133,7 +133,13 @@ let state = {
 };
 
 const isSuperAdmin = currentUser && (currentUser.role === 'superadmin' || currentUser.username === 'karuadmin');
-const isManager = Boolean(!currentUser || currentUser.role === 'admin' || currentUser.role === 'superadmin' || currentUser.role === 'gestor' || currentUser.isManager === true);
+const isManager = Boolean(
+  !currentUser ||
+  String(currentUser.role || '').toLowerCase().includes('admin') ||
+  String(currentUser.role || '').toLowerCase().includes('gestor') ||
+  String(currentUser.access || '').toLowerCase().includes('gestor') ||
+  currentUser.isManager === true
+);
 window.isSuperAdmin = isSuperAdmin;
 window.isManager = isManager;
 
@@ -949,6 +955,8 @@ function checkAndNotifyBirthdays() {
 
 // Inicialização
 document.addEventListener('DOMContentLoaded', async () => {
+  checkGoogleAuthReturn();
+
   // Se as notificações já estiverem concedidas, garante a assinatura Web Push VAPID em segundo plano
   if ('Notification' in window && Notification.permission === 'granted') {
     subscribeUserToWebPush();
@@ -1060,7 +1068,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 async function loadInitialData() {
   try {
-    const [settings, profs, servs, clis, apps, prods, exps, comms, pkgs, cats] = await Promise.all([
+    const [settings, profs, servs, clis, apps, prods, exps, comms, pkgs, cats, gCfg] = await Promise.all([
       tenantFetch('/api/settings').then(r => r.json()),
       tenantFetch('/api/professionals').then(r => r.json()),
       tenantFetch('/api/services').then(r => r.json()),
@@ -1070,7 +1078,8 @@ async function loadInitialData() {
       tenantFetch('/api/expenses').then(r => r.json()),
       tenantFetch('/api/commissions').then(r => r.json()),
       tenantFetch('/api/packages').then(r => r.json()).catch(() => []),
-      tenantFetch('/api/categories').then(r => r.json()).catch(() => [])
+      tenantFetch('/api/categories').then(r => r.json()).catch(() => []),
+      tenantFetch('/api/integrations/google/config').then(r => r.json()).catch(() => null)
     ]);
 
     state = {
@@ -1083,7 +1092,8 @@ async function loadInitialData() {
       expenses: exps,
       commissions: comms,
       packages: pkgs || [],
-      categories: cats || []
+      categories: cats || [],
+      googleConfig: gCfg || settings?.googleContacts || {}
     };
 
     checkAndNotifyNewAppointments(apps);
@@ -2402,8 +2412,8 @@ function renderProfessionals(container, actions) {
               ✂️ ${Array.isArray(p.serviceIds) ? `${p.serviceIds.length} serviços atribuídos` : 'Todos os serviços'}
             </span>
             ${p.requireDeposit ? `
-              <span class="prof-deposit-badge" onclick="openEditProfessionalModal('${p.id}')" title="Sinal configurado: ${p.depositPercent || 30}% via ${p.pixBank || 'Pix'}">
-                💳 Sinal ${p.depositPercent || 30}% (${p.pixBank || 'Pix'})
+              <span class="prof-deposit-badge" onclick="openEditProfessionalModal('${p.id}')" title="Sinal configurado: ${p.depositType === 'fixed' ? `R$ ${(Number(p.depositFixedAmount) || 50).toFixed(2)} fixos` : `${p.depositPercent || 30}%`} via ${p.pixBank || 'Pix'}">
+                💳 Sinal ${p.depositType === 'fixed' ? `R$ ${(Number(p.depositFixedAmount) || 50).toFixed(2)}` : `${p.depositPercent || 30}%`} (${p.pixBank || 'Pix'})
               </span>
             ` : ''}
           </div>
@@ -2460,9 +2470,19 @@ function renderProfessionals(container, actions) {
 // 4. Render Clientes
 function renderClients(container, actions) {
   actions.innerHTML = `
-    <span style="font-size:0.84rem; font-weight:500; color:var(--muted); background:rgba(255,255,255,0.7); padding:6px 14px; border-radius:999px; border:1px solid rgba(0,0,0,0.06); height:38px; display:inline-flex; align-items:center; box-sizing:border-box;">
-      <strong style="color:var(--ink); margin-right:4px;">${state.clients.length}</strong> clientes
-    </span>
+    <div style="display:flex; align-items:center; gap:8px;">
+      <span style="font-size:0.84rem; font-weight:500; color:var(--muted); background:rgba(255,255,255,0.7); padding:6px 14px; border-radius:999px; border:1px solid rgba(0,0,0,0.06); height:38px; display:inline-flex; align-items:center; box-sizing:border-box;">
+        <strong style="color:var(--ink); margin-right:4px;">${state.clients.length}</strong> clientes
+      </span>
+      ${isManager ? `
+        <button class="btn-falcon btn-secondary" onclick="renderView('configuracoes')" style="display:inline-flex; align-items:center; gap:6px; font-size:0.82rem; font-weight:600; padding:6px 12px; height:38px; border-radius:10px; cursor:pointer;" title="Configurações de Sincronização com Google Contatos">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15h-2v-6h2v6zm4 0h-2v-6h2v6zm-2-8c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1z" fill="var(--orange)"/>
+          </svg>
+          Google Contatos
+        </button>
+      ` : ''}
+    </div>
   `;
 
   if (!state.clients || state.clients.length === 0) {
@@ -2479,17 +2499,29 @@ function renderClients(container, actions) {
   const clientsHtml = state.clients.map(c => `
     <div class="data-item-card">
       <div class="item-main-info">
-        <h4>
-          ${c.name}
-          ${c.hasNoShowHistory ? `<span style="font-size:0.72rem; font-weight:700; color:#b91c1c; background:#fee2e2; border:1px solid #fecaca; padding:2px 8px; border-radius:12px; margin-left:8px;">⚠️ Histórico de Falta (Taxa 50%)</span>` : ''}
-        </h4>
-        <p>WhatsApp: ${c.phone} ${c.birthday ? '• Aniversário: ' + c.birthday : ''}</p>
+        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+          <h4 style="margin:0;">${c.name}</h4>
+          ${c.googleContactSynced ? `
+            <span style="font-size:0.7rem; font-weight:700; color:#15803d; background:#dcfce7; border:1px solid #86efac; padding:2px 8px; border-radius:12px; display:inline-flex; align-items:center; gap:4px;" title="Sincronizado na sua conta do Google Contatos">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15h-2v-6h2v6zm4 0h-2v-6h2v6zm-2-8c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1z" fill="#16a34a"/></svg>
+              Google
+            </span>
+          ` : ''}
+          ${c.hasNoShowHistory ? `<span style="font-size:0.72rem; font-weight:700; color:#b91c1c; background:#fee2e2; border:1px solid #fecaca; padding:2px 8px; border-radius:12px;">⚠️ Histórico de Falta (Taxa 50%)</span>` : ''}
+        </div>
+        <p style="margin-top:4px;">WhatsApp: ${c.phone} ${c.birthday ? '• Aniversário: ' + c.birthday : ''}</p>
         ${c.notes ? `<p style="font-size:0.78rem; color:var(--muted); margin-top:2px;">Obs: ${c.notes}</p>` : ''}
       </div>
       <div class="item-actions-group">
         <a href="https://wa.me/55${c.phone.replace(/\D/g, '')}" target="_blank" class="btn-falcon btn-secondary">
           WhatsApp
         </a>
+        ${isManager ? `
+          <button class="btn-card-action" onclick="syncSingleClientToGoogle('${c.id}')" title="Enviar ou atualizar no Google Contatos" style="color:${c.googleContactSynced ? '#15803d' : 'var(--orange)'};">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15h-2v-6h2v6zm4 0h-2v-6h2v6zm-2-8c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1z" fill="currentColor"/></svg>
+            ${c.googleContactSynced ? 'Atualizar Google' : 'Salvar no Google'}
+          </button>
+        ` : ''}
         <button class="btn-card-action edit" onclick="openEditClientModal('${c.id}')" title="Editar Cliente">
           <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
           Editar
@@ -2537,6 +2569,11 @@ function renderServices(container, actions) {
           ${s.showPriceInBooking === false ? `
             <span style="font-size:0.72rem; font-weight:700; color:#64748b; background:#f1f5f9; border:1px solid #e2e8f0; padding:2px 8px; border-radius:6px; display:inline-flex; align-items:center; gap:4px;" title="Preço oculto para clientes no agendamento online (aparece 'A consultar')">
               🔒 Preço Oculto p/ Clientes
+            </span>
+          ` : ''}
+          ${s.showVariableNotice ? `
+            <span style="font-size:0.72rem; font-weight:700; color:#92400e; background:#fef3c7; border:1px solid #fde68a; padding:2px 8px; border-radius:6px; display:inline-flex; align-items:center; gap:4px;" title="Aviso de orçamento médio/variável ativo no agendamento">
+              ⚠️ Orçamento Médio
             </span>
           ` : ''}
         </div>
@@ -4102,6 +4139,7 @@ function renderSettings(container, actions) {
 
   if (!isManager) {
     container.innerHTML = `
+      ${renderGoogleContactsCard()}
       ${notificationCardHtml}
       <div style="margin-top: 20px;">
         <button class="btn-falcon btn-primary" onclick="saveSettings()">Salvar Preferências de Notificação</button>
@@ -4112,6 +4150,7 @@ function renderSettings(container, actions) {
 
   container.innerHTML = `
     ${salonCardHtml}
+    ${renderGoogleContactsCard()}
     ${agendaCardHtml}
     ${notificationCardHtml}
     <div style="margin-top: 20px;">
@@ -4119,6 +4158,344 @@ function renderSettings(container, actions) {
     </div>
   `;
 }
+
+function checkGoogleAuthReturn() {
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.get('google_connected') === '1') {
+    const email = urlParams.get('email') || '';
+    window.history.replaceState({}, document.title, window.location.pathname);
+    setTimeout(async () => {
+      await asyncAlert(`🎉 Conta Google conectada com sucesso!\n\nEmail: ${email}\n\nAgora todas as clientes cadastradas e agendamentos serão salvos automaticamente na sua conta do Google Contatos.`, 'Google Contatos Conectado', 'success');
+      await loadInitialData();
+      renderView('configuracoes');
+    }, 400);
+  } else if (urlParams.get('google_error')) {
+    const err = urlParams.get('google_error');
+    window.history.replaceState({}, document.title, window.location.pathname);
+    setTimeout(async () => {
+      await asyncAlert(`Não foi possível conectar a conta Google:\n\n${err}`, 'Erro no Google Contatos', 'warning');
+      await loadInitialData();
+      renderView('configuracoes');
+    }, 400);
+  }
+}
+
+function renderGoogleContactsCard() {
+  const g = state.googleConfig || state.settings?.googleContacts || {};
+  const isConnected = !!(g.connected && (g.connectedEmail || g.tokens));
+  const redirectUri = g.redirectUri || `${window.location.origin}/api/integrations/google/callback`;
+
+  return `
+    <div class="card-shell" style="margin-bottom: 24px; border: 1.5px solid ${isConnected ? '#86efac' : '#fed7aa'}; background: ${isConnected ? 'linear-gradient(180deg, #f0fdf4 0%, #ffffff 100%)' : '#ffffff'}; border-radius: 16px; padding: 22px;">
+      
+      <!-- Cabeçalho -->
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 14px; margin-bottom: 16px; flex-wrap: wrap;">
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <div style="width: 46px; height: 46px; border-radius: 12px; background: ${isConnected ? '#dcfce7' : '#fff7ed'}; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 2px 6px rgba(0,0,0,0.04);">
+            <svg width="26" height="26" viewBox="0 0 24 24">
+              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+            </svg>
+          </div>
+          <div>
+            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+              <h3 style="margin: 0; font-size: 1.15rem; font-weight: 800; color: var(--ink);">
+                Google Contatos • Captura de Leads
+              </h3>
+              ${isConnected ? `
+                <span style="font-size: 0.74rem; font-weight: 800; color: #15803d; background: #dcfce7; border: 1px solid #86efac; padding: 2px 10px; border-radius: 20px; display: inline-flex; align-items: center; gap: 4px;">
+                  <span style="width: 7px; height: 7px; border-radius: 50%; background: #16a34a; display: inline-block;"></span>
+                  Conectado
+                </span>
+              ` : `
+                <span style="font-size: 0.74rem; font-weight: 700; color: #9a3412; background: #ffedd5; border: 1px solid #fed7aa; padding: 2px 10px; border-radius: 20px;">
+                  Não Conectado
+                </span>
+              `}
+            </div>
+            <p style="font-size: 0.85rem; color: var(--muted); margin: 3px 0 0 0;">
+              Salva automaticamente o número das clientes na agenda do seu celular para nunca mais perder um contato.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      ${isConnected ? `
+        <!-- Painel Conectado -->
+        <div style="background: #ffffff; border: 1.5px solid #86efac; border-radius: 14px; padding: 16px 18px; margin-bottom: 18px; display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; box-shadow: 0 2px 8px rgba(22,163,74,0.06);">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <div style="width: 38px; height: 38px; border-radius: 50%; background: #dcfce7; color: #15803d; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1.1rem;">
+              ✓
+            </div>
+            <div>
+              <div style="font-size: 0.74rem; text-transform: uppercase; font-weight: 700; color: #166534; letter-spacing: 0.05em;">
+                Conta Google Conectada:
+              </div>
+              <div style="font-size: 1.05rem; font-weight: 800; color: #14532d; margin-top: 1px;">
+                ${g.connectedEmail || 'Conta Google Autorizada'}
+              </div>
+              ${g.connectedName ? `<div style="font-size: 0.8rem; color: #15803d;">${g.connectedName}</div>` : ''}
+            </div>
+          </div>
+          <button type="button" class="btn-falcon btn-danger" onclick="disconnectGoogleAccount()" style="padding: 7px 16px; font-size: 0.82rem; font-weight: 700;">
+            Desconectar Conta
+          </button>
+        </div>
+
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px 16px; margin-bottom: 18px;">
+          <div style="font-size: 0.82rem; font-weight: 700; color: var(--ink); margin-bottom: 10px; display: flex; align-items: center; gap: 6px;">
+            <span>⚡ Como os contatos são salvos:</span>
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; align-items: center;">
+            <div class="form-group" style="margin-bottom: 0;">
+              <label style="font-size: 0.82rem; font-weight: 600; color: var(--ink); display: block; margin-bottom: 4px;">Sufixo no Nome da Cliente</label>
+              <input type="text" class="form-control" id="cfgGoogleNameSuffix" value="${g.nameSuffix !== undefined ? g.nameSuffix : ' (Cliente)'}" placeholder="Ex: (Cliente)" onchange="updateGoogleSuffix(this.value)">
+              <small style="color: var(--muted); font-size: 0.72rem; display: block; margin-top: 4px;">Exemplo na agenda do celular: <strong>Mariana Souza${g.nameSuffix !== undefined ? g.nameSuffix : ' (Cliente)'}</strong></small>
+            </div>
+            <div>
+              <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 0.85rem; font-weight: 600; color: var(--ink);">
+                <input type="checkbox" id="cfgGoogleAutoSync" ${g.autoSyncNewClients !== false ? 'checked' : ''} onchange="toggleGoogleAutoSync(this.checked)" style="width: 18px; height: 18px; accent-color: var(--orange);">
+                <span>Salvar novos agendamentos automaticamente</span>
+              </label>
+              <small style="color: var(--muted); font-size: 0.74rem; display: block; margin-top: 3px; margin-left: 26px;">
+                Toda cliente nova que agendar pelo link online ou for cadastrada é enviada na hora para os Contatos do Google.
+              </small>
+            </div>
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 12px; flex-wrap: wrap; align-items: center; padding-top: 12px; border-top: 1px dashed #bbf7d0;">
+          <button type="button" class="btn-falcon btn-success" id="btnSyncAllGoogle" onclick="syncAllClientsToGoogleClick()" style="display: inline-flex; align-items: center; gap: 8px; font-size: 0.88rem; font-weight: 700; padding: 10px 18px;">
+            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path></svg>
+            <span>Sincronizar Todas as Clientes Já Cadastradas</span>
+          </button>
+          <span style="color: var(--muted); font-size: 0.8rem;">
+            Envia toda a sua lista atual de clientes do BellaSync para o seu Google Contatos agora mesmo.
+          </span>
+        </div>
+      ` : `
+        <!-- Painel Não Conectado: Foco 100% no clique único da dona do salão -->
+        <div style="background: #fafaf9; border: 1px solid #f5f5f4; border-radius: 14px; padding: 18px; margin-bottom: 18px;">
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin-bottom: 16px;">
+            <div style="background: #ffffff; padding: 12px 14px; border-radius: 10px; border: 1px solid #e7e5e4;">
+              <div style="font-weight: 700; font-size: 0.85rem; color: var(--ink); margin-bottom: 4px;">1️⃣ Conecte uma única vez</div>
+              <div style="font-size: 0.78rem; color: var(--muted);">Basta clicar no botão abaixo e autorizar sua conta Google em poucos segundos.</div>
+            </div>
+            <div style="background: #ffffff; padding: 12px 14px; border-radius: 10px; border: 1px solid #e7e5e4;">
+              <div style="font-weight: 700; font-size: 0.85rem; color: var(--ink); margin-bottom: 4px;">2️⃣ Captura Automática de Leads</div>
+              <div style="font-size: 0.78rem; color: var(--muted);">Toda cliente nova que agendar no link online cai direto na sua agenda como "(Cliente)".</div>
+            </div>
+            <div style="background: #ffffff; padding: 12px 14px; border-radius: 10px; border: 1px solid #e7e5e4;">
+              <div style="font-weight: 700; font-size: 0.85rem; color: var(--ink); margin-bottom: 4px;">3️⃣ Direto no WhatsApp e Celular</div>
+              <div style="font-size: 0.78rem; color: var(--muted);">Identifique quem está ligando e mande mensagens no WhatsApp sem precisar digitar o número na mão.</div>
+            </div>
+          </div>
+
+          <div style="text-align: center; padding: 12px 0 6px 0;">
+            <button type="button" class="btn-falcon btn-primary" onclick="connectGoogleAccount()" style="display: inline-flex; align-items: center; gap: 10px; font-weight: 800; font-size: 1rem; padding: 12px 28px; border-radius: 12px; box-shadow: 0 4px 14px rgba(255,105,0,0.25);">
+              <svg width="22" height="22" viewBox="0 0 24 24">
+                <path fill="#ffffff" d="M12 5c1.56 0 2.97.55 4.08 1.45l3.06-3.06C17.29 1.69 14.81 1 12 1 7.42 1 3.55 3.59 1.63 7.37l3.71 2.88C6.23 7.42 8.87 5 12 5z"/>
+                <path fill="#ffffff" d="M23.49 12.27c0-.79-.07-1.54-.19-2.27H12v4.51h6.47c-.28 1.48-1.11 2.74-2.37 3.58l3.68 2.86c2.15-1.99 3.41-4.92 3.41-8.68z"/>
+                <path fill="#ffffff" d="M5.34 14.75c-.24-.72-.38-1.49-.38-2.28s.14-1.56.38-2.28L1.63 7.37C.59 9.44 0 11.66 0 14c0 2.34.59 4.56 1.63 6.63l3.71-2.88z"/>
+                <path fill="#ffffff" d="M12 23c3.24 0 5.95-1.08 7.93-2.91l-3.68-2.86c-1.07.72-2.45 1.15-4.25 1.15-3.13 0-5.77-2.42-6.66-5.25L1.63 20.63C3.55 24.41 7.42 27 12 27z"/>
+              </svg>
+              <span>Conectar com o Google</span>
+            </button>
+            <div style="font-size: 0.78rem; color: var(--muted); margin-top: 8px;">
+              Clique acima para autorizar sua conta do Google e começar a salvar leads automaticamente.
+            </div>
+          </div>
+        </div>
+
+        <!-- Seção recolhida para desenvolvedor/administrador configurar as chaves da API se necessário -->
+        <div style="margin-top: 14px; border-top: 1px dashed #e5e7eb; padding-top: 10px;">
+          <details id="googleDevDetails" style="cursor: pointer;">
+            <summary style="font-size: 0.78rem; color: #9ca3af; font-weight: 600; list-style: none; display: flex; align-items: center; gap: 6px;">
+              <span>⚙️ Configuração avançada de chaves da plataforma (apenas desenvolvedor/admin)</span>
+            </summary>
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px; margin-top: 10px;">
+              <p style="font-size: 0.8rem; color: #64748b; margin: 0 0 10px 0;">
+                Se a plataforma BellaSync não tiver as variáveis <code>GOOGLE_CLIENT_ID</code> e <code>GOOGLE_CLIENT_SECRET</code> no <code>.env</code> do servidor, você pode informá-las aqui uma única vez:
+              </p>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+                <div>
+                  <label style="font-size: 0.78rem; font-weight: 600;">Client ID</label>
+                  <input type="text" class="form-control" id="cfgGoogleClientId" value="${g.rawClientId || ''}" placeholder="Ex: 123456789-abcdef.apps.googleusercontent.com" style="font-size: 0.8rem;">
+                </div>
+                <div>
+                  <label style="font-size: 0.78rem; font-weight: 600;">Client Secret</label>
+                  <input type="password" class="form-control" id="cfgGoogleClientSecret" value="${g.hasClientSecret ? '••••••••••••••••' : ''}" placeholder="Cole a Chave Secreta aqui" style="font-size: 0.8rem;">
+                </div>
+              </div>
+              <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 10px;">
+                <label style="font-size: 0.78rem; font-weight: 600; white-space: nowrap;">URI de Redirecionamento:</label>
+                <input type="text" readonly value="${redirectUri}" id="gRedirectUriCopy" style="font-family: monospace; font-size: 0.72rem; padding: 4px 8px; border-radius: 6px; border: 1px solid #cbd5e1; background: #ffffff; flex: 1;">
+                <button type="button" class="btn-falcon btn-secondary" onclick="navigator.clipboard.writeText(document.getElementById('gRedirectUriCopy').value); asyncAlert('URL copiada!', 'Copiado', 'success');" style="padding: 4px 8px; font-size: 0.72rem;">Copiar</button>
+              </div>
+              <button type="button" class="btn-falcon btn-secondary" onclick="saveGoogleCredentialsOnly()" style="font-size: 0.78rem; padding: 6px 12px;">
+                Salvar Credenciais da Plataforma
+              </button>
+            </div>
+          </details>
+        </div>
+      `}
+    </div>
+  `;
+}
+
+window.connectGoogleAccount = async function() {
+  const clientIdInput = document.getElementById('cfgGoogleClientId');
+  const clientSecretInput = document.getElementById('cfgGoogleClientSecret');
+  const nameSuffixInput = document.getElementById('cfgGoogleNameSuffix');
+
+  const clientId = clientIdInput?.value.trim();
+  const clientSecret = clientSecretInput?.value.trim();
+  const nameSuffix = nameSuffixInput?.value;
+
+  if (clientId) {
+    const body = { clientId };
+    if (nameSuffix !== undefined) body.nameSuffix = nameSuffix;
+    if (clientSecret && !clientSecret.includes('••••')) {
+      body.clientSecret = clientSecret;
+    }
+    await tenantFetch('/api/integrations/google/config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+  }
+
+  try {
+    const res = await tenantFetch('/api/integrations/google/auth-url');
+    const data = await res.json();
+    if (!res.ok || !data.url) {
+      const msg = data.error || 'Não foi possível gerar link de conexão do Google.';
+      if (msg.includes('Client ID')) {
+        const detailsEl = document.getElementById('googleDevDetails');
+        if (detailsEl) detailsEl.open = true;
+        asyncAlert(
+          'Para a dona do salão poder logar com o Google em 1 clique, as credenciais da plataforma (Client ID e Secret) precisam ser configuradas uma única vez no sistema ou no arquivo .env do servidor.\n\nAbra a "Configuração avançada" abaixo para preencher.',
+          'Configuração da Plataforma Necessária',
+          'info'
+        );
+        return;
+      }
+      throw new Error(msg);
+    }
+    window.location.href = data.url;
+  } catch (err) {
+    asyncAlert(err.message, 'Atenção', 'warning');
+  }
+};
+
+window.saveGoogleCredentialsOnly = async function() {
+  const clientId = document.getElementById('cfgGoogleClientId')?.value.trim();
+  const clientSecret = document.getElementById('cfgGoogleClientSecret')?.value.trim();
+  const nameSuffix = document.getElementById('cfgGoogleNameSuffix')?.value;
+
+  if (!clientId) {
+    return asyncAlert('Por favor, informe ao menos o Client ID do Google.', 'Campo Obrigatório', 'warning');
+  }
+
+  const body = { clientId };
+  if (nameSuffix !== undefined) body.nameSuffix = nameSuffix;
+  if (clientSecret && !clientSecret.includes('••••')) {
+    body.clientSecret = clientSecret;
+  }
+
+  const res = await tenantFetch('/api/integrations/google/config', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+
+  if (res.ok) {
+    await loadInitialData();
+    renderView('configuracoes');
+    asyncAlert('Credenciais salvas com sucesso! Agora basta a dona do salão clicar em "Conectar com o Google".', 'Configuração Salva', 'success');
+  } else {
+    const err = await res.json();
+    asyncAlert(err.error || 'Erro ao salvar credenciais.', 'Erro', 'error');
+  }
+};
+
+window.disconnectGoogleAccount = async function() {
+  const confirmed = await asyncConfirm(
+    'Deseja realmente desconectar a conta do Google Contatos?\n\nA sincronização automática de clientes será pausada até que você conecte novamente.',
+    'Desconectar Google Contatos'
+  );
+  if (!confirmed) return;
+
+  const res = await tenantFetch('/api/integrations/google/disconnect', { method: 'POST' });
+  if (res.ok) {
+    await loadInitialData();
+    renderView('configuracoes');
+    asyncAlert('Conta Google desconectada com sucesso.', 'Desconectado', 'info');
+  } else {
+    asyncAlert('Erro ao desconectar conta Google.', 'Erro', 'error');
+  }
+};
+
+window.updateGoogleSuffix = async function(val) {
+  await tenantFetch('/api/integrations/google/config', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ nameSuffix: val })
+  });
+};
+
+window.toggleGoogleAutoSync = async function(checked) {
+  await tenantFetch('/api/integrations/google/config', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ autoSyncNewClients: checked })
+  });
+};
+
+window.syncAllClientsToGoogleClick = async function() {
+  const btn = document.getElementById('btnSyncAllGoogle');
+  if (btn) {
+    btn.disabled = true;
+    btn.innerText = 'Sincronizando clientes...';
+  }
+
+  try {
+    const res = await tenantFetch('/api/integrations/google/sync-all', { method: 'POST' });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Falha ao sincronizar clientes');
+
+    await loadInitialData();
+    renderView('configuracoes');
+    asyncAlert(
+      `🎉 Sincronização Concluída!\n\n• Total no salão: ${data.stats.total}\n• Sincronizados com sucesso: ${data.stats.synced}\n• Erros: ${data.stats.errors}`,
+      'Google Contatos',
+      'success'
+    );
+  } catch (err) {
+    asyncAlert(err.message, 'Erro na Sincronização', 'error');
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerText = 'Sincronizar Todas as Clientes Agora';
+    }
+  }
+};
+
+window.syncSingleClientToGoogle = async function(clientId) {
+  try {
+    const res = await tenantFetch('/api/integrations/google/sync-client/' + clientId, { method: 'POST' });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Erro ao sincronizar com Google Contatos');
+
+    await loadInitialData();
+    renderView('clientes');
+    asyncAlert(data.message || 'Cliente sincronizado com sucesso no Google Contatos!', 'Google Contatos', 'success');
+  } catch (err) {
+    asyncAlert(err.message, 'Atenção', 'warning');
+  }
+};
 
 window.openAgendaViewModeModal = function() {
   let selectedMode = state.settings.agendaViewMode || 'calendar';
@@ -4345,6 +4722,18 @@ window.openNewAppointmentModal = function(defaultTime = "10:00") {
     const startTime = document.getElementById('modalAppStart').value;
     const endTime = document.getElementById('modalAppEnd').value;
     const hasDeposit = document.getElementById('modalAppHasDeposit')?.checked || false;
+    const prof = (state.professionals || []).find(p => p.id === profId);
+    let profDepositPct = 30;
+    let depositAmt = 0;
+    if (prof) {
+      if (prof.depositType === 'fixed') {
+        profDepositPct = 0;
+        depositAmt = hasDeposit ? (Number(prof.depositFixedAmount) || 50) : 0;
+      } else {
+        profDepositPct = Number(prof.depositPercent) || 30;
+        depositAmt = hasDeposit ? ((price * profDepositPct) / 100) : 0;
+      }
+    }
 
     if (!clientName) {
       asyncAlert('Por favor informe o nome do cliente');
@@ -4363,7 +4752,8 @@ window.openNewAppointmentModal = function(defaultTime = "10:00") {
         serviceName,
         price,
         hasDeposit,
-        depositPercent: hasDeposit ? 30 : 0,
+        depositPercent: hasDeposit ? profDepositPct : 0,
+        depositAmount: hasDeposit ? depositAmt : 0,
         date: selectedDate,
         startTime,
         endTime,
@@ -4410,12 +4800,14 @@ window.filterModalServicesByProf = function() {
   const depositCheckbox = document.getElementById('modalAppHasDeposit');
   const depositLabel = document.getElementById('modalAppDepositLabel');
   if (depositCheckbox && prof) {
+    const isFixed = prof.depositType === 'fixed';
+    const depStr = isFixed ? `R$ ${(Number(prof.depositFixedAmount) || 50).toFixed(2)} fixos` : `${prof.depositPercent || 30}%`;
     if (prof.requireDeposit) {
       depositCheckbox.checked = true;
-      if (depositLabel) depositLabel.innerText = `Cobrado Sinal Prévio de ${prof.depositPercent || 30}% (Gera taxa de garantia de 50% em caso de falta)`;
+      if (depositLabel) depositLabel.innerText = `Cobrado Sinal Prévio de ${depStr} (Gera taxa de garantia de 50% em caso de falta)`;
     } else {
       depositCheckbox.checked = false;
-      if (depositLabel) depositLabel.innerText = `Cobrado Sinal Prévio de 30% (Gera taxa de garantia de 50% em caso de falta)`;
+      if (depositLabel) depositLabel.innerText = `Cobrado Sinal Prévio (${depStr})`;
     }
   }
 };
@@ -5510,6 +5902,30 @@ window.openNewServiceModal = function() {
         <span style="font-size: 0.75rem; color: var(--muted); display: block; margin-top: 1px;">Se desmarcado, o cliente verá "A consultar" no lugar do valor.</span>
       </div>
     </label>
+    <div style="border: 1.5px solid #e2e8f0; background: #ffffff; border-radius: 12px; padding: 12px; margin-bottom: 10px; transition: all 0.15s ease;" id="mServVariableBox">
+      <label style="display: flex; flex-direction: row; align-items: center; gap: 10px; cursor: pointer; margin: 0;">
+        <input type="checkbox" id="mServShowVariableNotice" onchange="
+          const box = document.getElementById('mServVariableBox');
+          const txtBox = document.getElementById('mServVariableTextBox');
+          if (box) {
+            box.style.borderColor = this.checked ? '#fde68a' : '#e2e8f0';
+            box.style.background = this.checked ? '#fffdf7' : '#ffffff';
+          }
+          if (txtBox) {
+            txtBox.style.display = this.checked ? 'block' : 'none';
+          }
+        " style="width: 18px; height: 18px; accent-color: var(--orange); flex-shrink: 0; cursor: pointer; margin: 0;">
+        <div>
+          <span style="font-size: 0.88rem; font-weight: 600; color: var(--ink); display: block;">Exibir aviso de valor variável (orçamento médio)</span>
+          <span style="font-size: 0.75rem; color: var(--muted); display: block; margin-top: 1px;">Informa que o valor no agendamento é uma estimativa e pode variar na avaliação presencial.</span>
+        </div>
+      </label>
+      <div id="mServVariableTextBox" style="display: none; margin-top: 10px; padding-top: 10px; border-top: 1px dashed #fed7aa;">
+        <label style="font-size: 0.8rem; font-weight: 600; color: #92400e; display: block; margin-bottom: 4px;">Texto da Observação (Aviso no Checkout):</label>
+        <textarea class="form-control" id="mServVariableText" rows="3" style="font-size: 0.82rem; line-height: 1.4; color: #451a03; background: #fffbeb;" placeholder="Digite o texto da observação...">O orçamento informado é uma média do valor do serviço. O valor a ser pago no salão no dia do agendamento pode variar conforme a avaliação presencial (comprimento, volume ou particularidades do cabelo). O valor de entrada será abatido do total final.</textarea>
+        <small style="color: #b45309; font-size: 0.72rem; display: block; margin-top: 3px;">Você pode personalizar o texto acima ou manter o texto de exemplo padrão.</small>
+      </div>
+    </div>
     <div class="form-group">
       <label>Duração do Serviço</label>
       <select class="form-control" id="mServDuration">
@@ -5537,6 +5953,8 @@ window.openNewServiceModal = function() {
     const category = document.getElementById('mServCat').value;
     const price = Number(document.getElementById('mServPrice').value);
     const showPriceInBooking = document.getElementById('mServShowPrice') ? document.getElementById('mServShowPrice').checked : true;
+    const showVariableNotice = document.getElementById('mServShowVariableNotice') ? document.getElementById('mServShowVariableNotice').checked : false;
+    const variableNoticeText = (document.getElementById('mServVariableText')?.value || '').trim();
     const durationMinutes = Number(document.getElementById('mServDuration').value);
     const commissionPercent = Number(document.getElementById('mServComm').value);
     const isPackage = document.getElementById('mServIsPkg')?.checked || category.toLowerCase().includes('pacote');
@@ -5550,7 +5968,7 @@ window.openNewServiceModal = function() {
     await tenantFetch('/api/services', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, category, price, durationMinutes, commissionPercent, isPackage, sessionsCount, showPriceInBooking })
+      body: JSON.stringify({ name, category, price, durationMinutes, commissionPercent, isPackage, sessionsCount, showPriceInBooking, showVariableNotice, variableNoticeText })
     });
 
     closeModal();
@@ -5832,13 +6250,25 @@ window.openNewProfessionalModal = function() {
 
         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:10px;">
           <div class="form-group" style="margin:0;">
+            <label style="font-size:0.8rem;">Tipo de Cobrança do Sinal</label>
+            <select class="form-control" id="mProfDepositType" onchange="toggleProfDepositTypeInput('mProf')">
+              <option value="percent">Porcentagem (%)</option>
+              <option value="fixed">Valor Fixo (R$)</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin:0;" id="mProfDepositPercentGroup">
             <label style="font-size:0.8rem;">Porcentagem do Sinal (%)</label>
             <input type="number" class="form-control" id="mProfDepositPercent" value="30" min="5" max="100" placeholder="Ex: 30">
           </div>
-          <div class="form-group" style="margin:0;">
-            <label style="font-size:0.8rem;">Banco / Instituição</label>
-            <input type="text" class="form-control" id="mProfPixBank" placeholder="Ex: Nubank, Inter, Itaú, InfinitePay, Caixa...">
+          <div class="form-group" style="margin:0; display:none;" id="mProfDepositFixedGroup">
+            <label style="font-size:0.8rem;">Valor Fixo do Sinal (R$)</label>
+            <input type="number" step="0.01" class="form-control" id="mProfDepositFixedAmount" value="50" min="1" placeholder="Ex: 50.00">
           </div>
+        </div>
+
+        <div class="form-group" style="margin:0 0 10px 0;">
+          <label style="font-size:0.8rem;">Banco / Instituição</label>
+          <input type="text" class="form-control" id="mProfPixBank" placeholder="Ex: Nubank, Inter, Itaú, InfinitePay, Caixa...">
         </div>
 
         <div style="display:grid; grid-template-columns: 1fr 1.5fr; gap:10px; margin-bottom:10px;">
@@ -5928,7 +6358,9 @@ window.openNewProfessionalModal = function() {
     const showInBooking = document.getElementById('mProfBooking').checked;
 
     const requireDeposit = document.getElementById('mProfRequireDeposit').checked;
+    const depositType = document.getElementById('mProfDepositType')?.value || 'percent';
     const depositPercent = Number(document.getElementById('mProfDepositPercent').value) || 30;
+    const depositFixedAmount = Number(document.getElementById('mProfDepositFixedAmount')?.value) || 50;
     const pixBank = document.getElementById('mProfPixBank').value.trim() || 'InfinitePay';
     const pixKeyType = document.getElementById('mProfPixType').value;
     const pixKey = document.getElementById('mProfPixKey').value.trim();
@@ -5953,7 +6385,9 @@ window.openNewProfessionalModal = function() {
         commissionDefault,
         showInBooking,
         requireDeposit,
+        depositType,
         depositPercent,
+        depositFixedAmount,
         pixBank,
         pixKeyType,
         pixKey,
@@ -6062,6 +6496,16 @@ window.openWhatsApp = function(phone, name = '') {
   window.open(waUrl, '_blank');
 };
 
+window.toggleProfDepositTypeInput = function(prefix) {
+  const typeSelect = document.getElementById(`${prefix}DepositType`);
+  const pctGroup = document.getElementById(`${prefix}DepositPercentGroup`);
+  const fixedGroup = document.getElementById(`${prefix}DepositFixedGroup`);
+  if (!typeSelect) return;
+  const isFixed = typeSelect.value === 'fixed';
+  if (pctGroup) pctGroup.style.display = isFixed ? 'none' : 'block';
+  if (fixedGroup) fixedGroup.style.display = isFixed ? 'block' : 'none';
+};
+
 // 1. Profissionais: Editar e Excluir
 window.openEditProfessionalModal = function(profId) {
   if (!isManager) {
@@ -6138,13 +6582,25 @@ window.openEditProfessionalModal = function(profId) {
 
         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:10px;">
           <div class="form-group" style="margin:0;">
+            <label style="font-size:0.8rem;">Tipo de Cobrança do Sinal</label>
+            <select class="form-control" id="mEditProfDepositType" onchange="toggleProfDepositTypeInput('mEditProf')">
+              <option value="percent" ${prof.depositType !== 'fixed' ? 'selected' : ''}>Porcentagem (%)</option>
+              <option value="fixed" ${prof.depositType === 'fixed' ? 'selected' : ''}>Valor Fixo (R$)</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin:0; ${prof.depositType === 'fixed' ? 'display:none;' : ''}" id="mEditProfDepositPercentGroup">
             <label style="font-size:0.8rem;">Porcentagem do Sinal (%)</label>
             <input type="number" class="form-control" id="mEditProfDepositPercent" value="${prof.depositPercent || 30}" min="5" max="100" placeholder="Ex: 30">
           </div>
-          <div class="form-group" style="margin:0;">
-            <label style="font-size:0.8rem;">Banco / Instituição</label>
-            <input type="text" class="form-control" id="mEditProfPixBank" value="${prof.pixBank || ''}" placeholder="Ex: Nubank, Inter, Itaú, InfinitePay, Caixa...">
+          <div class="form-group" style="margin:0; ${prof.depositType !== 'fixed' ? 'display:none;' : ''}" id="mEditProfDepositFixedGroup">
+            <label style="font-size:0.8rem;">Valor Fixo do Sinal (R$)</label>
+            <input type="number" step="0.01" class="form-control" id="mEditProfDepositFixedAmount" value="${prof.depositFixedAmount !== undefined ? prof.depositFixedAmount : 50}" min="1" placeholder="Ex: 50.00">
           </div>
+        </div>
+
+        <div class="form-group" style="margin:0 0 10px 0;">
+          <label style="font-size:0.8rem;">Banco / Instituição</label>
+          <input type="text" class="form-control" id="mEditProfPixBank" value="${prof.pixBank || ''}" placeholder="Ex: Nubank, Inter, Itaú, InfinitePay, Caixa...">
         </div>
 
         <div style="display:grid; grid-template-columns: 1fr 1.5fr; gap:10px; margin-bottom:10px;">
@@ -6234,7 +6690,9 @@ window.openEditProfessionalModal = function(profId) {
     const showInBooking = document.getElementById('mEditProfBooking').checked;
 
     const requireDeposit = document.getElementById('mEditProfRequireDeposit').checked;
+    const depositType = document.getElementById('mEditProfDepositType')?.value || 'percent';
     const depositPercent = Number(document.getElementById('mEditProfDepositPercent').value) || 30;
+    const depositFixedAmount = Number(document.getElementById('mEditProfDepositFixedAmount')?.value) || 50;
     const pixBank = document.getElementById('mEditProfPixBank').value.trim() || 'InfinitePay';
     const pixKeyType = document.getElementById('mEditProfPixType').value;
     const pixKey = document.getElementById('mEditProfPixKey').value.trim();
@@ -6257,7 +6715,9 @@ window.openEditProfessionalModal = function(profId) {
       commissionDefault,
       showInBooking,
       requireDeposit,
+      depositType,
       depositPercent,
+      depositFixedAmount,
       pixBank,
       pixKeyType,
       pixKey,
@@ -6347,6 +6807,30 @@ window.openEditServiceModal = function(serviceId) {
         <span style="font-size: 0.75rem; color: var(--muted); display: block; margin-top: 1px;">Se desmarcado, o cliente verá "A consultar" no lugar do valor.</span>
       </div>
     </label>
+    <div style="border: 1.5px solid ${serv.showVariableNotice ? '#fde68a' : '#e2e8f0'}; background: ${serv.showVariableNotice ? '#fffdf7' : '#ffffff'}; border-radius: 12px; padding: 12px; margin-bottom: 10px; transition: all 0.15s ease;" id="mEditServVariableBox">
+      <label style="display: flex; flex-direction: row; align-items: center; gap: 10px; cursor: pointer; margin: 0;">
+        <input type="checkbox" id="mEditServShowVariableNotice" ${serv.showVariableNotice ? 'checked' : ''} onchange="
+          const box = document.getElementById('mEditServVariableBox');
+          const txtBox = document.getElementById('mEditServVariableTextBox');
+          if (box) {
+            box.style.borderColor = this.checked ? '#fde68a' : '#e2e8f0';
+            box.style.background = this.checked ? '#fffdf7' : '#ffffff';
+          }
+          if (txtBox) {
+            txtBox.style.display = this.checked ? 'block' : 'none';
+          }
+        " style="width: 18px; height: 18px; accent-color: var(--orange); flex-shrink: 0; cursor: pointer; margin: 0;">
+        <div>
+          <span style="font-size: 0.88rem; font-weight: 600; color: var(--ink); display: block;">Exibir aviso de valor variável (orçamento médio)</span>
+          <span style="font-size: 0.75rem; color: var(--muted); display: block; margin-top: 1px;">Informa que o valor no agendamento é uma estimativa e pode variar na avaliação presencial.</span>
+        </div>
+      </label>
+      <div id="mEditServVariableTextBox" style="display: ${serv.showVariableNotice ? 'block' : 'none'}; margin-top: 10px; padding-top: 10px; border-top: 1px dashed #fed7aa;">
+        <label style="font-size: 0.8rem; font-weight: 600; color: #92400e; display: block; margin-bottom: 4px;">Texto da Observação (Aviso no Checkout):</label>
+        <textarea class="form-control" id="mEditServVariableText" rows="3" style="font-size: 0.82rem; line-height: 1.4; color: #451a03; background: #fffbeb;" placeholder="Digite o texto da observação...">${serv.variableNoticeText || 'O orçamento informado é uma média do valor do serviço. O valor a ser pago no salão no dia do agendamento pode variar conforme a avaliação presencial (comprimento, volume ou particularidades do cabelo). O valor de entrada será abatido do total final.'}</textarea>
+        <small style="color: #b45309; font-size: 0.72rem; display: block; margin-top: 3px;">Você pode personalizar o texto acima ou manter o texto de exemplo padrão.</small>
+      </div>
+    </div>
     <div class="form-group">
       <label>Duração do Serviço</label>
       <select class="form-control" id="mEditServDuration">
@@ -6374,6 +6858,8 @@ window.openEditServiceModal = function(serviceId) {
     const category = document.getElementById('mEditServCat').value.trim();
     const price = Number(document.getElementById('mEditServPrice').value);
     const showPriceInBooking = document.getElementById('mEditServShowPrice') ? document.getElementById('mEditServShowPrice').checked : true;
+    const showVariableNotice = document.getElementById('mEditServShowVariableNotice') ? document.getElementById('mEditServShowVariableNotice').checked : false;
+    const variableNoticeText = (document.getElementById('mEditServVariableText')?.value || '').trim();
     const durationMinutes = Number(document.getElementById('mEditServDuration').value);
     const commissionPercent = Number(document.getElementById('mEditServComm').value);
     const isPackage = document.getElementById('mEditServIsPkg')?.checked || category.toLowerCase().includes('pacote');
@@ -6387,7 +6873,7 @@ window.openEditServiceModal = function(serviceId) {
     const res = await tenantFetch(`/api/services/${serviceId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, category, price, durationMinutes, commissionPercent, isPackage, sessionsCount, showPriceInBooking })
+      body: JSON.stringify({ name, category, price, durationMinutes, commissionPercent, isPackage, sessionsCount, showPriceInBooking, showVariableNotice, variableNoticeText })
     });
 
     if (!res.ok) {

@@ -133,7 +133,13 @@ let state = {
 };
 
 const isSuperAdmin = currentUser && (currentUser.role === 'superadmin' || currentUser.username === 'karuadmin');
-const isManager = Boolean(!currentUser || currentUser.role === 'admin' || currentUser.role === 'superadmin' || currentUser.role === 'gestor' || currentUser.isManager === true);
+const isManager = Boolean(
+  !currentUser ||
+  String(currentUser.role || '').toLowerCase().includes('admin') ||
+  String(currentUser.role || '').toLowerCase().includes('gestor') ||
+  String(currentUser.access || '').toLowerCase().includes('gestor') ||
+  currentUser.isManager === true
+);
 window.isSuperAdmin = isSuperAdmin;
 window.isManager = isManager;
 
@@ -4133,6 +4139,7 @@ function renderSettings(container, actions) {
 
   if (!isManager) {
     container.innerHTML = `
+      ${renderGoogleContactsCard()}
       ${notificationCardHtml}
       <div style="margin-top: 20px;">
         <button class="btn-falcon btn-primary" onclick="saveSettings()">Salvar Preferências de Notificação</button>
@@ -4143,9 +4150,9 @@ function renderSettings(container, actions) {
 
   container.innerHTML = `
     ${salonCardHtml}
+    ${renderGoogleContactsCard()}
     ${agendaCardHtml}
     ${notificationCardHtml}
-    ${renderGoogleContactsCard()}
     <div style="margin-top: 20px;">
       <button class="btn-falcon btn-primary" onclick="saveSettings()">Salvar Configurações</button>
     </div>
