@@ -2069,14 +2069,16 @@
       let depositNotes = '';
       let hasDeposit = false;
       let depositAmount = 0;
+      let depositPercent = 0;
+      let tipoSinal = 'Sinal de Adiantamento';
 
       if (prof && prof.requireDeposit && selectedServices.length > 0 && !allHidden) {
         hasDeposit = true;
-        const pct = clientPenaltyActive ? clientPenaltyPct : (Number(prof.depositPercent) || 30);
-        depositAmount = (visiblePrice * pct) / 100;
+        depositPercent = clientPenaltyActive ? clientPenaltyPct : (Number(prof.depositPercent) || 30);
+        depositAmount = (visiblePrice * depositPercent) / 100;
         const remainVal = Math.max(0, visiblePrice - depositAmount);
-        const tipoSinal = clientPenaltyActive ? 'Taxa Reagendamento (Reincidência)' : 'Sinal de Adiantamento';
-        depositNotes = ` | ${tipoSinal} ${pct}%: R$ ${depositAmount.toFixed(2)} (${prof.pixBank || 'InfinitePay'}) - Restante no salão: R$ ${remainVal.toFixed(2)}`;
+        tipoSinal = clientPenaltyActive ? 'Taxa Reagendamento (Reincidência)' : 'Sinal de Adiantamento';
+        depositNotes = ` | ${tipoSinal} ${depositPercent}%: R$ ${depositAmount.toFixed(2)} (${prof.pixBank || 'InfinitePay'}) - Restante no salão: R$ ${remainVal.toFixed(2)}`;
       }
 
       try {
@@ -2095,7 +2097,7 @@
             price: totalPrice,
             durationMinutes: totalDuration,
             hasDeposit: hasDeposit,
-            depositPercent: hasDeposit ? pct : 0,
+            depositPercent: hasDeposit ? depositPercent : 0,
             depositAmount: hasDeposit ? depositAmount : 0,
             servicesList: selectedServices.map(s => ({
               id: s.id,
@@ -2145,13 +2147,13 @@
             `• *Duração:* ${formatDuration(totalDuration)}\n` +
             `• *Data:* ${dateBr} às ${selectedSlot.time}\n` +
             `• *Valor Total:* ${totalDisplayStr}\n` +
-            `• *Sinal de Adiantamento:* R$ ${depositAmount.toFixed(2)} via ${prof.pixBank || 'InfinitePay'}\n\n` +
+            `• *${tipoSinal}:* R$ ${depositAmount.toFixed(2)} via ${prof.pixBank || 'InfinitePay'}\n\n` +
             `Segue em anexo o comprovante do Pix para validação do meu horário!`;
 
           const waUrl = `https://wa.me/55${cleanProfPhone}?text=${encodeURIComponent(msg)}`;
           
           const openWa = await asyncConfirm(
-            `Agendamento realizado com sucesso!\n\nFoi gerada uma solicitação de sinal de R$ ${depositAmount.toFixed(2)} (${prof.pixBank || 'InfinitePay'}).\n\nDeseja abrir o WhatsApp de ${prof.name} agora para enviar o comprovante?`,
+            `Agendamento realizado com sucesso!\n\nFoi gerada uma solicitação de ${tipoSinal.toLowerCase()} de R$ ${depositAmount.toFixed(2)} (${prof.pixBank || 'InfinitePay'}).\n\nDeseja abrir o WhatsApp de ${prof.name} agora para enviar o comprovante?`,
             'Enviar Comprovante por WhatsApp'
           );
           if (openWa) {

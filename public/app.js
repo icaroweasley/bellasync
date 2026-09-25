@@ -4345,6 +4345,9 @@ window.openNewAppointmentModal = function(defaultTime = "10:00") {
     const startTime = document.getElementById('modalAppStart').value;
     const endTime = document.getElementById('modalAppEnd').value;
     const hasDeposit = document.getElementById('modalAppHasDeposit')?.checked || false;
+    const prof = (state.professionals || []).find(p => p.id === profId);
+    const profDepositPct = prof ? (Number(prof.depositPercent) || 30) : 30;
+    const depositAmt = hasDeposit ? ((price * profDepositPct) / 100) : 0;
 
     if (!clientName) {
       asyncAlert('Por favor informe o nome do cliente');
@@ -4363,7 +4366,8 @@ window.openNewAppointmentModal = function(defaultTime = "10:00") {
         serviceName,
         price,
         hasDeposit,
-        depositPercent: hasDeposit ? 30 : 0,
+        depositPercent: hasDeposit ? profDepositPct : 0,
+        depositAmount: hasDeposit ? depositAmt : 0,
         date: selectedDate,
         startTime,
         endTime,
