@@ -4186,22 +4186,22 @@ function renderGoogleContactsCard() {
   const redirectUri = g.redirectUri || `${window.location.origin}/api/integrations/google/callback`;
 
   return `
-    <div class="card-shell" style="margin-bottom: 24px; border: 1.5px solid ${isConnected ? '#86efac' : '#fed7aa'}; background: ${isConnected ? 'linear-gradient(180deg, #f0fdf4 0%, #ffffff 100%)' : '#ffffff'}; border-radius: 16px; padding: 22px;">
+    <div class="card-shell" style="margin-bottom: 24px; border: 1.5px solid ${isConnected ? '#86efac' : '#fed7aa'}; background: ${isConnected ? 'linear-gradient(180deg, #f0fdf4 0%, #ffffff 100%)' : '#ffffff'}; border-radius: 16px; padding: 18px 14px; box-sizing: border-box; max-width: 100%; overflow: hidden;">
       
       <!-- Cabeçalho -->
       <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 14px; margin-bottom: 16px; flex-wrap: wrap;">
         <div style="display: flex; align-items: center; gap: 12px;">
-          <div style="width: 46px; height: 46px; border-radius: 12px; background: ${isConnected ? '#dcfce7' : '#fff7ed'}; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 2px 6px rgba(0,0,0,0.04);">
-            <svg width="26" height="26" viewBox="0 0 24 24">
+          <div style="width: 44px; height: 44px; border-radius: 12px; background: ${isConnected ? '#dcfce7' : '#fff7ed'}; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 2px 6px rgba(0,0,0,0.04);">
+            <svg width="24" height="24" viewBox="0 0 24 24">
               <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
               <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
               <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
               <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
             </svg>
           </div>
-          <div>
+          <div style="flex: 1; min-width: 0;">
             <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-              <h3 style="margin: 0; font-size: 1.15rem; font-weight: 800; color: var(--ink);">
+              <h3 style="margin: 0; font-size: 1.1rem; font-weight: 800; color: var(--ink);">
                 Google Contatos • Captura de Leads
               </h3>
               ${isConnected ? `
@@ -4215,7 +4215,7 @@ function renderGoogleContactsCard() {
                 </span>
               `}
             </div>
-            <p style="font-size: 0.85rem; color: var(--muted); margin: 3px 0 0 0;">
+            <p style="font-size: 0.82rem; color: var(--muted); margin: 3px 0 0 0;">
               Salva automaticamente o número das clientes na agenda do seu celular para nunca mais perder um contato.
             </p>
           </div>
@@ -4224,16 +4224,16 @@ function renderGoogleContactsCard() {
 
       ${isConnected ? `
         <!-- Painel Conectado -->
-        <div style="background: #ffffff; border: 1.5px solid #86efac; border-radius: 14px; padding: 16px 18px; margin-bottom: 18px; display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; box-shadow: 0 2px 8px rgba(22,163,74,0.06);">
-          <div style="display: flex; align-items: center; gap: 12px;">
-            <div style="width: 38px; height: 38px; border-radius: 50%; background: #dcfce7; color: #15803d; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1.1rem;">
+        <div style="background: #ffffff; border: 1.5px solid #86efac; border-radius: 14px; padding: 14px 16px; margin-bottom: 18px; display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; box-shadow: 0 2px 8px rgba(22,163,74,0.06);">
+          <div style="display: flex; align-items: center; gap: 12px; min-width: 0; flex: 1;">
+            <div style="width: 36px; height: 36px; border-radius: 50%; background: #dcfce7; color: #15803d; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1.1rem; flex-shrink: 0;">
               ✓
             </div>
-            <div>
-              <div style="font-size: 0.74rem; text-transform: uppercase; font-weight: 700; color: #166534; letter-spacing: 0.05em;">
+            <div style="min-width: 0; overflow: hidden; text-overflow: ellipsis;">
+              <div style="font-size: 0.72rem; text-transform: uppercase; font-weight: 700; color: #166534; letter-spacing: 0.05em;">
                 Conta Google Conectada:
               </div>
-              <div style="font-size: 1.05rem; font-weight: 800; color: #14532d; margin-top: 1px;">
+              <div style="font-size: 1rem; font-weight: 800; color: #14532d; margin-top: 1px; word-break: break-all;">
                 ${g.connectedEmail || 'Conta Google Autorizada'}
               </div>
               ${g.connectedName ? `<div style="font-size: 0.8rem; color: #15803d;">${g.connectedName}</div>` : ''}
@@ -4244,11 +4244,11 @@ function renderGoogleContactsCard() {
           </button>
         </div>
 
-        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px 16px; margin-bottom: 18px;">
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px 14px; margin-bottom: 18px;">
           <div style="font-size: 0.82rem; font-weight: 700; color: var(--ink); margin-bottom: 10px; display: flex; align-items: center; gap: 6px;">
             <span>⚡ Como os contatos são salvos:</span>
           </div>
-          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; align-items: center;">
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; align-items: center;">
             <div class="form-group" style="margin-bottom: 0;">
               <label style="font-size: 0.82rem; font-weight: 600; color: var(--ink); display: block; margin-bottom: 4px;">Sufixo no Nome da Cliente</label>
               <input type="text" class="form-control" id="cfgGoogleNameSuffix" value="${g.nameSuffix !== undefined ? g.nameSuffix : ' (Cliente)'}" placeholder="Ex: (Cliente)" onchange="updateGoogleSuffix(this.value)">
@@ -4266,13 +4266,13 @@ function renderGoogleContactsCard() {
           </div>
         </div>
 
-        <div style="display: flex; gap: 12px; flex-wrap: wrap; align-items: center; padding-top: 12px; border-top: 1px dashed #bbf7d0;">
-          <button type="button" class="btn-falcon btn-success" id="btnSyncAllGoogle" onclick="syncAllClientsToGoogleClick()" style="display: inline-flex; align-items: center; gap: 8px; font-size: 0.88rem; font-weight: 700; padding: 10px 18px;">
-            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path></svg>
-            <span>Sincronizar Todas as Clientes Já Cadastradas</span>
+        <div style="padding-top: 14px; border-top: 1px dashed #bbf7d0; display: flex; flex-direction: column; gap: 8px; width: 100%; box-sizing: border-box;">
+          <button type="button" class="btn-falcon btn-success" id="btnSyncAllGoogle" onclick="syncAllClientsToGoogleClick()" style="width: 100%; max-width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 0.88rem; font-weight: 700; padding: 12px 14px; white-space: normal; text-align: center; border-radius: 12px; box-sizing: border-box; line-height: 1.3;">
+            <svg width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24" style="flex-shrink: 0;"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path></svg>
+            <span>Sincronizar Todas as Clientes Cadastradas</span>
           </button>
-          <span style="color: var(--muted); font-size: 0.8rem;">
-            Envia toda a sua lista atual de clientes do BellaSync para o seu Google Contatos agora mesmo.
+          <span style="color: var(--muted); font-size: 0.78rem; text-align: center; display: block; line-height: 1.4;">
+            Envia todas as clientes existentes no BellaSync para o seu Google Contatos agora mesmo.
           </span>
         </div>
       ` : `
