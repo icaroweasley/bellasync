@@ -632,8 +632,17 @@
               Adicionar mais serviços
             </button>
             <div style="text-align:right;">
-              <small style="color:var(--muted); font-size:0.75rem; display:block;">Valor Total:</small>
+              <small style="color:var(--muted); font-size:0.75rem; display:block;">Valor Total Estimado:</small>
               <strong id="checkoutSummaryTotalVal" style="color:#15803d; font-size:1.1rem;">R$ 0,00</strong>
+            </div>
+          </div>
+
+          <!-- Observação de Orçamento Médio -->
+          <div style="margin-top:10px; padding:9px 12px; background:#fffbeb; border:1px solid #fef3c7; border-radius:10px; font-size:0.75rem; color:#92400e; display:flex; gap:8px; align-items:flex-start; line-height:1.45;">
+            <span style="font-size:0.85rem; line-height:1; color:#d97706; flex-shrink:0; margin-top:2px;">ℹ️</span>
+            <div>
+              <strong>Observações:</strong>
+              <div style="margin-top:2px; color:#78350f;">• O orçamento efetuado é uma média do valor do serviço, pois só é possível passar o valor exato do orçamento presencialmente.</div>
             </div>
           </div>
         </div>
@@ -719,6 +728,13 @@
               <span style="color:var(--orange); font-weight:bold;">•</span>
               <div><strong>Reagendamento:</strong> Não há devolução do sinal pago e será cobrada uma nova taxa de <strong>50%</strong> do valor do serviço para remarcar.</div>
             </div>
+            <div style="margin-top:8px; padding-top:8px; border-top:1px dashed #cbd5e1;">
+              <strong style="color:var(--ink); display:block; margin-bottom:3px;">Observações:</strong>
+              <div style="display:flex; gap:6px; color:#475569;">
+                <span style="color:var(--orange); font-weight:bold;">•</span>
+                <div>O orçamento efetuado é uma média do valor do serviço, pois só é possível passar o valor exato do orçamento presencialmente.</div>
+              </div>
+            </div>
           </div>
 
           <!-- Resumo Financeiro da Reserva -->
@@ -728,7 +744,7 @@
               <span style="font-size:1.25rem; font-weight:800; color:#15803d; line-height:1.2;" id="depositAmountDisplay">R$ 0,00</span>
             </div>
             <div style="border-left:1px solid #e2e8f0; padding-left:10px;">
-              <span style="font-size:0.72rem; font-weight:600; text-transform:uppercase; letter-spacing:0.04em; color:#64748b; display:block;">Restante no Salão</span>
+              <span style="font-size:0.72rem; font-weight:600; text-transform:uppercase; letter-spacing:0.04em; color:#64748b; display:block;">Restante no Salão (Estimado)</span>
               <span style="font-size:1.05rem; font-weight:700; color:#334155; line-height:1.2;" id="depositRemainingDisplay">R$ 0,00</span>
             </div>
           </div>
@@ -750,7 +766,7 @@
               </button>
             </div>
             <small style="display:block; margin-top:6px; font-size:0.72rem; color:#94a3b8; text-align:center;">
-              Ao continuar, você concorda com a Política de Agendamento acima.
+              Ao continuar, você concorda com a Política de Agendamento e observações acima.
             </small>
           </div>
         </div>
@@ -2134,7 +2150,7 @@
         } else if (hasHidden) {
           totalDisplayStr = `R$ ${visiblePrice.toFixed(2)} (+ serviços a consultar no salão)`;
         } else {
-          totalDisplayStr = `R$ ${totalPrice.toFixed(2)}`;
+          totalDisplayStr = `R$ ${totalPrice.toFixed(2)} (estimado)`;
         }
 
         // Se houver exigência de sinal, convida o cliente a enviar o comprovante no WhatsApp da profissional
@@ -2148,19 +2164,21 @@
             `• *Data:* ${dateBr} às ${selectedSlot.time}\n` +
             `• *Valor Total:* ${totalDisplayStr}\n` +
             `• *${tipoSinal}:* R$ ${depositAmount.toFixed(2)} via ${prof.pixBank || 'InfinitePay'}\n\n` +
+            `*Observações:*\n` +
+            `• O orçamento efetuado é uma média do valor do serviço, pois só é possível passar o valor exato do orçamento presencialmente.\n\n` +
             `Segue em anexo o comprovante do Pix para validação do meu horário!`;
 
           const waUrl = `https://wa.me/55${cleanProfPhone}?text=${encodeURIComponent(msg)}`;
           
           const openWa = await asyncConfirm(
-            `Agendamento realizado com sucesso!\n\nFoi gerada uma solicitação de ${tipoSinal.toLowerCase()} de R$ ${depositAmount.toFixed(2)} (${prof.pixBank || 'InfinitePay'}).\n\nDeseja abrir o WhatsApp de ${prof.name} agora para enviar o comprovante?`,
+            `Agendamento realizado com sucesso!\n\nFoi gerada uma solicitação de ${tipoSinal.toLowerCase()} de R$ ${depositAmount.toFixed(2)} (${prof.pixBank || 'InfinitePay'}).\n\n📌 Observações:\n• O orçamento efetuado é uma média do valor do serviço, pois só é possível passar o valor exato do orçamento presencialmente.\n\nDeseja abrir o WhatsApp de ${prof.name} agora para enviar o comprovante?`,
             'Enviar Comprovante por WhatsApp'
           );
           if (openWa) {
             window.open(waUrl, '_blank');
           }
         } else {
-          await asyncAlert(`Agendamento confirmado com sucesso!\n\nCliente: ${name}\nProfissional: ${prof.name}\nServiços: ${joinedServiceNames} (${formatDuration(totalDuration)})\nData: ${date} das ${selectedSlot.time} às ${selectedSlot.endTime}\nValor Total: ${totalDisplayStr}`, 'Agendado com Sucesso', 'success');
+          await asyncAlert(`Agendamento confirmado com sucesso!\n\nCliente: ${name}\nProfissional: ${prof.name}\nServiços: ${joinedServiceNames} (${formatDuration(totalDuration)})\nData: ${date} das ${selectedSlot.time} às ${selectedSlot.endTime}\nValor Total: ${totalDisplayStr}\n\n📌 Observações:\n• O orçamento efetuado é uma média do valor do serviço, pois só é possível passar o valor exato do orçamento presencialmente.`, 'Agendado com Sucesso', 'success');
         }
       } catch (err) {
         console.error(err);
