@@ -14,6 +14,13 @@ import {
   syncClientToGoogle,
   syncAllClientsToGoogle
 } from './googleContacts.js';
+import {
+  getFiscalConfig,
+  saveFiscalConfig,
+  emitirNfse,
+  cancelarNfse,
+  getInvoices
+} from './fiscal.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -1356,6 +1363,65 @@ app.post('/api/integrations/google/sync-client/:id', requireManager, async (req,
     res.json({ message: `Cliente "${client.name}" sincronizado com sucesso no Google Contatos!`, result });
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+});
+
+// Endpoints Fiscais (NFS-e Padrão Nacional)
+app.get('/api/fiscal/config', requireManager, (req, res) => {
+  const db = getDb();
+  const tenantId = getTenantId(req);
+  const cfg = getFiscalConfig(tenantId, db);
+  res.json(cfg);
+});
+
+app.post('/api/fiscal/config', requireManager, (req, res) => {
+  const db = getDb();
+  const tenantId = getTenantId(req);
+  try {
+    const updated = saveFiscalConfig(tenantId, db, req.body);
+    saveDb(db);
+    res.json({ message: 'Configurações fiscais salvas com sucesso!', config: updated });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+app.post('/api/fiscal/emit', requireManager, async (req, res) => {
+  const db = getDb();
+  const tenantId = getTenantId(req);
+  try {
+    const result = await emitirNfse(tenantId, db, req.body);
+    saveDb(db);
+    res.json({ message: 'Nota Fiscal emitida com sucesso!', ...result });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+app.get('/api/fiscal/invoices', requireManager, (req, res) => {
+  const db = getDb();
+  const tenantId = getTenantId(req);
+  const list = getInvoices(tenantId, db, req.query);
+  res.json(list);
+});
+
+app.get('/api/fiscal/invoices/:id', requireManager, (req, res) => {
+  const db = getDb();
+  const tenantId = getTenantId(req);
+  const invoice = (db.invoices || []).find(inv => inv.id === req.params.id && inv.tenantId === tenantId);
+  if (!invoice) return res.status(404).json({ error: 'Nota fiscal não encontrada.' });
+  res.json(invoice);
+});
+
+app.post('/api/fiscal/invoices/:id/cancel', requireManager, (req, res) => {
+  const db = getDb();
+  const tenantId = getTenantId(req);
+  try {
+    const cancelled = cancelarNfse(tenantId, db, req.params.id, req.body.motivo);
+    saveDb(db);
+    res.json({ message: 'Nota fiscal cancelada com sucesso.', invoice: cancelled });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
   }
 });
 

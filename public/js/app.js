@@ -564,6 +564,47 @@ window.openAppointmentDetailsModal = function(app) {
     }
   }
 
+  const fiscalContainer = document.getElementById('appDetailsFiscalContainer');
+  if (fiscalContainer) {
+    const isFiscalEnabled = state.fiscalConfig && state.fiscalConfig.enabled;
+    if (isFiscalEnabled) {
+      fiscalContainer.style.display = 'block';
+      if (app.nfeId) {
+        fiscalContainer.innerHTML = `
+          <div style="background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 4px;">
+              <span style="font-weight: 800; color: #166534; font-size: 0.82rem; display: inline-flex; align-items: center; gap: 5px;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                NFS-e Nº ${app.nfeNumber || ''} Emitida
+              </span>
+              <a href="/notas/${app.nfeId}.html" target="_blank" class="btn-card-action" style="padding: 2px 8px; font-size: 0.75rem; font-weight: 700; color: #0284c7; background: #e0f2fe; border-radius: 6px; text-decoration: none;">
+                Ver DANFSE (PDF)
+              </a>
+            </div>
+            <div style="display: flex; gap: 6px;">
+              <button type="button" class="btn-falcon btn-success" onclick="shareNfseWhatsapp('${app.nfeId}')" style="flex: 1; padding: 7px 10px; font-size: 0.78rem; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; gap: 6px; border-radius: 8px;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91C2.13 13.66 2.59 15.36 3.45 16.86L2.05 22L7.3 20.62C8.75 21.41 10.38 21.83 12.04 21.83C17.5 21.83 21.95 17.38 21.95 11.92C21.95 9.27 20.92 6.78 19.05 4.91C17.18 3.03 14.69 2 12.04 2ZM12.05 20.16C10.57 20.16 9.12 19.76 7.85 19.01L7.55 18.83L4.43 19.65L5.26 16.61L5.06 16.29C4.24 14.99 3.81 13.47 3.81 11.91C3.81 7.37 7.5 3.68 12.05 3.68C14.25 3.68 16.31 4.54 17.87 6.1C19.42 7.66 20.28 9.72 20.27 11.92C20.28 16.46 16.59 20.16 12.05 20.16ZM16.56 14.46C16.31 14.33 15.09 13.73 14.86 13.65C14.63 13.56 14.47 13.52 14.3 13.77C14.14 14.02 13.66 14.58 13.52 14.75C13.37 14.92 13.23 14.94 12.98 14.81C12.73 14.69 11.93 14.42 10.98 13.58C10.24 12.92 9.74 12.11 9.6 11.86C9.45 11.61 9.58 11.48 9.71 11.35C9.82 11.24 9.96 11.06 10.08 10.91C10.21 10.77 10.25 10.66 10.33 10.5C10.41 10.33 10.37 10.19 10.31 10.06C10.25 9.94 9.76 8.73 9.55 8.24C9.35 7.75 9.15 7.82 8.99 7.81C8.85 7.8 8.68 7.8 8.52 7.8C8.35 7.8 8.08 7.86 7.85 8.11C7.62 8.36 6.98 8.96 6.98 10.18C6.98 11.4 7.87 12.58 7.99 12.74C8.11 12.91 9.74 15.42 12.23 16.5C12.82 16.76 13.28 16.91 13.64 17.03C14.23 17.22 14.77 17.19 15.2 17.13C15.68 17.06 16.67 16.53 16.88 15.95C17.08 15.37 17.08 14.88 17.02 14.77C16.96 14.67 16.81 14.59 16.56 14.46Z"/></svg>
+                <span>Reenviar WhatsApp</span>
+              </button>
+              <button type="button" class="btn-card-action" onclick="cancelNfsePrompt('${app.nfeId}')" style="padding: 7px 10px; font-size: 0.75rem; color: #dc2626; border: 1px solid #fecaca; border-radius: 8px;">
+                Cancelar
+              </button>
+            </div>
+          </div>
+        `;
+      } else {
+        fiscalContainer.innerHTML = `
+          <button type="button" class="btn-falcon btn-secondary" onclick="openEmitNfseModal('${app.id}')" style="width: 100%; padding: 8px 12px; font-size: 0.84rem; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 1.5px solid #cbd5e1; background: #ffffff; color: var(--ink); border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+            <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+            <span>🧾 Emitir Nota Fiscal (NFS-e)</span>
+          </button>
+        `;
+      }
+    } else {
+      fiscalContainer.style.display = 'none';
+    }
+  }
+
   modal.style.display = 'flex';
   modal.classList.add('open');
 };
@@ -1068,7 +1109,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 async function loadInitialData() {
   try {
-    const [settings, profs, servs, clis, apps, prods, exps, comms, pkgs, cats, gCfg] = await Promise.all([
+    const [settings, profs, servs, clis, apps, prods, exps, comms, pkgs, cats, gCfg, fCfg] = await Promise.all([
       tenantFetch('/api/settings').then(r => r.json()),
       tenantFetch('/api/professionals').then(r => r.json()),
       tenantFetch('/api/services').then(r => r.json()),
@@ -1079,7 +1120,8 @@ async function loadInitialData() {
       tenantFetch('/api/commissions').then(r => r.json()),
       tenantFetch('/api/packages').then(r => r.json()).catch(() => []),
       tenantFetch('/api/categories').then(r => r.json()).catch(() => []),
-      tenantFetch('/api/integrations/google/config').then(r => r.json()).catch(() => null)
+      tenantFetch('/api/integrations/google/config').then(r => r.json()).catch(() => null),
+      tenantFetch('/api/fiscal/config').then(r => r.json()).catch(() => null)
     ]);
 
     state = {
@@ -1093,7 +1135,8 @@ async function loadInitialData() {
       commissions: comms,
       packages: pkgs || [],
       categories: cats || [],
-      googleConfig: gCfg || settings?.googleContacts || {}
+      googleConfig: gCfg || settings?.googleContacts || {},
+      fiscalConfig: fCfg || settings?.fiscal || {}
     };
 
     checkAndNotifyNewAppointments(apps);
@@ -4150,6 +4193,7 @@ function renderSettings(container, actions) {
 
   container.innerHTML = `
     ${salonCardHtml}
+    ${renderFiscalCard()}
     ${renderGoogleContactsCard()}
     ${agendaCardHtml}
     ${notificationCardHtml}
@@ -4494,6 +4538,688 @@ window.syncSingleClientToGoogle = async function(clientId) {
     asyncAlert(data.message || 'Cliente sincronizado com sucesso no Google Contatos!', 'Google Contatos', 'success');
   } catch (err) {
     asyncAlert(err.message, 'Atenção', 'warning');
+  }
+};
+
+// ==========================================
+// MÓDULO FISCAL (NFS-e Padrão Nacional / MEI)
+// ==========================================
+
+function renderFiscalCard() {
+  const f = state.fiscalConfig || {};
+  const isEnabled = !!f.enabled;
+  const hasCert = !!f.hasCertificate;
+  const isHomologacao = (f.environment || 'homologacao') === 'homologacao';
+
+  let displayCnpj = f.cnpj || '';
+  if (displayCnpj.length === 14) {
+    displayCnpj = displayCnpj.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5');
+  }
+
+  return `
+    <div class="card-shell" style="margin-bottom: 24px; border: 1.5px solid ${isEnabled ? '#6366f1' : '#cbd5e1'}; background: ${isEnabled ? 'linear-gradient(180deg, #f8faff 0%, #ffffff 100%)' : '#ffffff'}; border-radius: 16px; padding: 18px 16px; box-sizing: border-box; max-width: 100%; overflow: hidden;">
+      
+      <!-- Cabeçalho do Card -->
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 14px; margin-bottom: 16px; flex-wrap: wrap;">
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <div style="width: 44px; height: 44px; border-radius: 12px; background: ${isEnabled ? 'rgba(99, 102, 241, 0.12)' : '#f1f5f9'}; color: ${isEnabled ? '#4f46e5' : '#64748b'}; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 2px 6px rgba(0,0,0,0.04);">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+          </div>
+          <div style="flex: 1; min-width: 0;">
+            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+              <h3 style="margin: 0; font-size: 1.1rem; font-weight: 800; color: var(--ink);">
+                Emissão de Nota Fiscal (NFS-e Padrão Nacional / MEI)
+              </h3>
+              ${isEnabled ? `
+                <span style="font-size: 0.74rem; font-weight: 800; color: #4338ca; background: #e0e7ff; border: 1px solid #c7d2fe; padding: 2px 10px; border-radius: 20px; display: inline-flex; align-items: center; gap: 4px;">
+                  <span style="width: 7px; height: 7px; border-radius: 50%; background: #4f46e5; display: inline-block;"></span>
+                  Módulo Ativo
+                </span>
+              ` : `
+                <span style="font-size: 0.74rem; font-weight: 700; color: #64748b; background: #f1f5f9; border: 1px solid #cbd5e1; padding: 2px 10px; border-radius: 20px;">
+                  Desativado
+                </span>
+              `}
+              ${isEnabled ? (isHomologacao ? `
+                <span style="font-size: 0.72rem; font-weight: 700; color: #b45309; background: #fef3c7; border: 1px solid #fde68a; padding: 2px 8px; border-radius: 20px;">
+                  🟡 Ambiente de Testes (Homologação)
+                </span>
+              ` : `
+                <span style="font-size: 0.72rem; font-weight: 800; color: #15803d; background: #dcfce7; border: 1px solid #86efac; padding: 2px 8px; border-radius: 20px;">
+                  🟢 Ambiente de Produção Oficial
+                </span>
+              `) : ''}
+            </div>
+            <p style="font-size: 0.82rem; color: var(--muted); margin: 3px 0 0 0;">
+              Emita notas fiscais de serviço para as clientes em 1 toque, sem mensalidade de APIs pagas e com envio direto no WhatsApp.
+            </p>
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+          <button type="button" class="btn-falcon btn-secondary" onclick="openFiscalInvoicesModal()" style="font-size: 0.82rem; font-weight: 700; padding: 7px 12px; display: inline-flex; align-items: center; gap: 6px; border-radius: 10px;">
+            <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+            <span>Notas Emitidas</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Ativação / Toggle Principal -->
+      <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px 14px; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
+        <div>
+          <span style="font-weight: 700; font-size: 0.88rem; color: var(--ink); display: block;">Habilitar Emissão de NFS-e no BellaSync</span>
+          <span style="font-size: 0.76rem; color: var(--muted); display: block;">Exibe o botão de emissão de nota fiscal nos agendamentos e atendimentos concluídos.</span>
+        </div>
+        <label class="custom-switch" style="margin: 0;">
+          <input type="checkbox" id="cfgFiscalEnabled" ${isEnabled ? 'checked' : ''} onchange="toggleFiscalModule(this.checked)">
+          <span class="switch-slider"></span>
+        </label>
+      </div>
+
+      <!-- Formulário de Configuração Fiscal -->
+      <div id="fiscalFormSection" style="display: ${isEnabled ? 'block' : 'none'};">
+        <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 14px; padding: 16px; margin-bottom: 16px;">
+          <div style="font-size: 0.86rem; font-weight: 800; color: var(--ink); margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
+            <span>🏢 Dados Cadastrais do Salão (Prestador)</span>
+          </div>
+
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-bottom: 12px;">
+            <div class="form-group" style="margin-bottom: 0;">
+              <label style="font-size: 0.8rem; font-weight: 700; color: var(--ink); margin-bottom: 4px; display: block;">CNPJ do Salão / MEI *</label>
+              <input type="text" class="form-control" id="cfgFiscalCnpj" value="${displayCnpj}" placeholder="00.000.000/0000-00" oninput="maskCnpjInput(this)" style="font-size: 0.85rem; font-weight: 600;">
+            </div>
+
+            <div class="form-group" style="margin-bottom: 0;">
+              <label style="font-size: 0.8rem; font-weight: 700; color: var(--ink); margin-bottom: 4px; display: block;">Regime Tributário *</label>
+              <select class="form-control" id="cfgFiscalRegime" style="font-size: 0.85rem;">
+                <option value="MEI" ${f.regimeTributario === 'MEI' ? 'selected' : ''}>MEI - Microempreendedor Individual (Alíquota zero no serviço)</option>
+                <option value="SimplesNacional" ${f.regimeTributario === 'SimplesNacional' ? 'selected' : ''}>Simples Nacional / Salão Parceiro</option>
+              </select>
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-bottom: 12px;">
+            <div class="form-group" style="margin-bottom: 0;">
+              <label style="font-size: 0.8rem; font-weight: 700; color: var(--ink); margin-bottom: 4px; display: block;">Razão Social *</label>
+              <input type="text" class="form-control" id="cfgFiscalRazaoSocial" value="${f.razaoSocial || ''}" placeholder="Nome Empresarial completo" style="font-size: 0.85rem;">
+            </div>
+
+            <div class="form-group" style="margin-bottom: 0;">
+              <label style="font-size: 0.8rem; font-weight: 700; color: var(--ink); margin-bottom: 4px; display: block;">Nome Fantasia</label>
+              <input type="text" class="form-control" id="cfgFiscalNomeFantasia" value="${f.nomeFantasia || ''}" placeholder="Nome comercial do salão" style="font-size: 0.85rem;">
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+            <div class="form-group" style="margin-bottom: 0;">
+              <label style="font-size: 0.8rem; font-weight: 700; color: var(--ink); margin-bottom: 4px; display: block;">Inscrição Municipal</label>
+              <input type="text" class="form-control" id="cfgFiscalInscricaoMun" value="${f.inscricaoMunicipal || 'ISENTO'}" placeholder="Ou digite ISENTO" style="font-size: 0.85rem;">
+            </div>
+
+            <div class="form-group" style="margin-bottom: 0;">
+              <label style="font-size: 0.8rem; font-weight: 700; color: var(--ink); margin-bottom: 4px; display: block;">Cidade</label>
+              <input type="text" class="form-control" id="cfgFiscalCidade" value="${f.cidade || 'Campo Grande'}" placeholder="Ex: Campo Grande" style="font-size: 0.85rem;">
+            </div>
+
+            <div class="form-group" style="margin-bottom: 0;">
+              <label style="font-size: 0.8rem; font-weight: 700; color: var(--ink); margin-bottom: 4px; display: block;">UF</label>
+              <input type="text" class="form-control" id="cfgFiscalUf" value="${f.uf || 'MS'}" maxlength="2" placeholder="MS" style="font-size: 0.85rem; text-transform: uppercase;">
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px;">
+            <div class="form-group" style="margin-bottom: 0;">
+              <label style="font-size: 0.8rem; font-weight: 700; color: var(--ink); margin-bottom: 4px; display: block;">CNAE Principal</label>
+              <input type="text" class="form-control" id="cfgFiscalCnae" value="${f.cnae || '9602-5/01'}" placeholder="9602-5/01" style="font-size: 0.85rem;">
+              <small style="color: var(--muted); font-size: 0.72rem; display: block; margin-top: 3px;">Padrão: 9602-5/01 (Cabeleireiros, manicure e pedicure)</small>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 0;">
+              <label style="font-size: 0.8rem; font-weight: 700; color: var(--ink); margin-bottom: 4px; display: block;">Ambiente de Emissão</label>
+              <select class="form-control" id="cfgFiscalEnv" style="font-size: 0.85rem;">
+                <option value="homologacao" ${f.environment === 'homologacao' ? 'selected' : ''}>Homologação (Testes / Sem valor fiscal)</option>
+                <option value="producao" ${f.environment === 'producao' ? 'selected' : ''}>Produção (Oficial / Válido na Receita)</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Certificado Digital A1 -->
+        <div style="background: #f8fafc; border: 1.5px solid ${hasCert ? '#86efac' : '#cbd5e1'}; border-radius: 14px; padding: 16px; margin-bottom: 16px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
+            <div style="font-size: 0.86rem; font-weight: 800; color: var(--ink); display: flex; align-items: center; gap: 6px;">
+              <span>🔐 Certificado Digital A1 (.pfx ou .p12)</span>
+            </div>
+            ${hasCert ? `
+              <span style="font-size: 0.74rem; font-weight: 800; color: #15803d; background: #dcfce7; border: 1px solid #86efac; padding: 2px 10px; border-radius: 20px; display: inline-flex; align-items: center; gap: 4px;">
+                ✓ Certificado A1 Carregado e Válido
+              </span>
+            ` : `
+              <span style="font-size: 0.74rem; font-weight: 600; color: #64748b; background: #ffffff; border: 1px solid #cbd5e1; padding: 2px 10px; border-radius: 20px;">
+                Opcional para homologação • Obrigatório para produção
+              </span>
+            `}
+          </div>
+
+          <p style="font-size: 0.78rem; color: var(--muted); margin: 0 0 12px 0; line-height: 1.4;">
+            O Certificado Digital A1 é o arquivo fornecido por sua certificadora (Serasa, Certisign, Soluti, etc). O BellaSync valida a chave criptográfica com segurança no servidor, garantindo emissão direta e 100% gratuita.
+          </p>
+
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px;">
+            <div class="form-group" style="margin-bottom: 0;">
+              <label style="font-size: 0.8rem; font-weight: 700; color: var(--ink); margin-bottom: 4px; display: block;">
+                ${hasCert ? 'Substituir Arquivo .PFX (Opcional)' : 'Arquivo do Certificado (.pfx / .p12)'}
+              </label>
+              <input type="file" id="cfgFiscalCertFile" accept=".pfx,.p12" class="form-control" style="font-size: 0.8rem; padding: 6px 10px; background: #ffffff;">
+            </div>
+
+            <div class="form-group" style="margin-bottom: 0;">
+              <label style="font-size: 0.8rem; font-weight: 700; color: var(--ink); margin-bottom: 4px; display: block;">
+                Senha do Certificado A1
+              </label>
+              <input type="password" id="cfgFiscalCertPass" class="form-control" placeholder="${hasCert ? '•••••••••••• (Salva)' : 'Senha do arquivo .pfx'}" style="font-size: 0.85rem;">
+            </div>
+          </div>
+        </div>
+
+        <!-- Botão Salvar -->
+        <div style="display: flex; gap: 10px; justify-content: flex-end; align-items: center; flex-wrap: wrap;">
+          <button type="button" class="btn-falcon btn-primary" id="btnSaveFiscalConfig" onclick="saveFiscalSettingsClick()" style="padding: 10px 22px; font-size: 0.88rem; font-weight: 800; border-radius: 12px; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 4px 12px rgba(99,102,241,0.2);">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            <span>Salvar Configurações Fiscais</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+window.maskCnpjInput = function(input) {
+  let v = input.value.replace(/\D/g, '').substring(0, 14);
+  if (v.length > 12) {
+    v = v.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{1,2})$/, '$1.$2.$3/$4-$5');
+  } else if (v.length > 8) {
+    v = v.replace(/^(\d{2})(\d{3})(\d{3})(\d{1,4})$/, '$1.$2.$3/$4');
+  } else if (v.length > 5) {
+    v = v.replace(/^(\d{2})(\d{3})(\d{1,3})$/, '$1.$2.$3');
+  } else if (v.length > 2) {
+    v = v.replace(/^(\d{2})(\d{1,3})$/, '$1.$2');
+  }
+  input.value = v;
+};
+
+window.maskCpfInput = function(input) {
+  let v = input.value.replace(/\D/g, '').substring(0, 11);
+  if (v.length > 9) {
+    v = v.replace(/^(\d{3})(\d{3})(\d{3})(\d{1,2})$/, '$1.$2.$3-$4');
+  } else if (v.length > 6) {
+    v = v.replace(/^(\d{3})(\d{3})(\d{1,3})$/, '$1.$2.$3');
+  } else if (v.length > 3) {
+    v = v.replace(/^(\d{3})(\d{1,3})$/, '$1.$2');
+  }
+  input.value = v;
+};
+
+window.toggleFiscalModule = async function(checked) {
+  const formSection = document.getElementById('fiscalFormSection');
+  if (formSection) {
+    formSection.style.display = checked ? 'block' : 'none';
+  }
+  try {
+    const res = await tenantFetch('/api/fiscal/config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ enabled: checked })
+    });
+    const data = await res.json();
+    if (res.ok && data.config) {
+      state.fiscalConfig = data.config;
+    }
+  } catch (err) {
+    console.warn('Erro ao atualizar status fiscal:', err);
+  }
+};
+
+window.saveFiscalSettingsClick = async function() {
+  const btn = document.getElementById('btnSaveFiscalConfig');
+  const oldText = btn ? btn.innerHTML : '';
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<span>Salvando...</span>';
+  }
+
+  try {
+    const enabled = document.getElementById('cfgFiscalEnabled')?.checked || false;
+    const cnpj = document.getElementById('cfgFiscalCnpj')?.value || '';
+    const regime = document.getElementById('cfgFiscalRegime')?.value || 'MEI';
+    const razaoSocial = document.getElementById('cfgFiscalRazaoSocial')?.value || '';
+    const nomeFantasia = document.getElementById('cfgFiscalNomeFantasia')?.value || '';
+    const inscricaoMunicipal = document.getElementById('cfgFiscalInscricaoMun')?.value || '';
+    const cidade = document.getElementById('cfgFiscalCidade')?.value || 'Campo Grande';
+    const uf = document.getElementById('cfgFiscalUf')?.value || 'MS';
+    const cnae = document.getElementById('cfgFiscalCnae')?.value || '9602-5/01';
+    const environment = document.getElementById('cfgFiscalEnv')?.value || 'homologacao';
+    const certPass = document.getElementById('cfgFiscalCertPass')?.value || '';
+
+    const payload = {
+      enabled,
+      cnpj,
+      regimeTributario: regime,
+      razaoSocial,
+      nomeFantasia,
+      inscricaoMunicipal,
+      cidade,
+      uf,
+      cnae,
+      environment
+    };
+
+    if (certPass && !certPass.includes('••••')) {
+      payload.certA1Password = certPass;
+    }
+
+    const fileInput = document.getElementById('cfgFiscalCertFile');
+    if (fileInput && fileInput.files && fileInput.files[0]) {
+      const file = fileInput.files[0];
+      const base64 = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const res = reader.result;
+          const commaIdx = res.indexOf(',');
+          resolve(commaIdx !== -1 ? res.substring(commaIdx + 1) : res);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+      payload.certA1Base64 = base64;
+    }
+
+    const res = await tenantFetch('/api/fiscal/config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Falha ao salvar configurações fiscais.');
+
+    state.fiscalConfig = data.config;
+    await loadInitialData();
+    renderView('configuracoes');
+    asyncAlert('Configurações fiscais salvas com sucesso!', 'Módulo Fiscal', 'success');
+  } catch (err) {
+    asyncAlert(err.message, 'Atenção', 'warning');
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = oldText;
+    }
+  }
+};
+
+window.openEmitNfseModal = function(appId) {
+  const app = (state.appointments || []).find(a => a.id === appId);
+  if (!app) return asyncAlert('Agendamento não encontrado.', 'Erro', 'error');
+
+  const modal = document.getElementById('emitNfseModal');
+  if (!modal) return;
+
+  const clientInput = document.getElementById('emitNfseClientName');
+  const phoneInput = document.getElementById('emitNfseClientPhone');
+  const cpfInput = document.getElementById('emitNfseClientCpf');
+  const servInput = document.getElementById('emitNfseService');
+  const valInput = document.getElementById('emitNfseAmount');
+  const obsInput = document.getElementById('emitNfseObs');
+  const hiddenAppId = document.getElementById('emitNfseAppId');
+
+  if (hiddenAppId) hiddenAppId.value = app.id;
+  if (clientInput) clientInput.value = app.clientName || '';
+  if (phoneInput) phoneInput.value = app.clientPhone || '';
+  if (cpfInput) cpfInput.value = '';
+  if (servInput) servInput.value = app.serviceName || 'Serviços de Cabeleireiro / Beleza';
+  
+  let preco = 0;
+  if (typeof app.price === 'number') preco = app.price;
+  else if (app.price) preco = parseFloat(String(app.price).replace(',', '.')) || 0;
+  if (valInput) valInput.value = preco.toFixed(2);
+
+  if (obsInput) obsInput.value = `Atendimento referente a ${app.serviceName || 'serviço'} realizado em ${app.date || ''}.`;
+
+  modal.style.display = 'flex';
+  modal.classList.add('open');
+};
+
+window.closeEmitNfseModal = function() {
+  const modal = document.getElementById('emitNfseModal');
+  if (modal) {
+    modal.style.display = 'none';
+    modal.classList.remove('open');
+  }
+};
+
+window.confirmEmitNfse = async function() {
+  const appId = document.getElementById('emitNfseAppId')?.value;
+  const clientName = document.getElementById('emitNfseClientName')?.value?.trim();
+  const clientPhone = document.getElementById('emitNfseClientPhone')?.value?.trim();
+  const clientCpf = document.getElementById('emitNfseClientCpf')?.value?.trim();
+  const serviceName = document.getElementById('emitNfseService')?.value?.trim();
+  const amountStr = document.getElementById('emitNfseAmount')?.value?.trim();
+  const observacoes = document.getElementById('emitNfseObs')?.value?.trim();
+
+  const amount = parseFloat(amountStr?.replace(',', '.') || '0');
+  if (isNaN(amount) || amount <= 0) {
+    return asyncAlert('Por favor, informe um valor de serviço válido maior que zero.', 'Valor Inválido', 'warning');
+  }
+
+  const cleanCpf = clientCpf ? clientCpf.replace(/\D/g, '') : '';
+  if (cleanCpf && cleanCpf.length !== 11) {
+    return asyncAlert('O CPF informado possui quantidade incorreta de dígitos. Deixe em branco se for emitir para Consumidor Final sem CPF.', 'CPF Inválido', 'warning');
+  }
+
+  const btn = document.getElementById('btnConfirmEmitNfse');
+  const oldText = btn ? btn.innerHTML : '';
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<span>Emitindo NFS-e...</span>';
+  }
+
+  try {
+    const res = await tenantFetch('/api/fiscal/emit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        appointmentId: appId || undefined,
+        clientName,
+        clientPhone,
+        clientCpf: cleanCpf,
+        serviceName,
+        amount,
+        observacoes
+      })
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Falha ao emitir nota fiscal');
+
+    closeEmitNfseModal();
+
+    // Atualiza agendamento se aberto
+    const app = (state.appointments || []).find(a => a.id === appId);
+    if (app && data.invoice) {
+      app.nfeId = data.invoice.id;
+      app.nfeNumber = data.invoice.dpsNumber;
+      app.nfeChave = data.invoice.chaveAcesso;
+    }
+
+    const fiscalContainer = document.getElementById('appDetailsFiscalContainer');
+    if (fiscalContainer && app && app.nfeId) {
+      fiscalContainer.innerHTML = `
+        <div style="background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 4px;">
+            <span style="font-weight: 800; color: #166534; font-size: 0.82rem; display: inline-flex; align-items: center; gap: 5px;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+              NFS-e Nº ${app.nfeNumber} Emitida
+            </span>
+            <a href="/notas/${app.nfeId}.html" target="_blank" class="btn-card-action" style="padding: 2px 8px; font-size: 0.75rem; font-weight: 700; color: #0284c7; background: #e0f2fe; border-radius: 6px; text-decoration: none;">
+              Ver DANFSE (PDF)
+            </a>
+          </div>
+          <div style="display: flex; gap: 6px;">
+            <button type="button" class="btn-falcon btn-success" onclick="shareNfseWhatsapp('${app.nfeId}')" style="flex: 1; padding: 7px 10px; font-size: 0.78rem; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; gap: 6px; border-radius: 8px;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91C2.13 13.66 2.59 15.36 3.45 16.86L2.05 22L7.3 20.62C8.75 21.41 10.38 21.83 12.04 21.83C17.5 21.83 21.95 17.38 21.95 11.92C21.95 9.27 20.92 6.78 19.05 4.91C17.18 3.03 14.69 2 12.04 2ZM12.05 20.16C10.57 20.16 9.12 19.76 7.85 19.01L7.55 18.83L4.43 19.65L5.26 16.61L5.06 16.29C4.24 14.99 3.81 13.47 3.81 11.91C3.81 7.37 7.5 3.68 12.05 3.68C14.25 3.68 16.31 4.54 17.87 6.1C19.42 7.66 20.28 9.72 20.27 11.92C20.28 16.46 16.59 20.16 12.05 20.16ZM16.56 14.46C16.31 14.33 15.09 13.73 14.86 13.65C14.63 13.56 14.47 13.52 14.3 13.77C14.14 14.02 13.66 14.58 13.52 14.75C13.37 14.92 13.23 14.94 12.98 14.81C12.73 14.69 11.93 14.42 10.98 13.58C10.24 12.92 9.74 12.11 9.6 11.86C9.45 11.61 9.58 11.48 9.71 11.35C9.82 11.24 9.96 11.06 10.08 10.91C10.21 10.77 10.25 10.66 10.33 10.5C10.41 10.33 10.37 10.19 10.31 10.06C10.25 9.94 9.76 8.73 9.55 8.24C9.35 7.75 9.15 7.82 8.99 7.81C8.85 7.8 8.68 7.8 8.52 7.8C8.35 7.8 8.08 7.86 7.85 8.11C7.62 8.36 6.98 8.96 6.98 10.18C6.98 11.4 7.87 12.58 7.99 12.74C8.11 12.91 9.74 15.42 12.23 16.5C12.82 16.76 13.28 16.91 13.64 17.03C14.23 17.22 14.77 17.19 15.2 17.13C15.68 17.06 16.67 16.53 16.88 15.95C17.08 15.37 17.08 14.88 17.02 14.77C16.96 14.67 16.81 14.59 16.56 14.46Z"/></svg>
+              <span>Reenviar WhatsApp</span>
+            </button>
+            <button type="button" class="btn-card-action" onclick="cancelNfsePrompt('${app.nfeId}')" style="padding: 7px 10px; font-size: 0.75rem; color: #dc2626; border: 1px solid #fecaca; border-radius: 8px;">
+              Cancelar
+            </button>
+          </div>
+        </div>
+      `;
+    }
+
+    openNfseSuccessModal(data);
+  } catch (err) {
+    asyncAlert(err.message, 'Erro na Emissão', 'error');
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = oldText;
+    }
+  }
+};
+
+window.openNfseSuccessModal = function(data) {
+  const modal = document.getElementById('nfseSuccessModal');
+  if (!modal) return;
+
+  const inv = data.invoice;
+  const numEl = document.getElementById('nfseSuccessNumber');
+  const cliEl = document.getElementById('nfseSuccessClient');
+  const valEl = document.getElementById('nfseSuccessValue');
+  const waBtn = document.getElementById('nfseSuccessWaBtn');
+  const pdfBtn = document.getElementById('nfseSuccessPdfBtn');
+
+  if (numEl) numEl.innerText = `Nº ${inv.dpsNumber} (Série ${inv.serie})`;
+  if (cliEl) cliEl.innerText = inv.tomador?.nome || 'Cliente Consumidor';
+  if (valEl) valEl.innerText = `R$ ${inv.valores.valorLiquido.toFixed(2).replace('.', ',')}`;
+
+  if (waBtn) {
+    waBtn.onclick = function() {
+      window.open(data.whatsappUrl, '_blank');
+    };
+  }
+
+  if (pdfBtn) {
+    pdfBtn.href = data.shareUrl;
+  }
+
+  modal.style.display = 'flex';
+  modal.classList.add('open');
+};
+
+window.closeNfseSuccessModal = function() {
+  const modal = document.getElementById('nfseSuccessModal');
+  if (modal) {
+    modal.style.display = 'none';
+    modal.classList.remove('open');
+  }
+};
+
+window.shareNfseWhatsapp = async function(invoiceId) {
+  try {
+    const res = await tenantFetch('/api/fiscal/invoices/' + invoiceId);
+    if (!res.ok) throw new Error('Nota fiscal não encontrada.');
+    const inv = await res.json();
+
+    const shareUrl = `${window.location.origin}/notas/${inv.id}.html`;
+    const text = `Olá, ${inv.tomador.nome}! ✨\n\nAqui está a sua Nota Fiscal Eletrônica referente ao atendimento no *${inv.prestador.nomeFantasia || inv.prestador.razaoSocial}*:\n\n` +
+      `🧾 *Nota Fiscal:* Nº ${inv.dpsNumber} (Série ${inv.serie})\n` +
+      `💇 *Serviço:* ${inv.servico.discriminacao}\n` +
+      `💰 *Valor Total:* R$ ${inv.valores.valorLiquido.toFixed(2).replace('.', ',')}\n\n` +
+      `📄 *Visualizar / Baixar Nota Oficial (DANFSE):*\n${shareUrl}\n\n` +
+      `_Agradecemos pela preferência e confiança!_ 💖`;
+
+    const cleanPhone = (inv.tomador.telefone || '').replace(/\D/g, '');
+    let targetPhone = cleanPhone;
+    if (targetPhone && (!targetPhone.startsWith('55') || targetPhone.length <= 11)) {
+      targetPhone = '55' + targetPhone;
+    }
+
+    const waUrl = targetPhone 
+      ? `https://wa.me/${targetPhone}?text=${encodeURIComponent(text)}`
+      : `https://wa.me/?text=${encodeURIComponent(text)}`;
+
+    window.open(waUrl, '_blank');
+  } catch (err) {
+    asyncAlert(err.message, 'Erro ao abrir WhatsApp', 'warning');
+  }
+};
+
+window.openFiscalInvoicesModal = function() {
+  const modal = document.getElementById('fiscalInvoicesModal');
+  if (!modal) return;
+  modal.style.display = 'flex';
+  modal.classList.add('open');
+  loadFiscalInvoicesList();
+};
+
+window.closeFiscalInvoicesModal = function() {
+  const modal = document.getElementById('fiscalInvoicesModal');
+  if (modal) {
+    modal.style.display = 'none';
+    modal.classList.remove('open');
+  }
+};
+
+window.loadFiscalInvoicesList = async function() {
+  const listContainer = document.getElementById('fiscalInvoicesListContainer');
+  const summaryContainer = document.getElementById('fiscalInvoicesSummaryContainer');
+  if (!listContainer) return;
+
+  listContainer.innerHTML = '<div style="text-align: center; padding: 24px; color: var(--muted);">Carregando notas fiscais...</div>';
+
+  try {
+    const res = await tenantFetch('/api/fiscal/invoices');
+    if (!res.ok) throw new Error('Falha ao obter lista de notas');
+    const invoices = await res.json();
+
+    const q = (document.getElementById('fiscalInvoicesSearch')?.value || '').toLowerCase().trim();
+    const filterStatus = document.getElementById('fiscalInvoicesFilterStatus')?.value || 'all';
+
+    let filtered = invoices || [];
+    if (filterStatus !== 'all') {
+      filtered = filtered.filter(i => i.status === filterStatus);
+    }
+    if (q) {
+      filtered = filtered.filter(i => 
+        (i.tomador?.nome && i.tomador.nome.toLowerCase().includes(q)) ||
+        (i.tomador?.cpf && i.tomador.cpf.includes(q)) ||
+        (String(i.dpsNumber).includes(q)) ||
+        (i.chaveAcesso && i.chaveAcesso.includes(q))
+      );
+    }
+
+    const totalAutorizadas = (invoices || []).filter(i => i.status === 'autorizada');
+    const valorTotalFaturado = totalAutorizadas.reduce((acc, i) => acc + (i.valores?.valorLiquido || 0), 0);
+
+    if (summaryContainer) {
+      summaryContainer.innerHTML = `
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 14px;">
+          <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 10px 14px;">
+            <div style="font-size: 0.72rem; color: var(--muted); text-transform: uppercase; font-weight: 700;">Notas Emitidas</div>
+            <div style="font-size: 1.25rem; font-weight: 800; color: var(--ink);">${totalAutorizadas.length}</div>
+          </div>
+          <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 10px 14px;">
+            <div style="font-size: 0.72rem; color: #166534; text-transform: uppercase; font-weight: 700;">Total Faturado</div>
+            <div style="font-size: 1.25rem; font-weight: 800; color: #15803d;">R$ ${valorTotalFaturado.toFixed(2).replace('.', ',')}</div>
+          </div>
+        </div>
+      `;
+    }
+
+    if (!filtered || filtered.length === 0) {
+      listContainer.innerHTML = `
+        <div style="text-align: center; padding: 36px 16px; color: var(--muted); background: #f8fafc; border-radius: 12px; border: 1px dashed #cbd5e1;">
+          <div style="font-size: 1.8rem; margin-bottom: 6px;">🧾</div>
+          <strong style="color: var(--ink); display: block; font-size: 0.95rem;">Nenhuma Nota Fiscal Encontrada</strong>
+          <span style="font-size: 0.8rem;">As notas emitidas nos agendamentos aparecerão listadas aqui.</span>
+        </div>
+      `;
+      return;
+    }
+
+    filtered.sort((a, b) => new Date(b.issuedAt) - new Date(a.issuedAt));
+
+    listContainer.innerHTML = filtered.map(inv => {
+      const isCancelada = inv.status === 'cancelada';
+      const issuedDate = inv.issuedAt ? new Date(inv.issuedAt).toLocaleDateString('pt-BR') : '';
+      const issuedHour = inv.issuedAt ? new Date(inv.issuedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '';
+
+      return `
+        <div class="data-item-card" style="display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; padding: 12px 14px; border: 1px solid ${isCancelada ? '#fecaca' : '#e2e8f0'}; background: ${isCancelada ? '#fff5f5' : '#ffffff'}; border-radius: 12px; margin-bottom: 10px;">
+          <div style="flex: 1; min-width: 220px;">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 3px; flex-wrap: wrap;">
+              <span style="font-weight: 800; font-size: 0.95rem; color: var(--ink);">NFS-e Nº ${inv.dpsNumber}</span>
+              <span style="font-size: 0.72rem; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: ${isCancelada ? '#fee2e2' : '#dcfce7'}; color: ${isCancelada ? '#dc2626' : '#15803d'};">
+                ${isCancelada ? 'Cancelada' : 'Autorizada'}
+              </span>
+              <span style="font-size: 0.75rem; color: var(--muted);">${issuedDate} às ${issuedHour}</span>
+            </div>
+            <div style="font-size: 0.84rem; color: var(--ink); font-weight: 600;">
+              ${inv.tomador?.nome || 'Consumidor Final'} • <span style="font-size: 0.78rem; color: var(--muted); font-weight: normal;">CPF: ${inv.tomador?.cpf || 'Não informado'}</span>
+            </div>
+            <div style="font-size: 0.78rem; color: var(--muted); margin-top: 2px;">
+              ${inv.servico?.discriminacao || 'Serviço'}
+            </div>
+          </div>
+
+          <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+            <div style="font-size: 1.05rem; font-weight: 800; color: ${isCancelada ? '#9ca3af' : '#16a34a'}; text-decoration: ${isCancelada ? 'line-through' : 'none'}; min-width: 90px; text-align: right;">
+              R$ ${(inv.valores?.valorLiquido || 0).toFixed(2).replace('.', ',')}
+            </div>
+
+            <div style="display: flex; gap: 6px; align-items: center;">
+              <a href="/notas/${inv.id}.html" target="_blank" class="btn-card-action" title="Visualizar / Imprimir DANFSE" style="padding: 6px 10px; font-size: 0.76rem; font-weight: 700; color: #0284c7; background: #e0f2fe; border-radius: 8px; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+                DANFSE
+              </a>
+
+              <a href="/notas/${inv.id}.xml" download="${inv.id}.xml" class="btn-card-action" title="Baixar Arquivo XML" style="padding: 6px 8px; font-size: 0.76rem; color: var(--ink); border: 1px solid #cbd5e1; border-radius: 8px; text-decoration: none;">
+                XML
+              </a>
+
+              <button type="button" class="btn-card-action" onclick="shareNfseWhatsapp('${inv.id}')" title="Mandar via WhatsApp" style="padding: 6px 8px; font-size: 0.76rem; color: #15803d; border: 1px solid #86efac; border-radius: 8px; background: #f0fdf4;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91C2.13 13.66 2.59 15.36 3.45 16.86L2.05 22L7.3 20.62C8.75 21.41 10.38 21.83 12.04 21.83C17.5 21.83 21.95 17.38 21.95 11.92C21.95 9.27 20.92 6.78 19.05 4.91C17.18 3.03 14.69 2 12.04 2ZM12.05 20.16C10.57 20.16 9.12 19.76 7.85 19.01L7.55 18.83L4.43 19.65L5.26 16.61L5.06 16.29C4.24 14.99 3.81 13.47 3.81 11.91C3.81 7.37 7.5 3.68 12.05 3.68C14.25 3.68 16.31 4.54 17.87 6.1C19.42 7.66 20.28 9.72 20.27 11.92C20.28 16.46 16.59 20.16 12.05 20.16ZM16.56 14.46C16.31 14.33 15.09 13.73 14.86 13.65C14.63 13.56 14.47 13.52 14.3 13.77C14.14 14.02 13.66 14.58 13.52 14.75C13.37 14.92 13.23 14.94 12.98 14.81C12.73 14.69 11.93 14.42 10.98 13.58C10.24 12.92 9.74 12.11 9.6 11.86C9.45 11.61 9.58 11.48 9.71 11.35C9.82 11.24 9.96 11.06 10.08 10.91C10.21 10.77 10.25 10.66 10.33 10.5C10.41 10.33 10.37 10.19 10.31 10.06C10.25 9.94 9.76 8.73 9.55 8.24C9.35 7.75 9.15 7.82 8.99 7.81C8.85 7.8 8.68 7.8 8.52 7.8C8.35 7.8 8.08 7.86 7.85 8.11C7.62 8.36 6.98 8.96 6.98 10.18C6.98 11.4 7.87 12.58 7.99 12.74C8.11 12.91 9.74 15.42 12.23 16.5C12.82 16.76 13.28 16.91 13.64 17.03C14.23 17.22 14.77 17.19 15.2 17.13C15.68 17.06 16.67 16.53 16.88 15.95C17.08 15.37 17.08 14.88 17.02 14.77C16.96 14.67 16.81 14.59 16.56 14.46Z"/></svg>
+              </button>
+
+              ${!isCancelada ? `
+                <button type="button" class="btn-card-action" onclick="cancelNfsePrompt('${inv.id}')" title="Cancelar Nota Fiscal" style="padding: 6px 8px; font-size: 0.76rem; color: #dc2626; border: 1px solid #fecaca; border-radius: 8px;">
+                  Cancelar
+                </button>
+              ` : ''}
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  } catch (err) {
+    listContainer.innerHTML = `<div style="color: #dc2626; text-align: center; padding: 20px;">Erro ao carregar notas: ${err.message}</div>`;
+  }
+};
+
+window.cancelNfsePrompt = async function(invoiceId) {
+  const motivo = prompt('Por favor, informe a justificativa do cancelamento da NFS-e (mínimo 5 caracteres):');
+  if (motivo === null) return;
+  if (motivo.trim().length < 5) {
+    return asyncAlert('A justificativa de cancelamento deve ter pelo menos 5 caracteres.', 'Atenção', 'warning');
+  }
+
+  try {
+    const res = await tenantFetch(`/api/fiscal/invoices/${invoiceId}/cancel`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ motivo: motivo.trim() })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Falha ao cancelar nota');
+
+    await asyncAlert('Nota Fiscal cancelada com sucesso! O documento oficial (DANFSE) foi atualizado com a marca d\'água de cancelamento.', 'Nota Cancelada', 'info');
+    
+    const fiscalContainer = document.getElementById('appDetailsFiscalContainer');
+    if (fiscalContainer) {
+      fiscalContainer.innerHTML = `
+        <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 10px; padding: 10px 12px; font-size: 0.8rem; color: #991b1b;">
+          <strong>Nota Fiscal Nº ${data.invoice.dpsNumber} Cancelada</strong>
+          <div style="font-size: 0.74rem; color: #b91c1c; margin-top: 2px;">Motivo: ${data.invoice.motivoCancelamento}</div>
+        </div>
+      `;
+    }
+
+    if (document.getElementById('fiscalInvoicesModal')?.classList.contains('open')) {
+      loadFiscalInvoicesList();
+    }
+  } catch (err) {
+    asyncAlert(err.message, 'Erro', 'error');
   }
 };
 
