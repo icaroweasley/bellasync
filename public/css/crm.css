@@ -839,29 +839,21 @@ body {
   margin-top: 6px;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   flex-wrap: nowrap;
-  overflow-x: auto;
   max-width: 100%;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-  -webkit-overflow-scrolling: touch;
-}
-
-.prof-badges-row::-webkit-scrollbar {
-  display: none;
 }
 
 .prof-services-badge {
-  font-size: 0.72rem;
+  font-size: 0.70rem;
   font-weight: 600;
   color: #1e40af;
   background: #dbeafe;
-  padding: 2.5px 8px;
-  border-radius: 8px;
+  padding: 2.5px 7px;
+  border-radius: 7px;
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 3px;
   border: 1px solid #bfdbfe;
   line-height: 1.2;
   white-space: nowrap;
@@ -872,13 +864,13 @@ body {
   background: #f5f3ff;
   color: #7c3aed;
   border: 1px solid #ddd6fe;
-  font-size: 0.72rem;
+  font-size: 0.70rem;
   font-weight: 700;
-  padding: 2.5px 8px;
-  border-radius: 8px;
+  padding: 2.5px 7px;
+  border-radius: 7px;
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 3px;
   cursor: pointer;
   white-space: nowrap;
   line-height: 1.2;
@@ -2108,7 +2100,10 @@ input[type="checkbox"] {
   }
 
   /* 3. Despesas e Profissionais - Botões de ação em linha única sem quebrar */
-  .prof-info-col,
+  .prof-info-col {
+    width: 100% !important;
+    gap: 10px !important;
+  }
   .expense-info-col {
     width: 100% !important;
   }

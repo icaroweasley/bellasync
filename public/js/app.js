@@ -2450,13 +2450,13 @@ function renderProfessionals(container, actions) {
         <div class="item-main-info" style="flex: 1; min-width: 0;">
           <h4 style="margin: 0; font-size: 1.02rem;">${p.name}</h4>
           <p style="margin: 2px 0 0 0; font-size: 0.82rem; color: var(--muted);">${p.role || 'Profissional'} • ${p.phone || 'Sem telefone'} • Acesso: <strong>${p.access || 'Profissional'}</strong></p>
-          <div class="prof-badges-row" style="display: flex; align-items: center; gap: 6px; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; max-width: 100%;">
+          <div class="prof-badges-row" style="display: flex; align-items: center; gap: 5px; flex-wrap: nowrap; max-width: 100%;">
             <span class="prof-services-badge" style="white-space: nowrap; flex-shrink: 0;" title="Serviços que este profissional atende no agendamento online">
-              ✂️ ${Array.isArray(p.serviceIds) ? `${p.serviceIds.length} serviços atribuídos` : 'Todos os serviços'}
+              ✂️ ${Array.isArray(p.serviceIds) ? `${p.serviceIds.length} serviços` : 'Todos os serviços'}
             </span>
             ${p.requireDeposit ? `
-              <span class="prof-deposit-badge" onclick="openEditProfessionalModal('${p.id}')" style="white-space: nowrap; flex-shrink: 0;" title="Sinal configurado: ${p.depositType === 'fixed' ? `R$ ${(Number(p.depositFixedAmount) || 50).toFixed(2)} fixos` : `${p.depositPercent || 30}%`} via ${p.pixBank || 'Pix'}">
-                💳 Sinal ${p.depositType === 'fixed' ? `R$ ${(Number(p.depositFixedAmount) || 50).toFixed(2)}` : `${p.depositPercent || 30}%`} (${p.pixBank || 'Pix'})
+              <span class="prof-deposit-badge" onclick="openEditProfessionalModal('${p.id}')" style="white-space: nowrap; flex-shrink: 0;" title="Sinal configurado: ${p.depositType === 'fixed' ? `R$ ${(Number(p.depositFixedAmount) || 50).toFixed(2)} fixos` : `${p.depositPercent || 30}%`} via ${p.pixBank || 'Pix'} (Clique para editar)">
+                💳 Sinal ${p.depositType === 'fixed' ? `R$ ${(Number(p.depositFixedAmount) || 50).toFixed(2)}` : `${p.depositPercent || 30}%`}
               </span>
             ` : ''}
           </div>
@@ -4233,37 +4233,33 @@ function renderGoogleContactsCard() {
     <div class="card-shell" style="margin-bottom: 24px; border: 1.5px solid ${isConnected ? '#86efac' : '#fed7aa'}; background: ${isConnected ? 'linear-gradient(180deg, #f0fdf4 0%, #ffffff 100%)' : '#ffffff'}; border-radius: 16px; padding: 18px 14px; box-sizing: border-box; max-width: 100%; overflow: hidden;">
       
       <!-- Cabeçalho -->
-      <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 14px; margin-bottom: 16px; flex-wrap: wrap;">
-        <div style="display: flex; align-items: center; gap: 12px;">
-          <div style="width: 44px; height: 44px; border-radius: 12px; background: ${isConnected ? '#dcfce7' : '#fff7ed'}; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 2px 6px rgba(0,0,0,0.04);">
-            <svg width="24" height="24" viewBox="0 0 24 24">
+      <div style="margin-bottom: 16px;">
+        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 6px;">
+          <div style="width: 38px; height: 38px; border-radius: 10px; background: ${isConnected ? '#dcfce7' : '#fff7ed'}; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 2px 6px rgba(0,0,0,0.04);">
+            <svg width="22" height="22" viewBox="0 0 24 24">
               <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
               <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
               <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
               <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
             </svg>
           </div>
-          <div style="flex: 1; min-width: 0;">
-            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-              <h3 style="margin: 0; font-size: 1.1rem; font-weight: 800; color: var(--ink);">
-                Google Contatos • Captura de Leads
-              </h3>
-              ${isConnected ? `
-                <span style="font-size: 0.74rem; font-weight: 800; color: #15803d; background: #dcfce7; border: 1px solid #86efac; padding: 2px 10px; border-radius: 20px; display: inline-flex; align-items: center; gap: 4px;">
-                  <span style="width: 7px; height: 7px; border-radius: 50%; background: #16a34a; display: inline-block;"></span>
-                  Conectado
-                </span>
-              ` : `
-                <span style="font-size: 0.74rem; font-weight: 700; color: #9a3412; background: #ffedd5; border: 1px solid #fed7aa; padding: 2px 10px; border-radius: 20px;">
-                  Não Conectado
-                </span>
-              `}
-            </div>
-            <p style="font-size: 0.82rem; color: var(--muted); margin: 3px 0 0 0;">
-              Salva automaticamente o número das clientes na agenda do seu celular para nunca mais perder um contato.
-            </p>
-          </div>
+          <h3 style="margin: 0; font-size: 1.08rem; font-weight: 800; color: var(--ink); line-height: 1.25;">
+            Google Contatos • Captura de Leads
+          </h3>
+          ${isConnected ? `
+            <span style="font-size: 0.74rem; font-weight: 800; color: #15803d; background: #dcfce7; border: 1px solid #86efac; padding: 2px 10px; border-radius: 20px; display: inline-flex; align-items: center; gap: 4px;">
+              <span style="width: 7px; height: 7px; border-radius: 50%; background: #16a34a; display: inline-block;"></span>
+              Conectado
+            </span>
+          ` : `
+            <span style="font-size: 0.74rem; font-weight: 700; color: #9a3412; background: #ffedd5; border: 1px solid #fed7aa; padding: 2px 10px; border-radius: 20px;">
+              Não Conectado
+            </span>
+          `}
         </div>
+        <p style="font-size: 0.82rem; color: var(--muted); margin: 0; line-height: 1.45;">
+          Salva automaticamente o número das clientes na agenda do seu celular para nunca mais perder um contato.
+        </p>
       </div>
 
       ${isConnected ? `
@@ -4563,40 +4559,38 @@ function renderFiscalCard() {
     <div class="card-shell" style="margin-bottom: 24px; border: 1.5px solid ${isEnabled ? '#6366f1' : '#cbd5e1'}; background: ${isEnabled ? 'linear-gradient(180deg, #f8faff 0%, #ffffff 100%)' : '#ffffff'}; border-radius: 16px; padding: 18px 16px; box-sizing: border-box; max-width: 100%; overflow: hidden;">
       
       <!-- Cabeçalho do Card -->
-      <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 14px; margin-bottom: 16px; flex-wrap: wrap;">
-        <div style="display: flex; align-items: center; gap: 12px;">
-          <div style="width: 44px; height: 44px; border-radius: 12px; background: ${isEnabled ? 'rgba(99, 102, 241, 0.12)' : '#f1f5f9'}; color: ${isEnabled ? '#4f46e5' : '#64748b'}; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 2px 6px rgba(0,0,0,0.04);">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
-          </div>
-          <div style="flex: 1; min-width: 0;">
-            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-              <h3 style="margin: 0; font-size: 1.1rem; font-weight: 800; color: var(--ink);">
-                Emissão de Nota Fiscal (NFS-e Padrão Nacional / MEI)
-              </h3>
-              ${isEnabled ? `
-                <span style="font-size: 0.74rem; font-weight: 800; color: #4338ca; background: #e0e7ff; border: 1px solid #c7d2fe; padding: 2px 10px; border-radius: 20px; display: inline-flex; align-items: center; gap: 4px;">
-                  <span style="width: 7px; height: 7px; border-radius: 50%; background: #4f46e5; display: inline-block;"></span>
-                  Módulo Ativo
-                </span>
-              ` : `
-                <span style="font-size: 0.74rem; font-weight: 700; color: #64748b; background: #f1f5f9; border: 1px solid #cbd5e1; padding: 2px 10px; border-radius: 20px;">
-                  Desativado
-                </span>
-              `}
-              ${isEnabled ? (isHomologacao ? `
-                <span style="font-size: 0.72rem; font-weight: 700; color: #b45309; background: #fef3c7; border: 1px solid #fde68a; padding: 2px 8px; border-radius: 20px;">
-                  🟡 Ambiente de Testes (Homologação)
-                </span>
-              ` : `
-                <span style="font-size: 0.72rem; font-weight: 800; color: #15803d; background: #dcfce7; border: 1px solid #86efac; padding: 2px 8px; border-radius: 20px;">
-                  🟢 Ambiente de Produção Oficial
-                </span>
-              `) : ''}
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 16px; flex-wrap: wrap;">
+        <div style="flex: 1; min-width: 0;">
+          <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 6px;">
+            <div style="width: 38px; height: 38px; border-radius: 10px; background: ${isEnabled ? 'rgba(99, 102, 241, 0.12)' : '#f1f5f9'}; color: ${isEnabled ? '#4f46e5' : '#64748b'}; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 2px 6px rgba(0,0,0,0.04);">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
             </div>
-            <p style="font-size: 0.82rem; color: var(--muted); margin: 3px 0 0 0;">
-              Emita notas fiscais de serviço para as clientes em 1 toque, sem mensalidade de APIs pagas e com envio direto no WhatsApp.
-            </p>
+            <h3 style="margin: 0; font-size: 1.08rem; font-weight: 800; color: var(--ink); line-height: 1.25;">
+              Emissão de Nota Fiscal (NFS-e Padrão Nacional / MEI)
+            </h3>
+            ${isEnabled ? `
+              <span style="font-size: 0.74rem; font-weight: 800; color: #4338ca; background: #e0e7ff; border: 1px solid #c7d2fe; padding: 2px 10px; border-radius: 20px; display: inline-flex; align-items: center; gap: 4px;">
+                <span style="width: 7px; height: 7px; border-radius: 50%; background: #4f46e5; display: inline-block;"></span>
+                Módulo Ativo
+              </span>
+            ` : `
+              <span style="font-size: 0.74rem; font-weight: 700; color: #64748b; background: #f1f5f9; border: 1px solid #cbd5e1; padding: 2px 10px; border-radius: 20px;">
+                Desativado
+              </span>
+            `}
+            ${isEnabled ? (isHomologacao ? `
+              <span style="font-size: 0.72rem; font-weight: 700; color: #b45309; background: #fef3c7; border: 1px solid #fde68a; padding: 2px 8px; border-radius: 20px;">
+                🟡 Testes (Homologação)
+              </span>
+            ` : `
+              <span style="font-size: 0.72rem; font-weight: 800; color: #15803d; background: #dcfce7; border: 1px solid #86efac; padding: 2px 8px; border-radius: 20px;">
+                🟢 Produção Oficial
+              </span>
+            `) : ''}
           </div>
+          <p style="font-size: 0.82rem; color: var(--muted); margin: 0; line-height: 1.45;">
+            Emita notas fiscais de serviço para as clientes em 1 toque, sem mensalidade de APIs pagas e com envio direto no WhatsApp.
+          </p>
         </div>
 
         <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
