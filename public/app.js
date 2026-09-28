@@ -25,6 +25,24 @@ function getButterflyAvatar(name) {
   return `/images/butterflies/butterfly-${index}.svg`;
 }
 
+function formatPhone(phone) {
+  if (!phone) return '';
+  const digits = String(phone).replace(/\D/g, '');
+  if (digits.length === 11) {
+    return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+  }
+  if (digits.length === 10) {
+    return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+  }
+  if (digits.length === 12 && digits.startsWith('55')) {
+    return `(${digits.slice(2, 4)}) ${digits.slice(4, 8)}-${digits.slice(8)}`;
+  }
+  if (digits.length === 13 && digits.startsWith('55')) {
+    return `(${digits.slice(2, 4)}) ${digits.slice(4, 9)}-${digits.slice(9)}`;
+  }
+  return phone;
+}
+
 function formatDurationHours(min) {
   min = Number(min) || 0;
   if (min === 0) return '0 min';
@@ -2444,36 +2462,54 @@ function renderProfessionals(container, actions) {
   }
 
   const profsHtml = state.professionals.map(p => `
-    <div class="data-item-card prof-item-card">
-      <div class="prof-info-col" style="display: flex; align-items: center; gap: 14px; min-width: 0;">
-        <img src="${p.avatar || getButterflyAvatar(p.name)}" alt="${p.name}" style="width: 48px; height: 48px; border-radius: 50%; flex-shrink: 0;">
-        <div class="item-main-info" style="flex: 1; min-width: 0;">
-          <h4 style="margin: 0; font-size: 1.02rem;">${p.name}</h4>
-          <p style="margin: 2px 0 0 0; font-size: 0.82rem; color: var(--muted);">${p.role || 'Profissional'} • ${p.phone || 'Sem telefone'} • Acesso: <strong>${p.access || 'Profissional'}</strong></p>
-          <div class="prof-badges-row" style="display: flex; align-items: center; gap: 5px; flex-wrap: nowrap; max-width: 100%;">
-            <span class="prof-services-badge" style="white-space: nowrap; flex-shrink: 0;" title="Serviços que este profissional atende no agendamento online">
-              ✂️ ${Array.isArray(p.serviceIds) ? `${p.serviceIds.length} serviços` : 'Todos os serviços'}
+    <div class="prof-card-shell">
+      
+      <!-- Linha 1: Avatar + Nome + Badge Acesso + Telefone formatado -->
+      <div class="prof-card-main">
+        <img src="${p.avatar || getButterflyAvatar(p.name)}" alt="${p.name}" class="prof-avatar">
+        <div class="prof-card-details">
+          <div class="prof-card-name-row">
+            <h4 class="prof-card-name">${p.name}</h4>
+            <span class="prof-access-badge ${p.access === 'Gestor' ? 'gestor' : 'prof'}">
+              ${p.access || 'Profissional'}
             </span>
-            ${p.requireDeposit ? `
-              <span class="prof-deposit-badge" onclick="openEditProfessionalModal('${p.id}')" style="white-space: nowrap; flex-shrink: 0;" title="Sinal configurado: ${p.depositType === 'fixed' ? `R$ ${(Number(p.depositFixedAmount) || 50).toFixed(2)} fixos` : `${p.depositPercent || 30}%`} via ${p.pixBank || 'Pix'} (Clique para editar)">
-                💳 Sinal ${p.depositType === 'fixed' ? `R$ ${(Number(p.depositFixedAmount) || 50).toFixed(2)}` : `${p.depositPercent || 30}%`}
-              </span>
-            ` : ''}
+          </div>
+          <div class="prof-card-subtext">
+            <span>📱 ${p.phone ? formatPhone(p.phone) : 'Sem telefone'}</span>
+            ${p.role && p.role !== 'Profissional' && p.role !== p.access ? `<span class="prof-sub-sep">•</span><span>${p.role}</span>` : ''}
           </div>
         </div>
       </div>
-      <div class="item-actions-group prof-actions-group">
+
+      <!-- Linha 2: Badges lado a lado (100% largura do card, sem corte!) -->
+      <div class="prof-badges-strip">
+        <span class="prof-services-badge" title="Serviços atendidos no agendamento online">
+          ✂️ ${Array.isArray(p.serviceIds) ? `${p.serviceIds.length} serviços` : 'Todos os serviços'}
+        </span>
+        ${p.requireDeposit ? `
+          <span class="prof-deposit-badge" onclick="openEditProfessionalModal('${p.id}')" title="Sinal configurado: ${p.depositType === 'fixed' ? `R$ ${(Number(p.depositFixedAmount) || 50).toFixed(0)} fixos` : `${p.depositPercent || 30}%`} via ${p.pixBank || 'Pix'} (Clique para editar)">
+            💳 Sinal ${p.depositType === 'fixed' ? `R$ ${(Number(p.depositFixedAmount) || 50).toFixed(0)}` : `${p.depositPercent || 30}%`}${p.pixBank ? ` (${p.pixBank})` : ''}
+          </span>
+        ` : `
+          <span class="prof-deposit-badge none" title="Sem sinal obrigatório configurado">
+            Sem sinal obrigatório
+          </span>
+        `}
+      </div>
+
+      <!-- Linha 3: Botões de Ação -->
+      <div class="prof-card-actions">
         ${isManager ? `
-          <button class="btn-card-action ${p.showInBooking ? 'pay' : 'edit'}" onclick="toggleProfBookingVisibility('${p.id}')" title="Clique para alternar visibilidade no agendamento online">
-            ${p.showInBooking ? 'Visível no Link' : 'Oculto'}
+          <button class="btn-card-action ${p.showInBooking ? 'pay' : 'edit'}" onclick="toggleProfBookingVisibility('${p.id}')" title="Alternar visibilidade no agendamento online" style="flex: 1.2;">
+            ${p.showInBooking ? '✓ Visível no Link' : '👁️ Oculto no Link'}
           </button>
           <button class="btn-card-action edit" onclick="openEditProfessionalModal('${p.id}')" title="Editar Profissional">
-            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-            Editar
+            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+            <span>Editar</span>
           </button>
           <button class="btn-card-action delete" onclick="deleteProfessional('${p.id}')" title="Excluir Profissional">
-            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-            Excluir
+            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+            <span>Excluir</span>
           </button>
         ` : `
           <span style="font-size:0.8rem; font-weight:600; color:var(--muted); padding:4px 10px; background:#f1f5f9; border-radius:8px;">
@@ -2485,21 +2521,23 @@ function renderProfessionals(container, actions) {
   `).join('');
 
   const subscriptionBannerHtml = isManager ? `
-    <div class="subscription-banner-card">
-      <div class="subscription-banner-info">
-        <div style="background: rgba(255, 105, 0, 0.1); width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-          <svg width="22" height="22" fill="none" stroke="var(--orange)" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+    <div class="subscription-banner-clean">
+      <div class="banner-left">
+        <div class="banner-icon">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
         </div>
         <div>
-          <h5 style="margin: 0; font-size: 0.92rem; color: var(--ink); font-weight: 700;">Regra de Assinatura por Profissionais</h5>
-          <p style="margin: 2px 0 0 0; font-size: 0.8rem; color: var(--muted); line-height: 1.4;">
-            O plano inclui até <strong>5 profissionais</strong>. Do 6º ao 10º profissional (máximo 10), acrescenta <strong>+R$ 10,00/mês</strong> por cada profissional.
-          </p>
+          <div class="banner-title">
+            Plano do Salão • <strong>${profCount} de 10</strong> profissionais
+          </div>
+          <div class="banner-sub">
+            ${extraProfs > 0 ? `+${extraProfs} extras inclusos (+R$ ${(extraProfs * 10).toFixed(2).replace('.', ',')})` : 'Até 5 profissionais inclusos sem acréscimo'}
+          </div>
         </div>
       </div>
-      <div class="subscription-banner-price-box">
-        <small style="display: block; font-size: 0.72rem; color: var(--muted); font-weight: 500;">Mensalidade do Salão (${profCount}/10 profs)</small>
-        <strong style="font-size: 1.05rem; color: var(--orange); font-weight: 800;">R$ ${totalMonthly.toFixed(2).replace('.', ',')} <span style="font-size: 0.75rem; font-weight: normal; color: var(--muted);">/ mês</span></strong>
+      <div class="banner-price">
+        <span class="banner-amount">R$ ${totalMonthly.toFixed(2).replace('.', ',')}</span>
+        <span class="banner-period">/ mês</span>
       </div>
     </div>
   ` : '';
@@ -2552,26 +2590,27 @@ function renderClients(container, actions) {
           ` : ''}
           ${c.hasNoShowHistory ? `<span style="font-size:0.72rem; font-weight:700; color:#b91c1c; background:#fee2e2; border:1px solid #fecaca; padding:2px 8px; border-radius:12px;">⚠️ Histórico de Falta (Taxa 50%)</span>` : ''}
         </div>
-        <p style="margin-top:4px;">WhatsApp: ${c.phone} ${c.birthday ? '• Aniversário: ' + c.birthday : ''}</p>
+        <p style="margin-top:4px;">📱 ${formatPhone(c.phone)} ${c.birthday ? '• 🎂 Aniversário: ' + c.birthday : ''}</p>
         ${c.notes ? `<p style="font-size:0.78rem; color:var(--muted); margin-top:2px;">Obs: ${c.notes}</p>` : ''}
       </div>
-      <div class="item-actions-group">
-        <a href="https://wa.me/55${c.phone.replace(/\D/g, '')}" target="_blank" class="btn-falcon btn-secondary">
-          WhatsApp
+      <div class="item-actions-group client-actions-group" style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
+        <a href="https://wa.me/55${c.phone.replace(/\D/g, '')}" target="_blank" class="btn-card-action pay" style="text-decoration: none;" title="Abrir conversa no WhatsApp">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91C2.13 13.66 2.59 15.36 3.45 16.86L2.05 22L7.3 20.62C8.75 21.41 10.38 21.83 12.04 21.83C17.5 21.83 21.95 17.38 21.95 11.92C21.95 9.27 20.92 6.78 19.05 4.91C17.18 3.03 14.69 2 12.04 2ZM12.05 20.16C10.57 20.16 9.12 19.76 7.85 19.01L7.55 18.83L4.43 19.65L5.26 16.61L5.06 16.29C4.24 14.99 3.81 13.47 3.81 11.91C3.81 7.37 7.5 3.68 12.05 3.68C14.25 3.68 16.31 4.54 17.87 6.1C19.42 7.66 20.28 9.72 20.27 11.92C20.28 16.46 16.59 20.16 12.05 20.16ZM16.56 14.46C16.31 14.33 15.09 13.73 14.86 13.65C14.63 13.56 14.47 13.52 14.3 13.77C14.14 14.02 13.66 14.58 13.52 14.75C13.37 14.92 13.23 14.94 12.98 14.81C12.73 14.69 11.93 14.42 10.98 13.58C10.24 12.92 9.74 12.11 9.6 11.86C9.45 11.61 9.58 11.48 9.71 11.35C9.82 11.24 9.96 11.06 10.08 10.91C10.21 10.77 10.25 10.66 10.33 10.5C10.41 10.33 10.37 10.19 10.31 10.06C10.25 9.94 9.76 8.73 9.55 8.24C9.35 7.75 9.15 7.82 8.99 7.81C8.85 7.8 8.68 7.8 8.52 7.8C8.35 7.8 8.08 7.86 7.85 8.11C7.62 8.36 6.98 8.96 6.98 10.18C6.98 11.4 7.87 12.58 7.99 12.74C8.11 12.91 9.74 15.42 12.23 16.5C12.82 16.76 13.28 16.91 13.64 17.03C14.23 17.22 14.77 17.19 15.2 17.13C15.68 17.06 16.67 16.53 16.88 15.95C17.08 15.37 17.08 14.88 17.02 14.77C16.96 14.67 16.81 14.59 16.56 14.46Z"/></svg>
+          <span>WhatsApp</span>
         </a>
         ${isManager ? `
           <button class="btn-card-action" onclick="syncSingleClientToGoogle('${c.id}')" title="Enviar ou atualizar no Google Contatos" style="color:${c.googleContactSynced ? '#15803d' : 'var(--orange)'};">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15h-2v-6h2v6zm4 0h-2v-6h2v6zm-2-8c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1z" fill="currentColor"/></svg>
-            ${c.googleContactSynced ? 'Atualizar Google' : 'Salvar no Google'}
+            <span>${c.googleContactSynced ? 'Google ✓' : 'Salvar Google'}</span>
           </button>
         ` : ''}
         <button class="btn-card-action edit" onclick="openEditClientModal('${c.id}')" title="Editar Cliente">
-          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-          Editar
+          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+          <span>Editar</span>
         </button>
         <button class="btn-card-action delete" onclick="deleteClient('${c.id}')" title="Excluir Cliente">
-          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-          Excluir
+          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+          <span>Excluir</span>
         </button>
       </div>
     </div>
@@ -4232,57 +4271,50 @@ function renderGoogleContactsCard() {
   return `
     <div class="card-shell" style="margin-bottom: 24px; border: 1.5px solid ${isConnected ? '#86efac' : '#fed7aa'}; background: ${isConnected ? 'linear-gradient(180deg, #f0fdf4 0%, #ffffff 100%)' : '#ffffff'}; border-radius: 16px; padding: 18px 14px; box-sizing: border-box; max-width: 100%; overflow: hidden;">
       
-      <!-- Cabeçalho -->
-      <div style="margin-bottom: 16px;">
-        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 6px;">
-          <div style="width: 38px; height: 38px; border-radius: 10px; background: ${isConnected ? '#dcfce7' : '#fff7ed'}; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 2px 6px rgba(0,0,0,0.04);">
-            <svg width="22" height="22" viewBox="0 0 24 24">
+      <!-- Cabeçalho: Ícone Google AO LADO do Título e Status à direita -->
+      <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; margin-bottom: 6px;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 8px; background: #ffffff; border: 1px solid #e2e8f0; flex-shrink: 0; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+            <svg width="17" height="17" viewBox="0 0 24 24">
               <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
               <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
               <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
               <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
             </svg>
-          </div>
-          <h3 style="margin: 0; font-size: 1.08rem; font-weight: 800; color: var(--ink); line-height: 1.25;">
-            Google Contatos • Captura de Leads
+          </span>
+          <h3 style="margin: 0; font-size: 1.05rem; font-weight: 800; color: var(--ink);">
+            Google Contatos
           </h3>
-          ${isConnected ? `
-            <span style="font-size: 0.74rem; font-weight: 800; color: #15803d; background: #dcfce7; border: 1px solid #86efac; padding: 2px 10px; border-radius: 20px; display: inline-flex; align-items: center; gap: 4px;">
-              <span style="width: 7px; height: 7px; border-radius: 50%; background: #16a34a; display: inline-block;"></span>
-              Conectado
-            </span>
-          ` : `
-            <span style="font-size: 0.74rem; font-weight: 700; color: #9a3412; background: #ffedd5; border: 1px solid #fed7aa; padding: 2px 10px; border-radius: 20px;">
-              Não Conectado
-            </span>
-          `}
         </div>
-        <p style="font-size: 0.82rem; color: var(--muted); margin: 0; line-height: 1.45;">
-          Salva automaticamente o número das clientes na agenda do seu celular para nunca mais perder um contato.
-        </p>
+        <span style="font-size: 0.72rem; font-weight: 700; ${isConnected ? 'color: #15803d; background: #dcfce7; border: 1px solid #86efac;' : 'color: #9a3412; background: #ffedd5; border: 1px solid #fed7aa;'} padding: 2px 8px; border-radius: 12px; display: inline-flex; align-items: center; gap: 4px;">
+          ${isConnected ? '<span style="width: 6px; height: 6px; border-radius: 50%; background: #16a34a;"></span>Conectado' : 'Não Conectado'}
+        </span>
       </div>
+
+      <p style="font-size: 0.80rem; color: var(--muted); margin: 0 0 14px 0; line-height: 1.4;">
+        Captura de Leads • Salva automaticamente os números das clientes na agenda do seu celular para nunca mais perder um contato.
+      </p>
 
       ${isConnected ? `
         <!-- Painel Conectado -->
-        <div style="background: #ffffff; border: 1.5px solid #86efac; border-radius: 14px; padding: 16px; margin-bottom: 18px; display: flex; flex-direction: column; gap: 12px; box-shadow: 0 2px 8px rgba(22,163,74,0.06);">
-          <div style="display: flex; align-items: center; gap: 12px; width: 100%; min-width: 0;">
-            <div style="width: 38px; height: 38px; border-radius: 50%; background: #dcfce7; color: #15803d; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1.1rem; flex-shrink: 0;">
+        <div style="background: #ffffff; border: 1.5px solid #86efac; border-radius: 14px; padding: 14px 16px; margin-bottom: 16px; box-shadow: 0 2px 8px rgba(22,163,74,0.06);">
+          <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 10px;">
+            <div style="width: 34px; height: 34px; border-radius: 50%; background: #dcfce7; color: #15803d; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1rem; flex-shrink: 0;">
               ✓
             </div>
             <div style="flex: 1; min-width: 0;">
-              <div style="font-size: 0.72rem; text-transform: uppercase; font-weight: 700; color: #166534; letter-spacing: 0.05em;">
+              <span style="font-size: 0.68rem; text-transform: uppercase; font-weight: 700; color: #166534; letter-spacing: 0.05em; display: block;">
                 Conta Google Conectada:
-              </div>
-              <div style="font-size: 0.95rem; font-weight: 800; color: #14532d; margin-top: 1px; word-break: break-word; overflow-wrap: anywhere; line-height: 1.3;">
+              </span>
+              <strong style="font-size: 0.94rem; color: #14532d; word-break: break-all; display: block;">
                 ${g.connectedEmail || 'Conta Google Autorizada'}
-              </div>
-              ${g.connectedName ? `<div style="font-size: 0.8rem; color: #15803d; margin-top: 2px;">${g.connectedName}</div>` : ''}
+              </strong>
+              ${g.connectedName ? `<span style="font-size: 0.76rem; color: #15803d; display: block;">${g.connectedName}</span>` : ''}
             </div>
           </div>
-          <div style="border-top: 1px dashed #bbf7d0; padding-top: 10px; width: 100%; display: flex; justify-content: flex-end;">
-            <button type="button" class="btn-falcon btn-danger" onclick="disconnectGoogleAccount()" style="padding: 8px 16px; font-size: 0.82rem; font-weight: 700; width: 100%; display: flex; align-items: center; justify-content: center; gap: 6px; border-radius: 10px;">
-              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18.36 6.64a9 9 0 1 1-12.73 0M12 2v10"></path></svg>
-              <span>Desconectar Conta</span>
+          <div style="border-top: 1px dashed #bbf7d0; padding-top: 10px; display: flex; justify-content: flex-end;">
+            <button type="button" class="btn-falcon btn-danger" onclick="disconnectGoogleAccount()" style="padding: 6px 14px; font-size: 0.78rem; font-weight: 700; border-radius: 8px;">
+              Desconectar Conta
             </button>
           </div>
         </div>
@@ -4558,47 +4590,41 @@ function renderFiscalCard() {
   return `
     <div class="card-shell" style="margin-bottom: 24px; border: 1.5px solid ${isEnabled ? '#6366f1' : '#cbd5e1'}; background: ${isEnabled ? 'linear-gradient(180deg, #f8faff 0%, #ffffff 100%)' : '#ffffff'}; border-radius: 16px; padding: 18px 16px; box-sizing: border-box; max-width: 100%; overflow: hidden;">
       
-      <!-- Cabeçalho do Card -->
-      <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 16px; flex-wrap: wrap;">
-        <div style="flex: 1; min-width: 0;">
-          <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 6px;">
-            <div style="width: 38px; height: 38px; border-radius: 10px; background: ${isEnabled ? 'rgba(99, 102, 241, 0.12)' : '#f1f5f9'}; color: ${isEnabled ? '#4f46e5' : '#64748b'}; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 2px 6px rgba(0,0,0,0.04);">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
-            </div>
-            <h3 style="margin: 0; font-size: 1.08rem; font-weight: 800; color: var(--ink); line-height: 1.25;">
-              Emissão de Nota Fiscal (NFS-e Padrão Nacional / MEI)
-            </h3>
-            ${isEnabled ? `
-              <span style="font-size: 0.74rem; font-weight: 800; color: #4338ca; background: #e0e7ff; border: 1px solid #c7d2fe; padding: 2px 10px; border-radius: 20px; display: inline-flex; align-items: center; gap: 4px;">
-                <span style="width: 7px; height: 7px; border-radius: 50%; background: #4f46e5; display: inline-block;"></span>
-                Módulo Ativo
-              </span>
-            ` : `
-              <span style="font-size: 0.74rem; font-weight: 700; color: #64748b; background: #f1f5f9; border: 1px solid #cbd5e1; padding: 2px 10px; border-radius: 20px;">
-                Desativado
-              </span>
-            `}
-            ${isEnabled ? (isHomologacao ? `
-              <span style="font-size: 0.72rem; font-weight: 700; color: #b45309; background: #fef3c7; border: 1px solid #fde68a; padding: 2px 8px; border-radius: 20px;">
-                🟡 Testes (Homologação)
-              </span>
-            ` : `
-              <span style="font-size: 0.72rem; font-weight: 800; color: #15803d; background: #dcfce7; border: 1px solid #86efac; padding: 2px 8px; border-radius: 20px;">
-                🟢 Produção Oficial
-              </span>
-            `) : ''}
-          </div>
-          <p style="font-size: 0.82rem; color: var(--muted); margin: 0; line-height: 1.45;">
-            Emita notas fiscais de serviço para as clientes em 1 toque, sem mensalidade de APIs pagas e com envio direto no WhatsApp.
-          </p>
+      <!-- Cabeçalho: Ícone Fiscal AO LADO do Título e Status à direita -->
+      <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; margin-bottom: 6px;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 8px; background: ${isEnabled ? 'rgba(99, 102, 241, 0.12)' : '#f1f5f9'}; color: ${isEnabled ? '#4f46e5' : '#64748b'}; flex-shrink: 0;">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+          </span>
+          <h3 style="margin: 0; font-size: 1.05rem; font-weight: 800; color: var(--ink);">
+            Nota Fiscal de Serviço (NFS-e)
+          </h3>
         </div>
+        <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+          <span style="font-size: 0.72rem; font-weight: 700; ${isEnabled ? 'color: #4338ca; background: #e0e7ff; border: 1px solid #c7d2fe;' : 'color: #64748b; background: #f1f5f9; border: 1px solid #cbd5e1;'} padding: 2px 8px; border-radius: 12px;">
+            ${isEnabled ? 'Módulo Ativo' : 'Desativado'}
+          </span>
+          ${isEnabled ? (isHomologacao ? `
+            <span style="font-size: 0.70rem; font-weight: 700; color: #b45309; background: #fef3c7; border: 1px solid #fde68a; padding: 2px 6px; border-radius: 10px;">
+              🟡 Testes
+            </span>
+          ` : `
+            <span style="font-size: 0.70rem; font-weight: 800; color: #15803d; background: #dcfce7; border: 1px solid #86efac; padding: 2px 6px; border-radius: 10px;">
+              🟢 Produção
+            </span>
+          `) : ''}
+        </div>
+      </div>
 
-        <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
-          <button type="button" class="btn-falcon btn-secondary" onclick="openFiscalInvoicesModal()" style="font-size: 0.82rem; font-weight: 700; padding: 7px 12px; display: inline-flex; align-items: center; gap: 6px; border-radius: 10px;">
-            <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
-            <span>Notas Emitidas</span>
-          </button>
-        </div>
+      <!-- Linha de descrição + Botão Notas Emitidas -->
+      <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 14px; flex-wrap: wrap;">
+        <p style="font-size: 0.80rem; color: var(--muted); margin: 0; line-height: 1.4; flex: 1; min-width: 200px;">
+          Padrão Nacional / MEI • Emita notas em 1 toque sem mensalidades extras.
+        </p>
+        <button type="button" class="btn-falcon btn-secondary" onclick="openFiscalInvoicesModal()" style="font-size: 0.78rem; font-weight: 700; padding: 5px 12px; display: inline-flex; align-items: center; gap: 6px; border-radius: 8px;">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+          <span>Notas Emitidas</span>
+        </button>
       </div>
 
       <!-- Ativação / Toggle Principal -->

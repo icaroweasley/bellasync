@@ -2014,9 +2014,21 @@ input[type="checkbox"] {
 
   /* 3. Cards e Contêineres Limpos sem Blur */
   .view-container {
-    padding: 14px 12px 90px 12px !important;
+    padding: 14px 12px 140px 12px !important;
     width: 100% !important;
     box-sizing: border-box !important;
+  }
+
+  .data-list {
+    padding-bottom: 24px !important;
+  }
+
+  .fab-button {
+    right: 18px !important;
+    bottom: 22px !important;
+    width: 52px !important;
+    height: 52px !important;
+    box-shadow: 0 8px 24px rgba(255, 105, 0, 0.42) !important;
   }
 
   .card-shell,
@@ -3662,6 +3674,288 @@ input[type="checkbox"] {
   font-weight: 600;
   color: var(--ink, #0f172a);
 }
+
+/* ==========================================================================
+   CARDS DE PROFISSIONAIS (Redesign Mobile-First & Desktop)
+   ========================================================================== */
+.prof-card-shell {
+  background: #ffffff !important;
+  border: 1px solid rgba(226, 232, 240, 0.95) !important;
+  border-radius: 16px !important;
+  padding: 14px 16px !important;
+  margin-bottom: 12px !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 10px !important;
+  box-sizing: border-box !important;
+  width: 100% !important;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.prof-card-shell:hover {
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06) !important;
+}
+
+.prof-card-main {
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  width: 100% !important;
+  min-width: 0 !important;
+}
+
+.prof-avatar {
+  width: 44px !important;
+  height: 44px !important;
+  border-radius: 50% !important;
+  object-fit: cover !important;
+  flex-shrink: 0 !important;
+  border: 2px solid #ffffff !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08) !important;
+}
+
+.prof-card-details {
+  flex: 1 !important;
+  min-width: 0 !important;
+}
+
+.prof-card-name-row {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 8px !important;
+}
+
+.prof-card-name {
+  margin: 0 !important;
+  font-size: 1rem !important;
+  font-weight: 700 !important;
+  color: var(--ink) !important;
+  line-height: 1.25 !important;
+  white-space: normal !important;
+  word-break: break-word !important;
+}
+
+.prof-access-badge {
+  font-size: 0.68rem !important;
+  font-weight: 700 !important;
+  padding: 2px 8px !important;
+  border-radius: 6px !important;
+  flex-shrink: 0 !important;
+  line-height: 1.3 !important;
+}
+
+.prof-access-badge.gestor {
+  background: #fef3c7 !important;
+  color: #92400e !important;
+  border: 1px solid #fde68a !important;
+}
+
+.prof-access-badge.prof {
+  background: #f1f5f9 !important;
+  color: #475569 !important;
+  border: 1px solid #e2e8f0 !important;
+}
+
+.prof-card-subtext {
+  margin-top: 3px !important;
+  font-size: 0.78rem !important;
+  color: var(--muted) !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  flex-wrap: wrap !important;
+}
+
+.prof-sub-sep {
+  color: #cbd5e1 !important;
+}
+
+/* Faixa de badges: largura total, lado a lado, sem corte */
+.prof-badges-strip {
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  flex-wrap: wrap !important;
+  width: 100% !important;
+  padding-top: 8px !important;
+  border-top: 1px solid #f1f5f9 !important;
+  box-sizing: border-box !important;
+}
+
+.prof-services-badge {
+  font-size: 0.72rem !important;
+  font-weight: 600 !important;
+  color: #1e40af !important;
+  background: #eff6ff !important;
+  border: 1px solid #bfdbfe !important;
+  padding: 3px 8px !important;
+  border-radius: 8px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  white-space: nowrap !important;
+  line-height: 1.2 !important;
+}
+
+.prof-deposit-badge {
+  font-size: 0.72rem !important;
+  font-weight: 700 !important;
+  color: #7c3aed !important;
+  background: #f5f3ff !important;
+  border: 1px solid #ddd6fe !important;
+  padding: 3px 8px !important;
+  border-radius: 8px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  white-space: nowrap !important;
+  cursor: pointer !important;
+  line-height: 1.2 !important;
+  transition: all 0.15s ease !important;
+}
+
+.prof-deposit-badge:hover {
+  background: #ede9fe !important;
+  border-color: #c4b5fd !important;
+}
+
+.prof-deposit-badge.none {
+  font-size: 0.72rem !important;
+  color: #94a3b8 !important;
+  font-weight: 500 !important;
+  background: transparent !important;
+  border: none !important;
+  padding: 2px 4px !important;
+  cursor: default !important;
+}
+
+.prof-card-actions {
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  width: 100% !important;
+  padding-top: 8px !important;
+  border-top: 1px solid #f1f5f9 !important;
+  box-sizing: border-box !important;
+}
+
+.prof-card-actions .btn-card-action {
+  flex: 1 1 0 !important;
+  min-width: 0 !important;
+  padding: 0 4px !important;
+  font-size: 0.76rem !important;
+  justify-content: center !important;
+  text-align: center !important;
+  white-space: nowrap !important;
+}
+
+/* Banner de assinatura elegante e compacto */
+.subscription-banner-clean {
+  background: linear-gradient(135deg, #fff7ed 0%, #ffffff 100%) !important;
+  border: 1.5px solid #fed7aa !important;
+  border-radius: 14px !important;
+  padding: 10px 14px !important;
+  margin-bottom: 14px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 10px !important;
+  box-shadow: 0 2px 8px rgba(255, 105, 0, 0.04) !important;
+  box-sizing: border-box !important;
+  width: 100% !important;
+}
+
+.subscription-banner-clean .banner-left {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  min-width: 0 !important;
+}
+
+.subscription-banner-clean .banner-icon {
+  width: 36px !important;
+  height: 36px !important;
+  border-radius: 10px !important;
+  background: rgba(255, 105, 0, 0.12) !important;
+  color: var(--orange) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex-shrink: 0 !important;
+}
+
+.subscription-banner-clean .banner-title {
+  font-size: 0.84rem !important;
+  font-weight: 700 !important;
+  color: #9a3412 !important;
+  line-height: 1.25 !important;
+}
+
+.subscription-banner-clean .banner-sub {
+  font-size: 0.72rem !important;
+  color: #7c2d12 !important;
+  margin-top: 2px !important;
+}
+
+.subscription-banner-clean .banner-price {
+  text-align: right !important;
+  flex-shrink: 0 !important;
+}
+
+.subscription-banner-clean .banner-amount {
+  font-size: 1.05rem !important;
+  font-weight: 800 !important;
+  color: var(--orange) !important;
+  display: block !important;
+  line-height: 1.1 !important;
+}
+
+.subscription-banner-clean .banner-period {
+  font-size: 0.70rem !important;
+  color: var(--muted) !important;
+  font-weight: 500 !important;
+}
+
+@media (min-width: 769px) {
+  .prof-card-shell {
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 16px !important;
+    padding: 14px 20px !important;
+  }
+
+  .prof-card-main {
+    flex: 1 1 320px !important;
+    width: auto !important;
+  }
+
+  .prof-badges-strip {
+    flex: 0 1 auto !important;
+    width: auto !important;
+    padding-top: 0 !important;
+    border-top: none !important;
+    border-left: 1px solid #f1f5f9 !important;
+    border-right: 1px solid #f1f5f9 !important;
+    padding: 0 16px !important;
+  }
+
+  .prof-card-actions {
+    flex: 0 0 auto !important;
+    width: auto !important;
+    padding-top: 0 !important;
+    border-top: none !important;
+  }
+
+  .prof-card-actions .btn-card-action {
+    flex: 0 0 auto !important;
+    padding: 0 12px !important;
+    font-size: 0.80rem !important;
+  }
+}
+
 
 
 
