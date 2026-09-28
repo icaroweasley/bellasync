@@ -840,30 +840,41 @@ body {
   display: flex;
   align-items: center;
   gap: 6px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  max-width: 100%;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.prof-badges-row::-webkit-scrollbar {
+  display: none;
 }
 
 .prof-services-badge {
-  font-size: 0.74rem;
+  font-size: 0.72rem;
   font-weight: 600;
   color: #1e40af;
   background: #dbeafe;
-  padding: 3px 9px;
+  padding: 2.5px 8px;
   border-radius: 8px;
   display: inline-flex;
   align-items: center;
   gap: 4px;
   border: 1px solid #bfdbfe;
   line-height: 1.2;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .prof-deposit-badge {
   background: #f5f3ff;
   color: #7c3aed;
   border: 1px solid #ddd6fe;
-  font-size: 0.74rem;
+  font-size: 0.72rem;
   font-weight: 700;
-  padding: 3px 9px;
+  padding: 2.5px 8px;
   border-radius: 8px;
   display: inline-flex;
   align-items: center;
@@ -872,6 +883,7 @@ body {
   white-space: nowrap;
   line-height: 1.2;
   transition: all 0.15s ease;
+  flex-shrink: 0;
 }
 
 .prof-deposit-badge:hover {

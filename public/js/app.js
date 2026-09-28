@@ -2450,12 +2450,12 @@ function renderProfessionals(container, actions) {
         <div class="item-main-info" style="flex: 1; min-width: 0;">
           <h4 style="margin: 0; font-size: 1.02rem;">${p.name}</h4>
           <p style="margin: 2px 0 0 0; font-size: 0.82rem; color: var(--muted);">${p.role || 'Profissional'} • ${p.phone || 'Sem telefone'} • Acesso: <strong>${p.access || 'Profissional'}</strong></p>
-          <div class="prof-badges-row">
-            <span class="prof-services-badge" title="Serviços que este profissional atende no agendamento online">
+          <div class="prof-badges-row" style="display: flex; align-items: center; gap: 6px; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; max-width: 100%;">
+            <span class="prof-services-badge" style="white-space: nowrap; flex-shrink: 0;" title="Serviços que este profissional atende no agendamento online">
               ✂️ ${Array.isArray(p.serviceIds) ? `${p.serviceIds.length} serviços atribuídos` : 'Todos os serviços'}
             </span>
             ${p.requireDeposit ? `
-              <span class="prof-deposit-badge" onclick="openEditProfessionalModal('${p.id}')" title="Sinal configurado: ${p.depositType === 'fixed' ? `R$ ${(Number(p.depositFixedAmount) || 50).toFixed(2)} fixos` : `${p.depositPercent || 30}%`} via ${p.pixBank || 'Pix'}">
+              <span class="prof-deposit-badge" onclick="openEditProfessionalModal('${p.id}')" style="white-space: nowrap; flex-shrink: 0;" title="Sinal configurado: ${p.depositType === 'fixed' ? `R$ ${(Number(p.depositFixedAmount) || 50).toFixed(2)} fixos` : `${p.depositPercent || 30}%`} via ${p.pixBank || 'Pix'}">
                 💳 Sinal ${p.depositType === 'fixed' ? `R$ ${(Number(p.depositFixedAmount) || 50).toFixed(2)}` : `${p.depositPercent || 30}%`} (${p.pixBank || 'Pix'})
               </span>
             ` : ''}
@@ -4268,24 +4268,27 @@ function renderGoogleContactsCard() {
 
       ${isConnected ? `
         <!-- Painel Conectado -->
-        <div style="background: #ffffff; border: 1.5px solid #86efac; border-radius: 14px; padding: 14px 16px; margin-bottom: 18px; display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; box-shadow: 0 2px 8px rgba(22,163,74,0.06);">
-          <div style="display: flex; align-items: center; gap: 12px; min-width: 0; flex: 1;">
-            <div style="width: 36px; height: 36px; border-radius: 50%; background: #dcfce7; color: #15803d; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1.1rem; flex-shrink: 0;">
+        <div style="background: #ffffff; border: 1.5px solid #86efac; border-radius: 14px; padding: 16px; margin-bottom: 18px; display: flex; flex-direction: column; gap: 12px; box-shadow: 0 2px 8px rgba(22,163,74,0.06);">
+          <div style="display: flex; align-items: center; gap: 12px; width: 100%; min-width: 0;">
+            <div style="width: 38px; height: 38px; border-radius: 50%; background: #dcfce7; color: #15803d; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1.1rem; flex-shrink: 0;">
               ✓
             </div>
-            <div style="min-width: 0; overflow: hidden; text-overflow: ellipsis;">
+            <div style="flex: 1; min-width: 0;">
               <div style="font-size: 0.72rem; text-transform: uppercase; font-weight: 700; color: #166534; letter-spacing: 0.05em;">
                 Conta Google Conectada:
               </div>
-              <div style="font-size: 1rem; font-weight: 800; color: #14532d; margin-top: 1px; word-break: break-all;">
+              <div style="font-size: 0.95rem; font-weight: 800; color: #14532d; margin-top: 1px; word-break: break-word; overflow-wrap: anywhere; line-height: 1.3;">
                 ${g.connectedEmail || 'Conta Google Autorizada'}
               </div>
-              ${g.connectedName ? `<div style="font-size: 0.8rem; color: #15803d;">${g.connectedName}</div>` : ''}
+              ${g.connectedName ? `<div style="font-size: 0.8rem; color: #15803d; margin-top: 2px;">${g.connectedName}</div>` : ''}
             </div>
           </div>
-          <button type="button" class="btn-falcon btn-danger" onclick="disconnectGoogleAccount()" style="padding: 7px 16px; font-size: 0.82rem; font-weight: 700;">
-            Desconectar Conta
-          </button>
+          <div style="border-top: 1px dashed #bbf7d0; padding-top: 10px; width: 100%; display: flex; justify-content: flex-end;">
+            <button type="button" class="btn-falcon btn-danger" onclick="disconnectGoogleAccount()" style="padding: 8px 16px; font-size: 0.82rem; font-weight: 700; width: 100%; display: flex; align-items: center; justify-content: center; gap: 6px; border-radius: 10px;">
+              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18.36 6.64a9 9 0 1 1-12.73 0M12 2v10"></path></svg>
+              <span>Desconectar Conta</span>
+            </button>
+          </div>
         </div>
 
         <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px 14px; margin-bottom: 18px;">
