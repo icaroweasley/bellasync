@@ -389,7 +389,61 @@ const initialData = {
       status: "a_pagar",
       paymentDate: null
     }
-  ]
+  ],
+  workstations: [
+    {
+      id: "ws_1",
+      tenantId: "tenant_metamorfose",
+      name: "Cadeira 01 - Tranças & Afro",
+      type: "cadeira",
+      monthlyRent: 800.00,
+      rentType: "mensal",
+      professionalId: "prof_1",
+      active: true
+    },
+    {
+      id: "ws_2",
+      tenantId: "tenant_metamorfose",
+      name: "Cadeira 02 - Corte & Barba",
+      type: "cadeira",
+      monthlyRent: 800.00,
+      rentType: "mensal",
+      professionalId: "prof_2",
+      active: true
+    },
+    {
+      id: "ws_3",
+      tenantId: "tenant_metamorfose",
+      name: "Cadeira 03 - Mechas & Química",
+      type: "cadeira",
+      monthlyRent: 800.00,
+      rentType: "mensal",
+      professionalId: "prof_3",
+      active: true
+    },
+    {
+      id: "ws_4",
+      tenantId: "tenant_metamorfose",
+      name: "Ciranda / Mesa 01 - Esmalteria",
+      type: "ciranda",
+      monthlyRent: 450.00,
+      rentType: "mensal",
+      professionalId: "prof_4",
+      active: true
+    },
+    {
+      id: "ws_5",
+      tenantId: "tenant_metamorfose",
+      name: "Maca 01 - Estética & Cílios",
+      type: "maca",
+      monthlyRent: 600.00,
+      rentType: "mensal",
+      professionalId: null,
+      active: true
+    }
+  ],
+  productSales: [],
+  personalFinances: []
 };
 
 function sanitizeDb(data) {
@@ -455,7 +509,7 @@ function sanitizeDb(data) {
   }
   const defaultTenantId = data.tenants[0].id;
 
-  const collections = ['professionals', 'services', 'clients', 'appointments', 'products', 'expenses', 'commissions', 'packages'];
+  const collections = ['professionals', 'services', 'clients', 'appointments', 'products', 'expenses', 'commissions', 'packages', 'workstations', 'productSales', 'personalFinances'];
   for (const col of collections) {
     if (Array.isArray(data[col])) {
       for (const item of data[col]) {

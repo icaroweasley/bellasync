@@ -1462,9 +1462,22 @@ app.post('/api/professionals', requireManager, (req, res) => {
     pixKeyType: req.body.pixKeyType || 'Chave Pix',
     pixName: req.body.pixName || req.body.name,
     serviceIds: Array.isArray(req.body.serviceIds) ? req.body.serviceIds : [],
+    contractType: req.body.contractType || 'comissao',
+    workstationId: req.body.workstationId || null,
+    rentAmount: Number(req.body.rentAmount) || 0,
+    rentDueDay: Number(req.body.rentDueDay) || 10,
+    cpf: req.body.cpf || '',
+    rg: req.body.rg || '',
+    mei: req.body.mei || '',
     active: true
   };
   db.professionals.push(newProf);
+
+  // Sincroniza estação de trabalho se vinculada
+  if (newProf.workstationId) {
+    const ws = (db.workstations || []).find(w => w.id === newProf.workstationId && w.tenantId === tenantId);
+    if (ws) ws.professionalId = newProf.id;
+  }
 
   // Se senha foi enviada, já cria o usuário correspondente
   const loginUser = (req.body.username || req.body.email || '').trim();
@@ -1513,6 +1526,27 @@ app.put('/api/professionals/:id', requireManager, (req, res) => {
   if (req.body.monthlyGoal !== undefined) prof.monthlyGoal = Number(req.body.monthlyGoal) || 0;
   if (req.body.serviceIds !== undefined) prof.serviceIds = Array.isArray(req.body.serviceIds) ? req.body.serviceIds : [];
 
+  if (req.body.contractType !== undefined) prof.contractType = req.body.contractType;
+  if (req.body.rentAmount !== undefined) prof.rentAmount = Number(req.body.rentAmount) || 0;
+  if (req.body.rentDueDay !== undefined) prof.rentDueDay = Number(req.body.rentDueDay) || 10;
+  if (req.body.cpf !== undefined) prof.cpf = req.body.cpf;
+  if (req.body.rg !== undefined) prof.rg = req.body.rg;
+  if (req.body.mei !== undefined) prof.mei = req.body.mei;
+
+  if (req.body.workstationId !== undefined) {
+    const oldWsId = prof.workstationId;
+    prof.workstationId = req.body.workstationId || null;
+    // Sincroniza estação vinculada
+    if (oldWsId && oldWsId !== prof.workstationId) {
+      const oldWs = (db.workstations || []).find(w => w.id === oldWsId && w.tenantId === tenantId);
+      if (oldWs && oldWs.professionalId === prof.id) oldWs.professionalId = null;
+    }
+    if (prof.workstationId) {
+      const newWs = (db.workstations || []).find(w => w.id === prof.workstationId && w.tenantId === tenantId);
+      if (newWs) newWs.professionalId = prof.id;
+    }
+  }
+
   // Atualizar dados de usuário correspondente se existirem
   const user = (db.users || []).find(u => u.professionalId === prof.id && u.tenantId === tenantId);
   if (user) {
@@ -1554,6 +1588,156 @@ app.delete('/api/professionals/:id', requireManager, (req, res) => {
   db.users = (db.users || []).filter(u => !(u.professionalId === req.params.id && u.tenantId === tenantId));
   saveDb(db);
   res.json({ message: 'Profissional excluído com sucesso.', removed });
+});
+
+// =============================================================
+// WORKSTATIONS / BENS MÓVEIS (Cadeiras, Cirandas, Macas, Bancadas)
+// =============================================================
+app.get('/api/workstations', (req, res) => {
+  const db = getDb();
+  const tenantId = getTenantId(req);
+  const stations = (db.workstations || []).filter(w => w.tenantId === tenantId);
+  const total = stations.length;
+  const occupied = stations.filter(w => w.professionalId).length;
+  const available = total - occupied;
+  const totalMonthlyRent = stations.filter(w => w.professionalId).reduce((acc, w) => acc + (Number(w.monthlyRent) || 0), 0);
+
+  res.json({
+    stations,
+    summary: {
+      total,
+      occupied,
+      available,
+      totalMonthlyRent,
+      occupancyRate: total > 0 ? Math.round((occupied / total) * 100) : 0
+    }
+  });
+});
+
+app.post('/api/workstations', requireManager, (req, res) => {
+  const db = getDb();
+  const tenantId = getTenantId(req);
+  const newStation = {
+    id: 'ws_' + Date.now(),
+    tenantId: tenantId,
+    name: req.body.name || 'Nova Cadeira / Estação',
+    type: req.body.type || 'cadeira', // 'cadeira', 'ciranda', 'maca', 'bancada'
+    monthlyRent: Number(req.body.monthlyRent) || 0,
+    rentType: req.body.rentType || 'mensal', // 'mensal', 'semanal', 'diaria'
+    professionalId: req.body.professionalId || null,
+    notes: req.body.notes || '',
+    active: req.body.active ?? true
+  };
+  if (!db.workstations) db.workstations = [];
+  db.workstations.push(newStation);
+
+  if (newStation.professionalId) {
+    const p = (db.professionals || []).find(pr => pr.id === newStation.professionalId && pr.tenantId === tenantId);
+    if (p) {
+      p.workstationId = newStation.id;
+      if (!p.contractType || p.contractType === 'comissao') p.contractType = 'locacao';
+      if (!p.rentAmount) p.rentAmount = newStation.monthlyRent;
+    }
+  }
+
+  saveDb(db);
+  res.status(201).json(newStation);
+});
+
+app.put('/api/workstations/:id', requireManager, (req, res) => {
+  const db = getDb();
+  const tenantId = getTenantId(req);
+  const station = (db.workstations || []).find(w => w.id === req.params.id && w.tenantId === tenantId);
+  if (!station) return res.status(404).json({ error: 'Estação não encontrada.' });
+
+  const oldProfId = station.professionalId;
+  if (req.body.name) station.name = req.body.name;
+  if (req.body.type) station.type = req.body.type;
+  if (req.body.monthlyRent !== undefined) station.monthlyRent = Number(req.body.monthlyRent) || 0;
+  if (req.body.rentType) station.rentType = req.body.rentType;
+  if (req.body.notes !== undefined) station.notes = req.body.notes;
+  if (req.body.active !== undefined) station.active = req.body.active;
+  if (req.body.professionalId !== undefined) {
+    station.professionalId = req.body.professionalId || null;
+    
+    if (oldProfId && oldProfId !== station.professionalId) {
+      const oldP = (db.professionals || []).find(pr => pr.id === oldProfId && pr.tenantId === tenantId);
+      if (oldP && oldP.workstationId === station.id) oldP.workstationId = null;
+    }
+    if (station.professionalId) {
+      const newP = (db.professionals || []).find(pr => pr.id === station.professionalId && pr.tenantId === tenantId);
+      if (newP) {
+        newP.workstationId = station.id;
+        if (!newP.contractType || newP.contractType === 'comissao') newP.contractType = 'locacao';
+        if (!newP.rentAmount) newP.rentAmount = station.monthlyRent;
+      }
+    }
+  }
+
+  saveDb(db);
+  res.json(station);
+});
+
+app.delete('/api/workstations/:id', requireManager, (req, res) => {
+  const db = getDb();
+  const tenantId = getTenantId(req);
+  const idx = (db.workstations || []).findIndex(w => w.id === req.params.id && w.tenantId === tenantId);
+  if (idx === -1) return res.status(404).json({ error: 'Estação não encontrada.' });
+  
+  const removed = db.workstations.splice(idx, 1)[0];
+  if (removed.professionalId) {
+    const p = (db.professionals || []).find(pr => pr.id === removed.professionalId && pr.tenantId === tenantId);
+    if (p && p.workstationId === removed.id) p.workstationId = null;
+  }
+
+  saveDb(db);
+  res.json({ message: 'Estação excluída com sucesso.', removed });
+});
+
+// =============================================================
+// CONTRATOS PRONTOS (Lei Salão Parceiro / Locação de Bem Móvel)
+// =============================================================
+app.get('/api/contracts/professional/:id', (req, res) => {
+  const db = getDb();
+  const tenantId = getTenantId(req);
+  const prof = (db.professionals || []).find(p => p.id === req.params.id && p.tenantId === tenantId);
+  if (!prof) return res.status(404).json({ error: 'Profissional não encontrado.' });
+
+  const tenant = (db.tenants || []).find(t => t.id === tenantId) || db.settings || {};
+  const salonName = tenant.name || db.settings?.salonName || 'Metamorfose Hair';
+  const salonPhone = tenant.phone || db.settings?.phone || '(67) 98424-8821';
+  const salonAddress = tenant.address || db.settings?.address || 'Campo Grande - MS';
+  const station = (db.workstations || []).find(w => w.id === prof.workstationId) || { name: 'Estação de Beleza Compartilhada', type: 'Cadeira' };
+
+  res.json({
+    salon: {
+      name: salonName,
+      phone: salonPhone,
+      address: salonAddress,
+      cnpj: tenant.cnpj || '00.000.000/0001-00'
+    },
+    professional: {
+      id: prof.id,
+      name: prof.name,
+      role: prof.role || 'Profissional da Beleza',
+      cpf: prof.cpf || '',
+      rg: prof.rg || '',
+      mei: prof.mei || '',
+      phone: prof.phone || '',
+      pixKey: prof.pixKey || prof.phone || '',
+      contractType: prof.contractType || 'locacao',
+      rentAmount: prof.rentAmount || 800,
+      rentDueDay: prof.rentDueDay || 10,
+      commissionPercent: prof.commissionDefault || 50
+    },
+    workstation: {
+      id: station.id,
+      name: station.name,
+      type: station.type,
+      monthlyRent: station.monthlyRent || prof.rentAmount || 800
+    },
+    generatedDate: new Date().toLocaleDateString('pt-BR')
+  });
 });
 
 // 3. Serviços
@@ -2450,6 +2634,162 @@ app.delete('/api/products/:id', requireManager, (req, res) => {
   const removed = db.products.splice(idx, 1)[0];
   saveDb(db);
   res.json({ message: 'Produto excluído com sucesso.', removed });
+});
+
+// =============================================================
+// VENDAS AVULSAS / BALCÃO (Produtos sem agendamento)
+// =============================================================
+app.get('/api/sales', (req, res) => {
+  const db = getDb();
+  const tenantId = getTenantId(req);
+  const { monthYear } = req.query;
+  let list = (db.productSales || []).filter(s => s.tenantId === tenantId);
+  if (monthYear) {
+    list = list.filter(s => s.date && s.date.startsWith(monthYear));
+  }
+  list.sort((a, b) => new Date(b.createdAt || b.date) - new Date(a.createdAt || a.date));
+  res.json(list);
+});
+
+app.post('/api/sales', (req, res) => {
+  const db = getDb();
+  const tenantId = getTenantId(req);
+  const { clientId, clientName, clientPhone, professionalId, professionalName, items, discount, paymentMethod, notes, date } = req.body;
+
+  if (!items || !Array.isArray(items) || items.length === 0) {
+    return res.status(400).json({ error: 'Nenhum produto selecionado para a venda.' });
+  }
+
+  let subtotal = 0;
+  const processedItems = [];
+
+  for (const item of items) {
+    const prod = (db.products || []).find(p => p.id === item.productId && p.tenantId === tenantId);
+    if (!prod) {
+      return res.status(404).json({ error: `Produto não encontrado: ${item.productName || item.productId}` });
+    }
+    const qty = Math.max(1, Number(item.quantity) || 1);
+    if (prod.stock < qty) {
+      return res.status(400).json({ error: `Estoque insuficiente para "${prod.name}". Disponível: ${prod.stock} un.` });
+    }
+    prod.stock -= qty;
+    const unitPrice = Number(prod.price) || 0;
+    const itemTotal = unitPrice * qty;
+    subtotal += itemTotal;
+    processedItems.push({
+      productId: prod.id,
+      productName: prod.name,
+      category: prod.category,
+      quantity: qty,
+      unitPrice,
+      total: itemTotal,
+      commissionPercent: prod.commissionPercent || 0
+    });
+  }
+
+  const disc = Number(discount) || 0;
+  const total = Math.max(0, subtotal - disc);
+  const today = date || new Date().toISOString().split('T')[0];
+
+  const newSale = {
+    id: 'sale_' + Date.now(),
+    tenantId,
+    clientId: clientId || null,
+    clientName: clientName || 'Cliente Balcão',
+    clientPhone: clientPhone || '',
+    professionalId: professionalId || null,
+    professionalName: professionalName || null,
+    items: processedItems,
+    subtotal,
+    discount: disc,
+    total,
+    paymentMethod: paymentMethod || 'Pix',
+    notes: notes || '',
+    date: today,
+    monthYear: today.substring(0, 7),
+    createdAt: new Date().toISOString()
+  };
+
+  if (!db.productSales) db.productSales = [];
+  db.productSales.push(newSale);
+
+  saveDb(db);
+  res.status(201).json(newSale);
+});
+
+app.delete('/api/sales/:id', requireManager, (req, res) => {
+  const db = getDb();
+  const tenantId = getTenantId(req);
+  const idx = (db.productSales || []).findIndex(s => s.id === req.params.id && s.tenantId === tenantId);
+  if (idx === -1) return res.status(404).json({ error: 'Venda não encontrada.' });
+
+  const removed = db.productSales.splice(idx, 1)[0];
+  if (removed.items && Array.isArray(removed.items)) {
+    for (const item of removed.items) {
+      const prod = (db.products || []).find(p => p.id === item.productId && p.tenantId === tenantId);
+      if (prod) prod.stock += (Number(item.quantity) || 1);
+    }
+  }
+
+  saveDb(db);
+  res.json({ message: 'Venda cancelada e estoque estornado.', removed });
+});
+
+// =============================================================
+// GESTÃO PESSOAL (Receitas, Gastos Fixos e Variáveis Pessoais)
+// =============================================================
+app.get('/api/personal-finances', (req, res) => {
+  const db = getDb();
+  const tenantId = getTenantId(req);
+  const { monthYear, professionalId } = req.query;
+  let list = (db.personalFinances || []).filter(pf => pf.tenantId === tenantId);
+
+  if (professionalId) {
+    list = list.filter(pf => pf.professionalId === professionalId);
+  }
+  if (monthYear) {
+    list = list.filter(pf => pf.monthYear === monthYear || (pf.date && pf.date.startsWith(monthYear)));
+  }
+
+  list.sort((a, b) => new Date(b.date || b.createdAt) - new Date(a.date || a.createdAt));
+  res.json(list);
+});
+
+app.post('/api/personal-finances', (req, res) => {
+  const db = getDb();
+  const tenantId = getTenantId(req);
+  const today = req.body.date || new Date().toISOString().split('T')[0];
+
+  const newItem = {
+    id: 'pfin_' + Date.now(),
+    tenantId,
+    professionalId: req.body.professionalId || null,
+    description: req.body.description || 'Gasto Pessoal',
+    category: req.body.category || 'Outros',
+    type: req.body.type || 'fixo', // 'fixo', 'variavel', 'receita'
+    amount: Number(req.body.amount) || 0,
+    date: today,
+    monthYear: today.substring(0, 7),
+    notes: req.body.notes || '',
+    createdAt: new Date().toISOString()
+  };
+
+  if (!db.personalFinances) db.personalFinances = [];
+  db.personalFinances.push(newItem);
+
+  saveDb(db);
+  res.status(201).json(newItem);
+});
+
+app.delete('/api/personal-finances/:id', (req, res) => {
+  const db = getDb();
+  const tenantId = getTenantId(req);
+  const idx = (db.personalFinances || []).findIndex(pf => pf.id === req.params.id && pf.tenantId === tenantId);
+  if (idx === -1) return res.status(404).json({ error: 'Registro não encontrado.' });
+
+  const removed = db.personalFinances.splice(idx, 1)[0];
+  saveDb(db);
+  res.json({ message: 'Registro pessoal excluído com sucesso.', removed });
 });
 
 // 7. Despesas

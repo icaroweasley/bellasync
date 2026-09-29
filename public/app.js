@@ -138,6 +138,9 @@ window.addEventListener('hashchange', () => {
 
 let selectedProfessionalId = null;
 let selectedDate = new Date().toISOString().split('T')[0];
+let activeProfessionalsTab = 'equipe'; // 'equipe' | 'cadeiras'
+let activeProductsTab = 'estoque'; // 'estoque' | 'vendas'
+let activeBalancoTab = 'salao'; // 'salao' | 'pessoal'
 
 let state = {
   settings: {},
@@ -147,7 +150,13 @@ let state = {
   appointments: [],
   products: [],
   expenses: [],
-  commissions: []
+  commissions: [],
+  packages: [],
+  categories: [],
+  workstations: [],
+  workstationsSummary: {},
+  productSales: [],
+  personalFinances: []
 };
 
 const isSuperAdmin = currentUser && (currentUser.role === 'superadmin' || currentUser.username === 'karuadmin');
@@ -1127,7 +1136,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 async function loadInitialData() {
   try {
-    const [settings, profs, servs, clis, apps, prods, exps, comms, pkgs, cats, gCfg, fCfg] = await Promise.all([
+    const [settings, profs, servs, clis, apps, prods, exps, comms, pkgs, cats, gCfg, fCfg, wsData, salesData, pFinData] = await Promise.all([
       tenantFetch('/api/settings').then(r => r.json()),
       tenantFetch('/api/professionals').then(r => r.json()),
       tenantFetch('/api/services').then(r => r.json()),
@@ -1139,7 +1148,10 @@ async function loadInitialData() {
       tenantFetch('/api/packages').then(r => r.json()).catch(() => []),
       tenantFetch('/api/categories').then(r => r.json()).catch(() => []),
       tenantFetch('/api/integrations/google/config').then(r => r.json()).catch(() => null),
-      tenantFetch('/api/fiscal/config').then(r => r.json()).catch(() => null)
+      tenantFetch('/api/fiscal/config').then(r => r.json()).catch(() => null),
+      tenantFetch('/api/workstations').then(r => r.json()).catch(() => ({ stations: [], summary: {} })),
+      tenantFetch('/api/sales').then(r => r.json()).catch(() => []),
+      tenantFetch('/api/personal-finances').then(r => r.json()).catch(() => [])
     ]);
 
     state = {
@@ -1154,7 +1166,11 @@ async function loadInitialData() {
       packages: pkgs || [],
       categories: cats || [],
       googleConfig: gCfg || settings?.googleContacts || {},
-      fiscalConfig: fCfg || settings?.fiscal || {}
+      fiscalConfig: fCfg || settings?.fiscal || {},
+      workstations: wsData?.stations || [],
+      workstationsSummary: wsData?.summary || {},
+      productSales: salesData || [],
+      personalFinances: pFinData || []
     };
 
     checkAndNotifyNewAppointments(apps);
@@ -2436,32 +2452,178 @@ window.payCommission = async function(id) {
 };
 
 // 3. Render Profissionais
+window.switchProfessionalsTab = function(tab) {
+  activeProfessionalsTab = tab;
+  const container = document.getElementById('viewContainer');
+  const actions = document.getElementById('topBarActions');
+  renderProfessionals(container, actions);
+};
+
+// 3. Render Profissionais
 function renderProfessionals(container, actions) {
   const profCount = state.professionals.length;
   const extraProfs = Math.max(0, profCount - 5);
   const basePrice = Number(currentSubscriptionData?.basePrice || currentSubscriptionData?.monthlyPrice) || 49.90;
   const totalMonthly = basePrice + (extraProfs * 10);
 
-  actions.innerHTML = isManager ? `
-    <span style="font-size:0.84rem; font-weight:500; color:var(--muted); background:rgba(255,255,255,0.85); padding:6px 14px; border-radius:999px; border:1px solid rgba(0,0,0,0.06); height:38px; display:inline-flex; align-items:center; box-sizing:border-box;">
-      <strong style="color:var(--ink); margin-right:4px;">${profCount} / 10</strong> Profissionais
-    </span>
-  ` : '';
+  const stations = state.workstations || [];
+  const totalWs = stations.length;
+  const occupiedWs = stations.filter(w => w.professionalId).length;
+  const availableWs = totalWs - occupiedWs;
+  const occupancyRate = totalWs > 0 ? Math.round((occupiedWs / totalWs) * 100) : 0;
+  const totalMonthlyRent = stations.filter(w => w.professionalId).reduce((acc, w) => acc + (Number(w.monthlyRent) || 0), 0);
 
-  if (!state.professionals || state.professionals.length === 0) {
-    container.innerHTML = renderEmptyStateHtml({
-      icon: `<svg width="30" height="30" fill="none" stroke="var(--orange)" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>`,
-      title: "Nenhum Profissional Cadastrado",
-      description: isManager 
-        ? "Adicione os membros da sua equipe para gerenciar a agenda, comissões e visibilidade no link de agendamento."
-        : "Nenhum profissional cadastrado na equipe do salão no momento.",
-      buttonText: isManager ? "Cadastrar Primeiro Profissional" : "",
-      buttonOnClick: "openProfessionalModal()"
-    });
+  const subnavTabsHtml = `
+    <div class="subnav-tabs">
+      <button class="subnav-tab-btn ${activeProfessionalsTab === 'equipe' ? 'active' : ''}" onclick="switchProfessionalsTab('equipe')">
+        👥 Equipe de Profissionais (${profCount})
+      </button>
+      <button class="subnav-tab-btn ${activeProfessionalsTab === 'cadeiras' ? 'active' : ''}" onclick="switchProfessionalsTab('cadeiras')">
+        💺 Cadeiras & Locação (${totalWs})
+      </button>
+    </div>
+  `;
+
+  if (activeProfessionalsTab === 'cadeiras') {
+    actions.innerHTML = isManager ? `
+      <button class="btn-falcon btn-primary" onclick="openWorkstationModal()" style="height:36px; font-size:0.82rem; padding:0 14px; display:inline-flex; align-items:center; gap:6px;">
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+        <span>Nova Estação</span>
+      </button>
+    ` : '';
+
+    const overviewHtml = `
+      <div class="ws-overview-card">
+        <div class="ws-metric-box">
+          <div class="ws-metric-icon">💺</div>
+          <div class="ws-metric-data">
+            <h4>${occupiedWs} de ${totalWs}</h4>
+            <p>Cadeiras / Estações Locadas (${occupancyRate}%)</p>
+          </div>
+        </div>
+        <div class="ws-metric-box">
+          <div class="ws-metric-icon" style="background:rgba(22, 163, 74, 0.1); color:#16a34a;">🟢</div>
+          <div class="ws-metric-data">
+            <h4>${availableWs} Livres</h4>
+            <p>Disponíveis para novos locatários</p>
+          </div>
+        </div>
+        <div class="ws-metric-box">
+          <div class="ws-metric-icon" style="background:rgba(2, 132, 199, 0.1); color:#0284c7;">💰</div>
+          <div class="ws-metric-data">
+            <h4>R$ ${totalMonthlyRent.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h4>
+            <p>Previsão de Receita Mensal dos Aluguéis</p>
+          </div>
+        </div>
+      </div>
+    `;
+
+    if (stations.length === 0) {
+      container.innerHTML = `
+        ${subnavTabsHtml}
+        ${overviewHtml}
+        ${renderEmptyStateHtml({
+          icon: `<svg width="30" height="30" fill="none" stroke="var(--orange)" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line></svg>`,
+          title: "Nenhuma Cadeira ou Estação Cadastrada",
+          description: "Cadastre as cadeiras, macas de cílios/estética ou cirandas de manicure do seu espaço para gerenciar os aluguéis e locatários.",
+          buttonText: isManager ? "Cadastrar Primeira Estação" : "",
+          buttonOnClick: "openWorkstationModal()"
+        })}
+      `;
+      return;
+    }
+
+    const stationsHtml = stations.map(ws => {
+      let icon = '✂️';
+      let typeLabel = 'Cadeira de Cabelo / Barba';
+      if (ws.type === 'ciranda') { icon = '💅'; typeLabel = 'Ciranda / Mesa de Manicure'; }
+      else if (ws.type === 'maca') { icon = '🛋️'; typeLabel = 'Maca de Cílios / Estética'; }
+      else if (ws.type === 'bancada') { icon = '💄'; typeLabel = 'Bancada de Maquiagem'; }
+
+      const profOccupying = (state.professionals || []).find(pr => pr.id === ws.professionalId);
+
+      return `
+        <div class="ws-card-item">
+          <div class="ws-card-top">
+            <div class="ws-avatar-icon">${icon}</div>
+            <div class="ws-card-info">
+              <h4>${ws.name}</h4>
+              <p style="margin:2px 0 0 0; font-size:0.78rem; color:var(--muted);">${typeLabel}</p>
+              <div class="ws-price-tag">R$ ${(Number(ws.monthlyRent) || 0).toFixed(2)} / ${ws.rentType || 'mês'}</div>
+            </div>
+          </div>
+
+          <div style="margin: 6px 0;">
+            ${profOccupying ? `
+              <span class="ws-badge-status occupied" title="Ocupada por ${profOccupying.name}">
+                ● Locada por <strong>${profOccupying.name}</strong>
+              </span>
+            ` : `
+              <span class="ws-badge-status vacant" title="Disponível para locação">
+                ○ Livre / Disponível para Locação
+              </span>
+            `}
+          </div>
+
+          <div class="prof-card-actions" style="margin-top:auto; padding-top:10px; border-top:1px solid #f1f5f9;">
+            ${isManager ? `
+              <button class="btn-card-action edit" onclick="openWorkstationModal('${ws.id}')" title="Editar Estação">
+                <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                <span>Editar</span>
+              </button>
+              <button class="btn-card-action delete" onclick="deleteWorkstation('${ws.id}')" title="Excluir Estação">
+                <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                <span>Excluir</span>
+              </button>
+            ` : ''}
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    container.innerHTML = `
+      ${subnavTabsHtml}
+      ${overviewHtml}
+      <div class="workstation-grid">${stationsHtml}</div>
+    `;
     return;
   }
 
-  const profsHtml = state.professionals.map(p => `
+  // ABA 1: EQUIPE DE PROFISSIONAIS
+  actions.innerHTML = isManager ? `
+    <div style="display:flex; align-items:center; gap:8px;">
+      <span style="font-size:0.82rem; font-weight:600; color:var(--muted); background:rgba(255,255,255,0.85); padding:6px 12px; border-radius:999px; border:1px solid rgba(0,0,0,0.06); height:36px; display:inline-flex; align-items:center; box-sizing:border-box;">
+        💺 <strong>${occupiedWs}/${totalWs}</strong> locadas
+      </span>
+      <button class="btn-falcon btn-primary" onclick="openNewProfessionalModal()" style="height:36px; font-size:0.82rem; padding:0 14px; display:inline-flex; align-items:center; gap:6px;">
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+        <span>Novo Profissional</span>
+      </button>
+    </div>
+  ` : '';
+
+  if (!state.professionals || state.professionals.length === 0) {
+    container.innerHTML = `
+      ${subnavTabsHtml}
+      ${renderEmptyStateHtml({
+        icon: `<svg width="30" height="30" fill="none" stroke="var(--orange)" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>`,
+        title: "Nenhum Profissional Cadastrado",
+        description: isManager 
+          ? "Adicione os membros da sua equipe para gerenciar a agenda, comissões e visibilidade no link de agendamento."
+          : "Nenhum profissional cadastrado na equipe do salão no momento.",
+        buttonText: isManager ? "Cadastrar Primeiro Profissional" : "",
+        buttonOnClick: "openProfessionalModal()"
+      })}
+    `;
+    return;
+  }
+
+  const profsHtml = state.professionals.map(p => {
+    const ws = (state.workstations || []).find(w => w.id === p.workstationId || w.professionalId === p.id);
+    const isLocatario = p.contractType === 'locacao' || (ws && p.contractType !== 'comissao');
+    const rentVal = Number(p.rentAmount) || (ws ? Number(ws.monthlyRent) : 800);
+
+    return `
     <div class="prof-card-shell">
       
       <!-- Linha 1: Avatar + Nome + Badge Acesso + Telefone formatado -->
@@ -2481,11 +2643,22 @@ function renderProfessionals(container, actions) {
         </div>
       </div>
 
-      <!-- Linha 2: Badges lado a lado (100% largura do card, sem corte!) -->
+      <!-- Linha 2: Badges lado a lado (Serviços + Locação/Comissão + Sinal) -->
       <div class="prof-badges-strip">
         <span class="prof-services-badge" title="Serviços atendidos no agendamento online">
           ✂️ ${Array.isArray(p.serviceIds) ? `${p.serviceIds.length} serviços` : 'Todos os serviços'}
         </span>
+
+        ${isLocatario ? `
+          <span class="prof-deposit-badge" style="background:#ecfdf5; color:#059669; border:1px solid #a7f3d0;" title="Profissional locatário de estação de trabalho">
+            🏢 Locatário: ${ws ? ws.name : 'Cadeira'} (R$ ${rentVal.toFixed(0)}/mês)
+          </span>
+        ` : `
+          <span class="prof-deposit-badge none" title="Comissão padrão sobre serviços">
+            ✂️ Comissão ${p.commissionDefault || 50}%
+          </span>
+        `}
+
         ${p.requireDeposit ? `
           <span class="prof-deposit-badge" onclick="openEditProfessionalModal('${p.id}')" title="Sinal configurado: ${p.depositType === 'fixed' ? `R$ ${(Number(p.depositFixedAmount) || 50).toFixed(0)} fixos` : `${p.depositPercent || 30}%`} via ${p.pixBank || 'Pix'} (Clique para editar)">
             💳 Sinal ${p.depositType === 'fixed' ? `R$ ${(Number(p.depositFixedAmount) || 50).toFixed(0)}` : `${p.depositPercent || 30}%`}${p.pixBank ? ` (${p.pixBank})` : ''}
@@ -2497,11 +2670,16 @@ function renderProfessionals(container, actions) {
         `}
       </div>
 
-      <!-- Linha 3: Botões de Ação -->
+      <!-- Linha 3: Botões de Ação (Com Botão de Contrato!) -->
       <div class="prof-card-actions">
+        <button class="btn-card-action edit" onclick="openContractModal('${p.id}')" title="Gerar Contrato de Locação e Parceria (PDF / WhatsApp)" style="background:#f0fdf4; border-color:#bbf7d0; color:#16a34a;">
+          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+          <span>Contrato</span>
+        </button>
+
         ${isManager ? `
-          <button class="btn-card-action ${p.showInBooking ? 'pay' : 'edit'}" onclick="toggleProfBookingVisibility('${p.id}')" title="Alternar visibilidade no agendamento online" style="flex: 1.2;">
-            ${p.showInBooking ? '✓ Visível no Link' : '👁️ Oculto no Link'}
+          <button class="btn-card-action ${p.showInBooking ? 'pay' : 'edit'}" onclick="toggleProfBookingVisibility('${p.id}')" title="Alternar visibilidade no agendamento online">
+            ${p.showInBooking ? '✓ Visível' : '👁️ Oculto'}
           </button>
           <button class="btn-card-action edit" onclick="openEditProfessionalModal('${p.id}')" title="Editar Profissional">
             <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
@@ -2513,12 +2691,13 @@ function renderProfessionals(container, actions) {
           </button>
         ` : `
           <span style="font-size:0.8rem; font-weight:600; color:var(--muted); padding:4px 10px; background:#f1f5f9; border-radius:8px;">
-            ${p.showInBooking ? 'Visível na Agenda' : 'Oculto na Agenda'}
+            ${p.showInBooking ? 'Visível' : 'Oculto'}
           </span>
         `}
       </div>
     </div>
-  `).join('');
+  `;
+  }).join('');
 
   const subscriptionBannerHtml = isManager ? `
     <div class="subscription-banner-clean">
@@ -2543,6 +2722,7 @@ function renderProfessionals(container, actions) {
   ` : '';
 
   container.innerHTML = `
+    ${subnavTabsHtml}
     ${subscriptionBannerHtml}
     <div class="data-list">${profsHtml}</div>
   `;
@@ -3592,19 +3772,111 @@ window.deletePackage = async function(pkgId) {
 };
 
 // 6. Render Produtos
+window.switchProductsTab = function(tab) {
+  activeProductsTab = tab;
+  const container = document.getElementById('viewContainer');
+  const actions = document.getElementById('topBarActions');
+  renderProducts(container, actions);
+};
+
+// 6. Render Produtos & Vendas Balcão
 function renderProducts(container, actions) {
-  actions.innerHTML = '';
+  const prodsCount = (state.products || []).length;
+  const salesCount = (state.productSales || []).length;
+
+  const subnavTabsHtml = `
+    <div class="subnav-tabs">
+      <button class="subnav-tab-btn ${activeProductsTab === 'estoque' ? 'active' : ''}" onclick="switchProductsTab('estoque')">
+        📦 Estoque de Produtos (${prodsCount})
+      </button>
+      <button class="subnav-tab-btn ${activeProductsTab === 'vendas' ? 'active' : ''}" onclick="switchProductsTab('vendas')">
+        🧾 Vendas Balcão (${salesCount})
+      </button>
+    </div>
+  `;
+
+  if (activeProductsTab === 'vendas') {
+    actions.innerHTML = `
+      <button class="btn-falcon btn-primary" onclick="openDirectSaleModal()" style="height:36px; font-size:0.82rem; padding:0 14px; background:#16a34a; border-color:#16a34a; display:inline-flex; align-items:center; gap:6px;">
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+        <span>Nova Venda Balcão</span>
+      </button>
+    `;
+
+    const sales = state.productSales || [];
+    if (sales.length === 0) {
+      container.innerHTML = `
+        ${subnavTabsHtml}
+        ${renderEmptyStateHtml({
+          icon: `<svg width="30" height="30" fill="none" stroke="#16a34a" stroke-width="2" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>`,
+          title: "Nenhuma Venda Balcão Realizada",
+          description: "Venda produtos direto no balcão para qualquer cliente sem precisar de um agendamento de serviço.",
+          buttonText: "Realizar Venda Rápida",
+          buttonOnClick: "openDirectSaleModal()"
+        })}
+      `;
+      return;
+    }
+
+    const salesHtml = sales.map(s => {
+      const itemsListStr = (s.items || []).map(it => `<strong>${it.quantity}x</strong> ${it.productName}`).join(' • ');
+      const formattedDate = s.date ? s.date.split('-').reverse().join('/') : 'Hoje';
+
+      return `
+        <div class="data-item-card">
+          <div class="item-main-info">
+            <h4>${s.clientName || 'Cliente Balcão'} ${s.professionalName ? `<span style="font-size:0.75rem; font-weight:500; color:var(--muted); margin-left:6px;">(Vendido por ${s.professionalName})</span>` : ''}</h4>
+            <p style="margin:3px 0 0 0; color:var(--ink);">${itemsListStr}</p>
+            <p style="margin:2px 0 0 0; font-size:0.78rem; color:var(--muted);">${formattedDate} • Forma: <strong>${s.paymentMethod || 'Pix'}</strong> ${s.notes ? `• <em>${s.notes}</em>` : ''}</p>
+          </div>
+          <div class="item-actions-group">
+            <span class="item-badge-price" style="margin-right: 6px; background:#ecfdf5; color:#16a34a; border-color:#bbf7d0;">R$ ${(Number(s.total) || 0).toFixed(2)}</span>
+            ${isManager ? `
+              <button class="btn-card-action delete" onclick="deleteProductSale('${s.id}')" title="Cancelar venda e estornar estoque">
+                <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                <span>Estornar</span>
+              </button>
+            ` : ''}
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    container.innerHTML = `
+      ${subnavTabsHtml}
+      <div class="data-list">${salesHtml}</div>
+    `;
+    return;
+  }
+
+  // ABA ESTOQUE DE PRODUTOS
+  actions.innerHTML = `
+    <div style="display:flex; align-items:center; gap:8px;">
+      <button class="btn-falcon btn-primary" onclick="openDirectSaleModal()" style="height:36px; font-size:0.82rem; padding:0 14px; background:#16a34a; border-color:#16a34a; display:inline-flex; align-items:center; gap:6px;">
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+        <span>Venda Balcão</span>
+      </button>
+      ${isManager ? `
+        <button class="btn-falcon btn-secondary" onclick="openNewProductModal()" style="height:36px; font-size:0.82rem; padding:0 14px;">
+          + Novo Produto
+        </button>
+      ` : ''}
+    </div>
+  `;
 
   if (!state.products || state.products.length === 0) {
-    container.innerHTML = renderEmptyStateHtml({
-      icon: `<svg width="30" height="30" fill="none" stroke="var(--orange)" stroke-width="2" viewBox="0 0 24 24"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></svg>`,
-      title: "Nenhum Produto no Estoque",
-      description: isManager 
-        ? "Cadastre produtos de revenda ou lavatório para controlar as quantidades em estoque e registrar vendas."
-        : "Nenhum produto cadastrado no estoque ainda. Entre em contato com a gerência para inclusão.",
-      buttonText: isManager ? "Cadastrar Primeiro Produto" : "",
-      buttonOnClick: "openProductModal()"
-    });
+    container.innerHTML = `
+      ${subnavTabsHtml}
+      ${renderEmptyStateHtml({
+        icon: `<svg width="30" height="30" fill="none" stroke="var(--orange)" stroke-width="2" viewBox="0 0 24 24"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></svg>`,
+        title: "Nenhum Produto no Estoque",
+        description: isManager 
+          ? "Cadastre produtos de revenda ou lavatório para controlar as quantidades em estoque e registrar vendas."
+          : "Nenhum produto cadastrado no estoque ainda. Entre em contato com a gerência para inclusão.",
+        buttonText: isManager ? "Cadastrar Primeiro Produto" : "",
+        buttonOnClick: "openProductModal()"
+      })}
+    `;
     return;
   }
 
@@ -3616,14 +3888,18 @@ function renderProducts(container, actions) {
       </div>
       <div class="item-actions-group">
         <span class="item-badge-price" style="margin-right: 6px;">R$ ${p.price.toFixed(2)}</span>
+        <button class="btn-card-action edit" onclick="openDirectSaleModal('${p.id}')" title="Vender este produto no balcão" style="background:#f0fdf4; border-color:#bbf7d0; color:#16a34a;">
+          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+          <span>Vender</span>
+        </button>
         ${isManager ? `
           <button class="btn-card-action edit" onclick="openEditProductModal('${p.id}')" title="Editar Produto">
             <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-            Editar
+            <span>Editar</span>
           </button>
           <button class="btn-card-action delete" onclick="deleteProduct('${p.id}')" title="Excluir Produto">
             <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-            Excluir
+            <span>Excluir</span>
           </button>
         ` : ''}
       </div>
@@ -3631,6 +3907,7 @@ function renderProducts(container, actions) {
   `).join('');
 
   container.innerHTML = `
+    ${subnavTabsHtml}
     <div class="data-list">${prodsHtml}</div>
   `;
 }
@@ -3777,6 +4054,84 @@ function renderBirthdays(container, actions) {
   container.innerHTML = `<div class="data-list">${bdaysHtml}</div>`;
 }
 
+function generateDonutChartSvg(slices, centerLabel, centerSub) {
+  const total = slices.reduce((acc, s) => acc + (Number(s.value) || 0), 0);
+  const r = 58;
+  const c = 2 * Math.PI * r; // ~364.42
+  const cx = 100, cy = 100;
+
+  if (total <= 0) {
+    return `
+      <div class="donut-chart-flex">
+        <svg width="170" height="170" viewBox="0 0 200 200" class="donut-chart-svg">
+          <circle cx="${cx}" cy="${cy}" r="${r}" fill="transparent" stroke="#e2e8f0" stroke-width="22"></circle>
+        </svg>
+        <div style="font-size:0.82rem; color:var(--muted); text-align:center; padding:10px;">Nenhum valor lançado no mês.</div>
+      </div>
+    `;
+  }
+
+  let accumulated = 0;
+  const paths = slices.map(s => {
+    const val = Number(s.value) || 0;
+    if (val <= 0) return '';
+    const pct = val / total;
+    const strokeDash = pct * c;
+    const strokeOffset = -accumulated * c;
+    accumulated += pct;
+    return `
+      <circle cx="${cx}" cy="${cy}" r="${r}" fill="transparent"
+        stroke="${s.color}" stroke-width="24"
+        stroke-dasharray="${strokeDash} ${c}"
+        stroke-dashoffset="${strokeOffset}"
+        class="donut-slice">
+        <title>${s.label}: R$ ${val.toFixed(2)} (${Math.round(pct * 100)}%)</title>
+      </circle>
+    `;
+  }).join('');
+
+  const legend = slices.map(s => {
+    const val = Number(s.value) || 0;
+    const pct = total > 0 ? Math.round((val / total) * 100) : 0;
+    return `
+      <div class="donut-legend-row">
+        <div class="donut-legend-label">
+          <span class="donut-legend-dot" style="background:${s.color};"></span>
+          <span title="${s.label}">${s.label}</span>
+        </div>
+        <div class="donut-legend-val">
+          R$ ${val.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          <span style="font-size:0.75rem; color:var(--muted); font-weight:500; margin-left:4px;">(${pct}%)</span>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  return `
+    <div class="donut-chart-flex">
+      <div style="position:relative; width:170px; height:170px; flex-shrink:0;">
+        <svg width="170" height="170" viewBox="0 0 200 200" class="donut-chart-svg">
+          ${paths}
+        </svg>
+        <div style="position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; pointer-events:none; text-align:center; padding:10px;">
+          <span style="font-size:0.68rem; color:var(--muted); font-weight:600; text-transform:uppercase;">${centerSub || 'Total'}</span>
+          <strong style="font-size:0.92rem; color:var(--ink); line-height:1.2;">${centerLabel || `R$ ${total.toFixed(0)}`}</strong>
+        </div>
+      </div>
+      <div class="donut-legend-list">
+        ${legend}
+      </div>
+    </div>
+  `;
+}
+
+window.switchBalancoTab = function(tab) {
+  activeBalancoTab = tab;
+  const container = document.getElementById('viewContainer');
+  const actions = document.getElementById('topBarActions');
+  renderBalanco(container, actions);
+};
+
 // 8.5 Render Balanço Mensal & Metas
 let selectedBalancoMonth = null;
 
@@ -3800,9 +4155,14 @@ function renderBalanco(container, actions) {
 
   // Filtragem dos dados para o mês selecionado
   const monthApps = (state.appointments || []).filter(a => a.date && a.date.startsWith(selectedBalancoMonth) && a.status !== 'cancelado');
-  const monthExps = (state.expenses || []).filter(e => e.date && e.date.startsWith(selectedBalancoMonth));
-  
-  const totalGrossRevenue = monthApps.reduce((acc, a) => acc + (Number(a.price) || 0), 0);
+  const monthExps = (state.expenses || []).filter(e => (e.monthYear === selectedBalancoMonth) || (e.date && e.date.startsWith(selectedBalancoMonth)));
+  const monthSales = (state.productSales || []).filter(s => (s.monthYear === selectedBalancoMonth) || (s.date && s.date.startsWith(selectedBalancoMonth)));
+
+  const servicesRevenue = monthApps.reduce((acc, a) => acc + (Number(a.price) || 0), 0);
+  const salesRevenue = monthSales.reduce((acc, s) => acc + (Number(s.total) || 0), 0);
+  const rentRevenue = (state.workstations || []).filter(w => w.professionalId).reduce((acc, w) => acc + (Number(w.monthlyRent) || 0), 0);
+  const totalGrossRevenue = servicesRevenue + salesRevenue + rentRevenue;
+
   const totalAppCount = monthApps.length;
   const totalExpenses = monthExps.reduce((acc, e) => acc + (Number(e.amount) || 0), 0);
 
@@ -3819,6 +4179,17 @@ function renderBalanco(container, actions) {
 
   // Limpa actions superiores para evitar overflow no mobile
   actions.innerHTML = '';
+
+  const subnavTabsHtml = `
+    <div class="subnav-tabs">
+      <button class="subnav-tab-btn ${activeBalancoTab === 'salao' ? 'active' : ''}" onclick="switchBalancoTab('salao')">
+        🏢 Gestão do Salão
+      </button>
+      <button class="subnav-tab-btn ${activeBalancoTab === 'pessoal' ? 'active' : ''}" onclick="switchBalancoTab('pessoal')">
+        👤 Gestão Pessoal
+      </button>
+    </div>
+  `;
 
   const monthSelectorCardHtml = `
     <div class="balanco-month-card">
@@ -3844,6 +4215,155 @@ function renderBalanco(container, actions) {
   );
   const myProfId = myProf ? myProf.id : currentUser?.professionalId;
 
+  if (activeBalancoTab === 'pessoal') {
+    // VISÃO DE GESTÃO PESSOAL (CONTAS, GASTOS FIXOS/VARIÁVEIS, GANHOS)
+    const myApps = myProfId ? monthApps.filter(a => a.professionalId === myProfId) : [];
+    const myGross = myApps.reduce((acc, a) => acc + (Number(a.price) || 0), 0);
+    const commRate = myProf ? ((Number(myProf.commissionDefault) || 50) / 100) : 0.5;
+    const mySalonComm = myGross * commRate;
+
+    // Filtra lançamentos pessoais do mês
+    const myPersonalItems = (state.personalFinances || []).filter(item => {
+      return (item.monthYear === selectedBalancoMonth) || (item.date && item.date.startsWith(selectedBalancoMonth));
+    });
+
+    const personalGainsFromItems = myPersonalItems.filter(i => i.type === 'ganho').reduce((acc, i) => acc + (Number(i.amount) || 0), 0);
+    const totalGains = mySalonComm + personalGainsFromItems;
+
+    const fixedExpenses = myPersonalItems.filter(i => i.type === 'fixo').reduce((acc, i) => acc + (Number(i.amount) || 0), 0);
+    const variableExpenses = myPersonalItems.filter(i => i.type === 'variavel').reduce((acc, i) => acc + (Number(i.amount) || 0), 0);
+    const totalExpenses = fixedExpenses + variableExpenses;
+    const balance = totalGains - totalExpenses;
+
+    // Agrupamento por categoria para o Donut Chart
+    const categoriesMap = {};
+    myPersonalItems.filter(i => i.type !== 'ganho').forEach(i => {
+      const cat = i.category || 'Outros';
+      categoriesMap[cat] = (categoriesMap[cat] || 0) + (Number(i.amount) || 0);
+    });
+
+    const categoryColors = ['#ef4444', '#f97316', '#eab308', '#3b82f6', '#8b5cf6', '#ec4899', '#14b8a6', '#64748b'];
+    const catKeys = Object.keys(categoriesMap);
+    const donutSlices = catKeys.length > 0 ? catKeys.map((cat, idx) => ({
+      label: cat,
+      value: categoriesMap[cat],
+      color: categoryColors[idx % categoryColors.length]
+    })) : [
+      { label: 'Gastos Fixos', value: fixedExpenses, color: '#ef4444' },
+      { label: 'Gastos Variáveis', value: variableExpenses, color: '#f97316' }
+    ];
+
+    const personalChartHtml = generateDonutChartSvg(donutSlices, `R$ ${totalExpenses.toFixed(0)}`, 'Gastos Totais');
+
+    const summaryHtml = `
+      <div class="balanco-summary-cards">
+        <div class="balanco-card">
+          <div class="balanco-card-title">💰 Entradas Pessoais</div>
+          <div class="balanco-card-value" style="color: #16a34a;">R$ ${totalGains.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+          <div class="balanco-card-sub">${mySalonComm > 0 ? `Comissão salão (R$ ${mySalonComm.toFixed(2)}) + extras` : 'Ganhos e pró-labore'}</div>
+        </div>
+        <div class="balanco-card">
+          <div class="balanco-card-title">🔒 Gastos Fixos</div>
+          <div class="balanco-card-value" style="color: #ef4444;">R$ ${fixedExpenses.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+          <div class="balanco-card-sub">Moradia, contas, plano, etc.</div>
+        </div>
+        <div class="balanco-card">
+          <div class="balanco-card-title">🛍️ Gastos Variáveis</div>
+          <div class="balanco-card-value" style="color: #f97316;">R$ ${variableExpenses.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+          <div class="balanco-card-sub">Mercado, lazer, delivery, etc.</div>
+        </div>
+        <div class="balanco-card">
+          <div class="balanco-card-title">💎 Saldo Disponível</div>
+          <div class="balanco-card-value" style="color: ${balance >= 0 ? '#16a34a' : '#dc2626'};">R$ ${balance.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+          <div class="balanco-card-sub">Entradas - Gastos totais</div>
+        </div>
+      </div>
+    `;
+
+    const itemsRowsHtml = myPersonalItems.length > 0 ? myPersonalItems.map(item => {
+      const isGain = item.type === 'ganho';
+      const isFixed = item.type === 'fixo';
+      const typeBadge = isGain 
+        ? '<span style="background: rgba(22, 163, 74, 0.1); color: #16a34a; font-weight: 600; padding: 3px 8px; border-radius: 6px; font-size: 0.75rem;">💰 Ganho</span>'
+        : isFixed
+        ? '<span style="background: rgba(239, 68, 68, 0.1); color: #ef4444; font-weight: 600; padding: 3px 8px; border-radius: 6px; font-size: 0.75rem;">🔒 Fixo</span>'
+        : '<span style="background: rgba(249, 115, 22, 0.1); color: #f97316; font-weight: 600; padding: 3px 8px; border-radius: 6px; font-size: 0.75rem;">🛍️ Variável</span>';
+      
+      const formattedVal = (Number(item.amount) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      const colorVal = isGain ? '#16a34a' : '#dc2626';
+
+      return `
+        <div class="ws-card-item" style="display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; margin-bottom: 10px; background: #fff; border: 1px solid #f1f5f9; border-radius: 14px;">
+          <div style="display: flex; align-items: center; gap: 12px; min-width: 0;">
+            <div style="width: 38px; height: 38px; border-radius: 10px; background: ${isGain ? 'rgba(22,163,74,0.1)' : 'rgba(239,68,68,0.1)'}; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; flex-shrink: 0;">
+              ${isGain ? '📈' : isFixed ? '🏠' : '🛒'}
+            </div>
+            <div style="min-width: 0;">
+              <div style="font-weight: 700; color: var(--ink); font-size: 0.92rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(item.description || 'Lançamento Pessoal')}</div>
+              <div style="font-size: 0.78rem; color: var(--muted); display: flex; align-items: center; gap: 6px; margin-top: 2px;">
+                <span>${item.date ? item.date.split('-').reverse().join('/') : ''}</span>
+                <span>•</span>
+                <span>${escapeHtml(item.category || 'Geral')}</span>
+                <span>•</span>
+                ${typeBadge}
+              </div>
+            </div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 14px; flex-shrink: 0;">
+            <div style="text-align: right;">
+              <span style="font-weight: 700; font-size: 1rem; color: ${colorVal};">${isGain ? '+' : '-'} R$ ${formattedVal}</span>
+            </div>
+            <button class="btn-action-icon delete" title="Excluir lançamento" onclick="deletePersonalFinanceItem('${item.id}')" style="background: none; border: none; cursor: pointer; color: #dc2626; padding: 6px;">
+              <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"></path></svg>
+            </button>
+          </div>
+        </div>
+      `;
+    }).join('') : `
+      <div class="card-shell" style="text-align:center; padding: 32px 16px; color: var(--muted); background: #fff; border-radius: 14px; border: 1px dashed #cbd5e1;">
+        <div style="font-size: 2rem; margin-bottom: 8px;">💳</div>
+        <div style="font-weight: 600; color: var(--ink);">Nenhum gasto ou ganho pessoal lançado neste mês.</div>
+        <div style="font-size: 0.82rem; margin-top: 4px;">Adicione suas despesas de casa, moradia, mercado ou entradas extras!</div>
+        <button class="btn-falcon btn-primary" onclick="openPersonalFinanceModal()" style="margin-top: 14px;">
+          + Adicionar Primeiro Gasto / Ganho
+        </button>
+      </div>
+    `;
+
+    container.innerHTML = `
+      ${subnavTabsHtml}
+      ${monthSelectorCardHtml}
+      ${summaryHtml}
+
+      <div class="charts-grid-wrapper" style="margin-top: 20px;">
+        <div class="chart-card-box">
+          <div class="chart-card-header">
+            <h4>📊 Distribuição de Gastos Pessoais</h4>
+            <span style="font-size: 0.78rem; color: var(--muted);">Por categoria de despesa</span>
+          </div>
+          ${personalChartHtml}
+        </div>
+      </div>
+
+      <div style="margin-top: 24px;">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; flex-wrap: wrap; gap: 10px;">
+          <div>
+            <h3 style="margin: 0; font-size: 1.1rem; font-weight: 700; color: var(--ink);">📋 Seus Lançamentos Pessoais</h3>
+            <span style="font-size: 0.8rem; color: var(--muted);">Controle de contas, moradia, alimentação e lazer</span>
+          </div>
+          <button class="btn-falcon btn-primary" onclick="openPersonalFinanceModal()" style="padding: 8px 16px; font-size: 0.85rem;">
+            + Novo Lançamento Pessoal
+          </button>
+        </div>
+        <div class="personal-finances-list">
+          ${itemsRowsHtml}
+        </div>
+      </div>
+    `;
+    return;
+  }
+
+  // VISÃO GESTÃO DO SALÃO
   if (!isManager) {
     // VISÃO INDIVIDUAL DO PROFISSIONAL
     const myApps = myProfId ? monthApps.filter(a => a.professionalId === myProfId) : [];
@@ -3922,6 +4442,7 @@ function renderBalanco(container, actions) {
     ` : `<div class="card-shell" style="text-align:center; color:var(--muted);">Perfil de profissional não associado.</div>`;
 
     container.innerHTML = `
+      ${subnavTabsHtml}
       ${monthSelectorCardHtml}
       ${summaryHtml}
       <div style="margin-top: 24px;">
@@ -3936,9 +4457,9 @@ function renderBalanco(container, actions) {
   const overallSummaryHtml = `
     <div class="balanco-summary-cards">
       <div class="balanco-card">
-        <div class="balanco-card-title">💰 Faturamento Bruto</div>
+        <div class="balanco-card-title">💰 Faturamento Total</div>
         <div class="balanco-card-value">R$ ${totalGrossRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-        <div class="balanco-card-sub">${totalAppCount} atendimentos no mês</div>
+        <div class="balanco-card-sub">Serviços, Vendas & Locações</div>
       </div>
       <div class="balanco-card">
         <div class="balanco-card-title">🤝 Comissões</div>
@@ -3946,7 +4467,7 @@ function renderBalanco(container, actions) {
         <div class="balanco-card-sub">Repasse aos profissionais</div>
       </div>
       <div class="balanco-card">
-        <div class="balanco-card-title">💸 Despesas</div>
+        <div class="balanco-card-title">💸 Despesas Operacionais</div>
         <div class="balanco-card-value" style="color: #dc2626;">R$ ${totalExpenses.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
         <div class="balanco-card-sub">${monthExps.length} lançamentos de custo</div>
       </div>
@@ -3954,6 +4475,40 @@ function renderBalanco(container, actions) {
         <div class="balanco-card-title">📈 Lucro Líquido Estimado</div>
         <div class="balanco-card-value" style="color: ${estimatedNetProfit >= 0 ? '#16a34a' : '#dc2626'};">R$ ${estimatedNetProfit.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
         <div class="balanco-card-sub">Faturamento - Comissões - Despesas</div>
+      </div>
+    </div>
+  `;
+
+  // Gráficos Donut SVG do Salão:
+  const revenueSlices = [
+    { label: 'Serviços', value: servicesRevenue, color: '#3b82f6' },
+    { label: 'Venda de Produtos', value: salesRevenue, color: '#10b981' },
+    { label: 'Locação de Cadeiras', value: rentRevenue, color: '#f59e0b' }
+  ];
+  const revenueChartHtml = generateDonutChartSvg(revenueSlices, `R$ ${totalGrossRevenue.toFixed(0)}`, 'Faturamento');
+
+  const totalOutflows = totalCommissions + totalExpenses;
+  const outflowSlices = [
+    { label: 'Comissões de Parceiros', value: totalCommissions, color: '#d97706' },
+    { label: 'Despesas do Salão', value: totalExpenses, color: '#ef4444' }
+  ];
+  const outflowChartHtml = generateDonutChartSvg(outflowSlices, `R$ ${totalOutflows.toFixed(0)}`, 'Total Saídas');
+
+  const chartsGridHtml = `
+    <div class="charts-grid-wrapper">
+      <div class="chart-card-box">
+        <div class="chart-card-header">
+          <h4>📊 Origem das Receitas</h4>
+          <span style="font-size: 0.78rem; color: var(--muted);">Serviços, Balcão e Aluguéis</span>
+        </div>
+        ${revenueChartHtml}
+      </div>
+      <div class="chart-card-box">
+        <div class="chart-card-header">
+          <h4>📉 Distribuição de Saídas</h4>
+          <span style="font-size: 0.78rem; color: var(--muted);">Comissões e Custos Operacionais</span>
+        </div>
+        ${outflowChartHtml}
       </div>
     </div>
   `;
@@ -4023,8 +4578,10 @@ function renderBalanco(container, actions) {
   }
 
   container.innerHTML = `
+    ${subnavTabsHtml}
     ${monthSelectorCardHtml}
     ${overallSummaryHtml}
+    ${chartsGridHtml}
     <div style="margin-top: 24px;">
       <h3 style="margin-bottom: 16px; font-size: 1.1rem; font-weight: 700; color: var(--ink);">🎯 Desempenho e Metas Individuais</h3>
       ${profCardsHtml}
@@ -7045,6 +7602,63 @@ window.openNewProfessionalModal = function() {
       </div>
     </div>
 
+    <!-- Seção de Contrato e Locação de Cadeira / Posto -->
+    <div style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 14px; padding: 14px; margin-top: 14px;">
+      <div style="margin-bottom: 10px;">
+        <label style="margin: 0 0 4px 0; font-weight: 700; color: var(--ink); font-size: 0.92rem; display: flex; align-items: center; gap: 6px;">
+          <svg width="17" height="17" fill="none" stroke="var(--orange)" stroke-width="2.2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+          <span>📜 Contrato & Posto de Trabalho (Locação de Cadeira)</span>
+        </label>
+        <p style="font-size: 0.76rem; color: var(--muted); margin: 0 0 10px 0; line-height: 1.35;">
+          Defina o modelo de parceria jurídica e o posto de atendimento vinculado ao profissional:
+        </p>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+        <div class="form-group" style="margin: 0;">
+          <label style="font-size: 0.8rem;">Modelo de Contrato</label>
+          <select class="form-control" id="mProfContractType" onchange="toggleProfContractFields('mProf')">
+            <option value="comissao">Salão Parceiro (Comissionado)</option>
+            <option value="locacao_fixa">Locação de Cadeira (Aluguel Fixo)</option>
+            <option value="hibrido">Híbrido (Aluguel + Comissão)</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin: 0;">
+          <label style="font-size: 0.8rem;">Cadeira / Posto de Trabalho</label>
+          <select class="form-control" id="mProfWorkstationId">
+            <option value="">Nenhum Posto Fixo</option>
+            ${(state.workstations || []).map(w => `<option value="${w.id}">${escapeHtml(w.name)} (${escapeHtml(w.type)})</option>`).join('')}
+          </select>
+        </div>
+      </div>
+
+      <div id="mProfRentFields" style="display: none; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+        <div class="form-group" style="margin: 0;">
+          <label style="font-size: 0.8rem;">Valor do Aluguel (R$/mês)</label>
+          <input type="number" step="10" class="form-control" id="mProfRentAmount" value="600" placeholder="600.00">
+        </div>
+        <div class="form-group" style="margin: 0;">
+          <label style="font-size: 0.8rem;">Dia do Vencimento</label>
+          <input type="number" class="form-control" id="mProfRentDueDay" value="5" min="1" max="31">
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;">
+        <div class="form-group" style="margin: 0;">
+          <label style="font-size: 0.78rem;">CPF do Parceiro</label>
+          <input type="text" class="form-control" id="mProfCpf" placeholder="000.000.000-00">
+        </div>
+        <div class="form-group" style="margin: 0;">
+          <label style="font-size: 0.78rem;">RG</label>
+          <input type="text" class="form-control" id="mProfRg" placeholder="0000000 SSP">
+        </div>
+        <div class="form-group" style="margin: 0;">
+          <label style="font-size: 0.78rem;">CNPJ MEI (Opcional)</label>
+          <input type="text" class="form-control" id="mProfMei" placeholder="00.000.000/0001-00">
+        </div>
+      </div>
+    </div>
+
     <!-- Seção de Serviços Atendidos por este Profissional -->
     <div style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 14px; padding: 14px; margin-top: 14px;">
       <div style="margin-bottom: 10px;">
@@ -7115,6 +7729,14 @@ window.openNewProfessionalModal = function() {
     const pixKey = document.getElementById('mProfPixKey').value.trim();
     const pixName = document.getElementById('mProfPixName').value.trim() || name;
 
+    const contractType = document.getElementById('mProfContractType')?.value || 'comissao';
+    const workstationId = document.getElementById('mProfWorkstationId')?.value || null;
+    const rentAmount = Number(document.getElementById('mProfRentAmount')?.value) || 0;
+    const rentDueDay = Number(document.getElementById('mProfRentDueDay')?.value) || 5;
+    const cpf = document.getElementById('mProfCpf')?.value.trim() || '';
+    const rg = document.getElementById('mProfRg')?.value.trim() || '';
+    const mei = document.getElementById('mProfMei')?.value.trim() || '';
+
     const avatar = document.getElementById('mProfAvatarValue')?.value || getButterflyAvatar(name);
 
     const serviceIds = Array.from(document.querySelectorAll('.m-new-prof-service-cb:checked')).map(cb => cb.value);
@@ -7141,6 +7763,13 @@ window.openNewProfessionalModal = function() {
         pixKeyType,
         pixKey,
         pixName,
+        contractType,
+        workstationId,
+        rentAmount,
+        rentDueDay,
+        cpf,
+        rg,
+        mei,
         serviceIds
       })
     });
@@ -7377,6 +8006,63 @@ window.openEditProfessionalModal = function(profId) {
       </div>
     </div>
 
+    <!-- Seção de Contrato e Locação de Cadeira / Posto -->
+    <div style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 14px; padding: 14px; margin-top: 14px;">
+      <div style="margin-bottom: 10px;">
+        <label style="margin: 0 0 4px 0; font-weight: 700; color: var(--ink); font-size: 0.92rem; display: flex; align-items: center; gap: 6px;">
+          <svg width="17" height="17" fill="none" stroke="var(--orange)" stroke-width="2.2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+          <span>📜 Contrato & Posto de Trabalho (Locação de Cadeira)</span>
+        </label>
+        <p style="font-size: 0.76rem; color: var(--muted); margin: 0 0 10px 0; line-height: 1.35;">
+          Defina o modelo de parceria jurídica e o posto de atendimento vinculado ao profissional:
+        </p>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+        <div class="form-group" style="margin: 0;">
+          <label style="font-size: 0.8rem;">Modelo de Contrato</label>
+          <select class="form-control" id="mEditProfContractType" onchange="toggleProfContractFields('mEditProf')">
+            <option value="comissao" ${prof.contractType === 'comissao' || !prof.contractType ? 'selected' : ''}>Salão Parceiro (Comissionado)</option>
+            <option value="locacao_fixa" ${prof.contractType === 'locacao_fixa' ? 'selected' : ''}>Locação de Cadeira (Aluguel Fixo)</option>
+            <option value="hibrido" ${prof.contractType === 'hibrido' ? 'selected' : ''}>Híbrido (Aluguel + Comissão)</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin: 0;">
+          <label style="font-size: 0.8rem;">Cadeira / Posto de Trabalho</label>
+          <select class="form-control" id="mEditProfWorkstationId">
+            <option value="">Nenhum Posto Fixo</option>
+            ${(state.workstations || []).map(w => `<option value="${w.id}" ${prof.workstationId === w.id ? 'selected' : ''}>${escapeHtml(w.name)} (${escapeHtml(w.type)})</option>`).join('')}
+          </select>
+        </div>
+      </div>
+
+      <div id="mEditProfRentFields" style="display: ${(prof.contractType === 'locacao_fixa' || prof.contractType === 'hibrido') ? 'grid' : 'none'}; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+        <div class="form-group" style="margin: 0;">
+          <label style="font-size: 0.8rem;">Valor do Aluguel (R$/mês)</label>
+          <input type="number" step="10" class="form-control" id="mEditProfRentAmount" value="${prof.rentAmount || 600}" placeholder="600.00">
+        </div>
+        <div class="form-group" style="margin: 0;">
+          <label style="font-size: 0.8rem;">Dia do Vencimento</label>
+          <input type="number" class="form-control" id="mEditProfRentDueDay" value="${prof.rentDueDay || 5}" min="1" max="31">
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;">
+        <div class="form-group" style="margin: 0;">
+          <label style="font-size: 0.78rem;">CPF do Parceiro</label>
+          <input type="text" class="form-control" id="mEditProfCpf" value="${escapeHtml(prof.cpf || '')}" placeholder="000.000.000-00">
+        </div>
+        <div class="form-group" style="margin: 0;">
+          <label style="font-size: 0.78rem;">RG</label>
+          <input type="text" class="form-control" id="mEditProfRg" value="${escapeHtml(prof.rg || '')}" placeholder="0000000 SSP">
+        </div>
+        <div class="form-group" style="margin: 0;">
+          <label style="font-size: 0.78rem;">CNPJ MEI (Opcional)</label>
+          <input type="text" class="form-control" id="mEditProfMei" value="${escapeHtml(prof.mei || '')}" placeholder="00.000.000/0001-00">
+        </div>
+      </div>
+    </div>
+
     <!-- Seção de Serviços Atendidos por este Profissional -->
     <div style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 14px; padding: 14px; margin-top: 14px;">
       <div style="margin-bottom: 10px;">
@@ -7447,6 +8133,14 @@ window.openEditProfessionalModal = function(profId) {
     const pixKey = document.getElementById('mEditProfPixKey').value.trim();
     const pixName = document.getElementById('mEditProfPixName').value.trim() || name;
 
+    const contractType = document.getElementById('mEditProfContractType')?.value || 'comissao';
+    const workstationId = document.getElementById('mEditProfWorkstationId')?.value || null;
+    const rentAmount = Number(document.getElementById('mEditProfRentAmount')?.value) || 0;
+    const rentDueDay = Number(document.getElementById('mEditProfRentDueDay')?.value) || 5;
+    const cpf = document.getElementById('mEditProfCpf')?.value.trim() || '';
+    const rg = document.getElementById('mEditProfRg')?.value.trim() || '';
+    const mei = document.getElementById('mEditProfMei')?.value.trim() || '';
+
     if (!name) {
       asyncAlert('O nome do profissional é obrigatório.');
       return;
@@ -7471,6 +8165,13 @@ window.openEditProfessionalModal = function(profId) {
       pixKeyType,
       pixKey,
       pixName,
+      contractType,
+      workstationId,
+      rentAmount,
+      rentDueDay,
+      cpf,
+      rg,
+      mei,
       avatar,
       serviceIds
     };
@@ -8672,5 +9373,513 @@ window.saveUserProfile = async function() {
   } catch (err) {
     console.error(err);
     await asyncAlert("Erro de conexão ao salvar perfil.");
+  }
+};
+
+// ==========================================
+// NOVAS FUNCIONALIDADES (VENDA BALCÃO, CADEIRAS & LOCAÇÃO, CONTRATOS, GESTÃO PESSOAL)
+// ==========================================
+
+window.toggleProfContractFields = function(prefix) {
+  const typeSelect = document.getElementById(`${prefix}ContractType`);
+  const rentFields = document.getElementById(`${prefix}RentFields`);
+  if (!typeSelect || !rentFields) return;
+  const isRent = typeSelect.value === 'locacao_fixa' || typeSelect.value === 'hibrido';
+  rentFields.style.display = isRent ? 'grid' : 'none';
+};
+
+// --- VENDA BALCÃO (PDV RÁPIDO DE PRODUTOS) ---
+window.openDirectSaleModal = function(preSelectedProductId) {
+  const products = (state.products || []).filter(p => p.active !== false);
+  if (products.length === 0) {
+    asyncAlert('Nenhum produto cadastrado no estoque.');
+    return;
+  }
+
+  const defaultProd = preSelectedProductId ? products.find(p => p.id === preSelectedProductId) || products[0] : products[0];
+
+  const html = `
+    <div class="form-group">
+      <label>Selecionar Produto do Estoque</label>
+      <select class="form-control" id="mSaleProduct" onchange="updateDirectSaleTotals()">
+        ${products.map(p => `
+          <option value="${p.id}" data-price="${p.price || 0}" data-stock="${p.stockQuantity !== undefined ? p.stockQuantity : 99}" ${p.id === defaultProd.id ? 'selected' : ''}>
+            ${escapeHtml(p.name)} — R$ ${(Number(p.price) || 0).toFixed(2)} (Estoque: ${p.stockQuantity !== undefined ? p.stockQuantity : 'N/A'})
+          </option>
+        `).join('')}
+      </select>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
+      <div class="form-group" style="margin: 0;">
+        <label>Quantidade</label>
+        <input type="number" class="form-control" id="mSaleQty" value="1" min="1" max="999" oninput="updateDirectSaleTotals()">
+      </div>
+      <div class="form-group" style="margin: 0;">
+        <label>Preço Unitário (R$)</label>
+        <input type="number" step="0.01" class="form-control" id="mSaleUnitPrice" value="${Number(defaultProd.price || 0).toFixed(2)}" oninput="updateDirectSaleTotals()">
+      </div>
+    </div>
+
+    <div style="background: #f8fafc; border-radius: 12px; padding: 12px; margin-bottom: 14px; border: 1.5px dashed #cbd5e1; display: flex; align-items: center; justify-content: space-between;">
+      <span style="font-size: 0.88rem; font-weight: 600; color: var(--muted);">Total da Venda:</span>
+      <span id="mSaleTotalDisplay" style="font-size: 1.25rem; font-weight: 800; color: #16a34a;">
+        R$ ${(Number(defaultProd.price || 0)).toFixed(2)}
+      </span>
+    </div>
+
+    <div class="form-group">
+      <label>Cliente (Opcional)</label>
+      <input type="text" class="form-control" id="mSaleClient" placeholder="Nome do cliente (ou deixe em branco)">
+    </div>
+
+    <div class="form-group">
+      <label>Profissional / Vendedor (Opcional)</label>
+      <select class="form-control" id="mSaleProf">
+        <option value="">Nenhum (Venda Balcão do Salão)</option>
+        ${(state.professionals || []).map(p => `<option value="${p.id}">${escapeHtml(p.name)}</option>`).join('')}
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label>Forma de Pagamento</label>
+      <select class="form-control" id="mSalePayment">
+        <option value="pix">Pix</option>
+        <option value="dinheiro">Dinheiro</option>
+        <option value="cartao_credito">Cartão de Crédito</option>
+        <option value="cartao_debito">Cartão de Débito</option>
+        <option value="outro">Outro</option>
+      </select>
+    </div>
+  `;
+
+  openModal('🧾 Nova Venda Balcão (PDV Rápido)', html, async () => {
+    const prodId = document.getElementById('mSaleProduct').value;
+    const qty = Number(document.getElementById('mSaleQty').value) || 1;
+    const unitPrice = Number(document.getElementById('mSaleUnitPrice').value) || 0;
+    const clientName = document.getElementById('mSaleClient').value.trim();
+    const professionalId = document.getElementById('mSaleProf').value || null;
+    const paymentMethod = document.getElementById('mSalePayment').value;
+
+    if (!prodId) {
+      asyncAlert('Selecione um produto.');
+      return;
+    }
+    if (qty <= 0) {
+      asyncAlert('A quantidade deve ser de no mínimo 1.');
+      return;
+    }
+
+    try {
+      const res = await tenantFetch('/api/sales', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          productId: prodId,
+          quantity: qty,
+          unitPrice,
+          clientName,
+          professionalId,
+          paymentMethod
+        })
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        asyncAlert(err.error || 'Erro ao registrar venda.');
+        return;
+      }
+
+      closeModal();
+      await loadInitialData();
+      renderProducts(document.getElementById('viewContainer'), document.getElementById('topBarActions'));
+      asyncAlert('Venda balcão registrada com sucesso e estoque atualizado!', 'Sucesso', 'success');
+    } catch (e) {
+      console.error(e);
+      asyncAlert('Erro ao conectar ao servidor.');
+    }
+  });
+};
+
+window.updateDirectSaleTotals = function() {
+  const prodSelect = document.getElementById('mSaleProduct');
+  const selOpt = prodSelect ? prodSelect.options[prodSelect.selectedIndex] : null;
+  const unitInput = document.getElementById('mSaleUnitPrice');
+  const qtyInput = document.getElementById('mSaleQty');
+  const totalDisplay = document.getElementById('mSaleTotalDisplay');
+
+  if (selOpt && (!unitInput.dataset.manuallyEdited || unitInput.dataset.lastProd !== selOpt.value)) {
+    unitInput.value = Number(selOpt.dataset.price || 0).toFixed(2);
+    unitInput.dataset.lastProd = selOpt.value;
+  }
+
+  const qty = Number(qtyInput?.value) || 1;
+  const unitPrice = Number(unitInput?.value) || 0;
+  const total = qty * unitPrice;
+
+  if (totalDisplay) {
+    totalDisplay.innerText = `R$ ${total.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  }
+};
+
+window.deleteProductSale = async function(saleId) {
+  const confirmed = await asyncConfirm('Deseja realmente estornar/cancelar esta venda balcão? A quantidade vendida retornará ao estoque.');
+  if (!confirmed) return;
+
+  try {
+    const res = await tenantFetch(`/api/sales/${saleId}`, { method: 'DELETE' });
+    if (res.ok) {
+      await loadInitialData();
+      renderProducts(document.getElementById('viewContainer'), document.getElementById('topBarActions'));
+      asyncAlert('Venda estornada com sucesso!', 'Sucesso', 'success');
+    } else {
+      asyncAlert('Erro ao excluir venda.');
+    }
+  } catch (e) {
+    console.error(e);
+    asyncAlert('Erro ao conectar ao servidor.');
+  }
+};
+
+// --- POSTOS DE TRABALHO & LOCAÇÃO DE CADEIRAS ---
+window.openWorkstationModal = function(wsId) {
+  if (!isManager) {
+    asyncAlert('Apenas gestores podem gerenciar postos e cadeiras.');
+    return;
+  }
+  const ws = wsId ? (state.workstations || []).find(w => w.id === wsId) : null;
+  const isEditing = !!ws;
+
+  const html = `
+    <div class="form-group">
+      <label>Identificação / Nome do Posto</label>
+      <input type="text" class="form-control" id="mWsName" value="${ws ? escapeHtml(ws.name) : ''}" placeholder="Ex: Cadeira 01 - Corte & Escova, Maca 02 - Estética">
+    </div>
+
+    <div class="form-group">
+      <label>Tipo do Bem Móvel / Espaço</label>
+      <select class="form-control" id="mWsType">
+        <option value="Cadeira" ${ws?.type === 'Cadeira' ? 'selected' : ''}>Cadeira de Cabeleireiro</option>
+        <option value="Ciranda / Manicure" ${ws?.type === 'Ciranda / Manicure' ? 'selected' : ''}>Ciranda / Manicure & Pedicure</option>
+        <option value="Maca / Estética" ${ws?.type === 'Maca / Estética' ? 'selected' : ''}>Maca / Estética & Depilação</option>
+        <option value="Bancada / Maquiagem" ${ws?.type === 'Bancada / Maquiagem' ? 'selected' : ''}>Bancada / Maquiagem & Penteado</option>
+        <option value="Lavatório" ${ws?.type === 'Lavatório' ? 'selected' : ''}>Lavatório</option>
+        <option value="Outro" ${ws?.type === 'Outro' ? 'selected' : ''}>Outro Posto de Trabalho</option>
+      </select>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
+      <div class="form-group" style="margin: 0;">
+        <label>Valor do Aluguel (R$)</label>
+        <input type="number" step="10" class="form-control" id="mWsMonthlyRent" value="${ws ? ws.monthlyRent || 0 : 600}" placeholder="600.00">
+      </div>
+      <div class="form-group" style="margin: 0;">
+        <label>Periodicidade</label>
+        <select class="form-control" id="mWsRentType">
+          <option value="mensal" ${ws?.rentType === 'mensal' ? 'selected' : ''}>Mensal</option>
+          <option value="semanal" ${ws?.rentType === 'semanal' ? 'selected' : ''}>Semanal</option>
+          <option value="diaria" ${ws?.rentType === 'diaria' ? 'selected' : ''}>Diária</option>
+          <option value="porcentagem" ${ws?.rentType === 'porcentagem' ? 'selected' : ''}>Porcentagem</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Profissional Locatário / Ocupante</label>
+      <select class="form-control" id="mWsProf">
+        <option value="">Nenhum (Cadeira Livre / Disponível)</option>
+        ${(state.professionals || []).map(p => `
+          <option value="${p.id}" ${ws?.professionalId === p.id ? 'selected' : ''}>
+            ${escapeHtml(p.name)} (${escapeHtml(p.role || 'Profissional')})
+          </option>
+        `).join('')}
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label>Status Operacional</label>
+      <select class="form-control" id="mWsStatus">
+        <option value="disponivel" ${ws?.status === 'disponivel' || (!ws?.status && !ws?.professionalId) ? 'selected' : ''}>Disponível / Livre</option>
+        <option value="locada" ${ws?.status === 'locada' || ws?.professionalId ? 'selected' : ''}>Locada / Ocupada</option>
+        <option value="manutencao" ${ws?.status === 'manutencao' ? 'selected' : ''}>Em Manutenção</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label>Equipamentos & Detalhes Inclusos</label>
+      <textarea class="form-control" id="mWsNotes" rows="2" placeholder="Ex: Cadeira reclinável hidráulica com espelho LED, carrinho auxiliar com 4 gavetas e tomada 220v.">${ws?.notes ? escapeHtml(ws.notes) : ''}</textarea>
+    </div>
+  `;
+
+  openModal(isEditing ? '💺 Editar Posto / Cadeira' : '💺 Novo Posto / Cadeira para Locação', html, async () => {
+    const name = document.getElementById('mWsName').value.trim();
+    const type = document.getElementById('mWsType').value;
+    const monthlyRent = Number(document.getElementById('mWsMonthlyRent').value) || 0;
+    const rentType = document.getElementById('mWsRentType').value;
+    const professionalId = document.getElementById('mWsProf').value || null;
+    let status = document.getElementById('mWsStatus').value;
+    if (professionalId && status === 'disponivel') status = 'locada';
+    const notes = document.getElementById('mWsNotes').value.trim();
+
+    if (!name) {
+      asyncAlert('O nome/identificação do posto é obrigatório.');
+      return;
+    }
+
+    try {
+      const url = isEditing ? `/api/workstations/${wsId}` : '/api/workstations';
+      const method = isEditing ? 'PUT' : 'POST';
+      const res = await tenantFetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, type, monthlyRent, rentType, professionalId, status, notes })
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        asyncAlert(err.error || 'Erro ao salvar posto.');
+        return;
+      }
+
+      closeModal();
+      await loadInitialData();
+      renderProfessionals(document.getElementById('viewContainer'), document.getElementById('topBarActions'));
+      asyncAlert(`Posto "${name}" salvo com sucesso!`, 'Sucesso', 'success');
+    } catch (e) {
+      console.error(e);
+      asyncAlert('Erro ao conectar ao servidor.');
+    }
+  });
+};
+
+window.deleteWorkstation = async function(wsId) {
+  if (!isManager) {
+    asyncAlert('Apenas gestores podem excluir postos.');
+    return;
+  }
+  const confirmed = await asyncConfirm('Deseja realmente remover esta cadeira/posto de trabalho do salão?');
+  if (!confirmed) return;
+
+  try {
+    const res = await tenantFetch(`/api/workstations/${wsId}`, { method: 'DELETE' });
+    if (res.ok) {
+      await loadInitialData();
+      renderProfessionals(document.getElementById('viewContainer'), document.getElementById('topBarActions'));
+      asyncAlert('Posto de trabalho removido com sucesso!', 'Sucesso', 'success');
+    } else {
+      asyncAlert('Erro ao excluir posto.');
+    }
+  } catch (e) {
+    console.error(e);
+    asyncAlert('Erro ao conectar ao servidor.');
+  }
+};
+
+// --- CONTRATOS & TERMOS JURÍDICOS PRONTOS ---
+window.openContractModal = async function(profId) {
+  try {
+    const res = await tenantFetch(`/api/contracts/professional/${profId}`);
+    if (!res.ok) {
+      asyncAlert('Não foi possível carregar os dados contratuais deste profissional.');
+      return;
+    }
+    const cData = await res.json();
+    const prof = cData.professional || {};
+    const salon = cData.salon || {};
+    const ws = cData.workstation || {};
+
+    const contractHtml = `
+      <div class="contract-viewer-card" id="printableContractArea">
+        <div style="text-align: center; margin-bottom: 20px; border-bottom: 2px solid #e2e8f0; padding-bottom: 16px;">
+          <div style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; color: var(--orange, #ff6900); font-weight: 700; margin-bottom: 4px;">Documento Jurídico Operacional</div>
+          <h2 style="font-size: 1.15rem; font-weight: 800; color: #0f172a; margin: 0 0 6px 0; text-transform: uppercase; line-height: 1.3;">
+            ${escapeHtml(cData.contractTitle)}
+          </h2>
+          <div style="font-size: 0.8rem; color: #64748b;">
+            Instrumento Particular de Parceria e Locação de Bem Móvel — Data: <strong>${cData.date}</strong>
+          </div>
+        </div>
+
+        <div style="margin-bottom: 16px; background: #f8fafc; border-radius: 12px; padding: 14px; border: 1px solid #e2e8f0; font-size: 0.85rem; line-height: 1.5;">
+          <div style="margin-bottom: 8px;">
+            <strong style="color: #0f172a;">SALÃO-PARCEIRO:</strong> ${escapeHtml(salon.name || 'Salão')} 
+            ${salon.document ? `— CNPJ/CPF: <strong>${escapeHtml(salon.document)}</strong>` : ''} 
+            ${salon.address ? `— Endereço: ${escapeHtml(salon.address)}` : ''}
+          </div>
+          <div>
+            <strong style="color: #0f172a;">PROFISSIONAL-PARCEIRO / LOCATÁRIO:</strong> ${escapeHtml(prof.name || 'Profissional')}
+            ${prof.cpf ? `— CPF: <strong>${escapeHtml(prof.cpf)}</strong>` : ''} 
+            ${prof.rg ? `— RG: <strong>${escapeHtml(prof.rg)}</strong>` : ''} 
+            ${prof.mei ? `— MEI: <strong>${escapeHtml(prof.mei)}</strong>` : ''} 
+            — Função: <strong>${escapeHtml(prof.role || 'Profissional Especialista')}</strong>
+          </div>
+        </div>
+
+        <div style="margin-bottom: 16px; background: #fff7ed; border-radius: 12px; padding: 14px; border: 1px solid #ffedd5; font-size: 0.85rem; line-height: 1.5;">
+          <div style="font-weight: 700; color: #c2410c; margin-bottom: 6px; display: flex; align-items: center; gap: 6px;">
+            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
+            <span>BEM MÓVEL / POSTO DE TRABALHO CEDIDO:</span>
+          </div>
+          <div>
+            • <strong>Identificação:</strong> ${escapeHtml(ws.name || 'Posto de Trabalho Compartilhado')} (${escapeHtml(ws.type || 'Cadeira')})<br>
+            • <strong>Modalidade de Contrato:</strong> ${prof.contractType === 'locacao_fixa' ? 'Locação Fixa de Cadeira' : prof.contractType === 'hibrido' ? 'Híbrido (Aluguel + Comissão)' : 'Salão Parceiro (Comissionado)'}<br>
+            • <strong>Condição Financeira:</strong> ${prof.contractType === 'locacao_fixa' || prof.contractType === 'hibrido' ? `Aluguel de R$ ${(Number(prof.rentAmount) || Number(ws.monthlyRent) || 0).toFixed(2)}/mês (Vencimento todo dia ${prof.rentDueDay || 5})` : `Comissão de ${prof.commissionDefault || 50}% sobre os serviços realizados`}<br>
+            ${ws.notes ? `• <strong>Equipamentos e Acessórios Inclusos:</strong> ${escapeHtml(ws.notes)}` : ''}
+          </div>
+        </div>
+
+        <div style="font-size: 0.82rem; line-height: 1.6; color: #334155; margin-bottom: 24px;">
+          <h4 style="font-size: 0.9rem; font-weight: 700; color: #0f172a; margin: 12px 0 6px 0;">CLÁUSULAS CONTRATUAIS</h4>
+          <ol style="padding-left: 20px; margin: 0;">
+            ${(cData.clauses || []).map(clause => `<li style="margin-bottom: 8px;">${escapeHtml(clause)}</li>`).join('')}
+          </ol>
+        </div>
+
+        <div style="margin-top: 36px; padding-top: 20px; border-top: 1px dashed #cbd5e1; display: grid; grid-template-columns: 1fr 1fr; gap: 30px; text-align: center; font-size: 0.82rem;">
+          <div>
+            <div style="border-bottom: 1px solid #0f172a; margin-bottom: 6px; height: 35px;"></div>
+            <strong>${escapeHtml(salon.name || 'Salão-Parceiro')}</strong><br>
+            <span style="color: #64748b;">Representante Legal</span>
+          </div>
+          <div>
+            <div style="border-bottom: 1px solid #0f172a; margin-bottom: 6px; height: 35px;"></div>
+            <strong>${escapeHtml(prof.name || 'Profissional-Parceiro')}</strong><br>
+            <span style="color: #64748b;">Profissional / Locatário</span>
+          </div>
+        </div>
+      </div>
+
+      <div style="display: flex; align-items: center; justify-content: flex-end; gap: 10px; margin-top: 16px;" class="no-print">
+        <button class="btn-falcon btn-secondary" onclick="shareContractWhatsApp('${prof.phone || ''}', '${escapeHtml(prof.name)}', '${escapeHtml(cData.contractTitle)}')">
+          <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.301-.15-1.78-.879-2.056-.98-.276-.1-.477-.15-.678.15-.2.301-.778.98-.954 1.18-.176.2-.351.226-.653.075-.301-.15-1.272-.469-2.423-1.496-.896-.799-1.5-1.786-1.676-2.088-.176-.301-.019-.464.132-.614.136-.135.301-.351.452-.527.15-.176.2-.301.3-.502.101-.201.05-.377-.025-.527-.075-.15-.678-1.633-.929-2.235-.245-.587-.494-.508-.678-.517-.176-.01-.377-.01-.578-.01-.201 0-.527.075-.803.377-.276.301-1.054 1.03-1.054 2.512 0 1.482 1.079 2.912 1.23 3.113.15.201 2.124 3.243 5.144 4.548.718.311 1.279.497 1.716.636.722.23 1.378.197 1.898.12.578-.087 1.78-.728 2.03-1.431.25-.703.25-1.305.175-1.431-.075-.126-.276-.201-.577-.351zM12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.97.57 3.81 1.57 5.37L2.1 22.37l5.25-1.53c1.51.92 3.26 1.46 5.12 1.46 5.46 0 9.91-4.45 9.91-9.91 0-5.46-4.45-9.91-9.91-9.91z"/></svg>
+          <span>Enviar via WhatsApp</span>
+        </button>
+        <button class="btn-falcon btn-primary" onclick="window.print()">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+          <span>Imprimir / PDF</span>
+        </button>
+      </div>
+    `;
+
+    openModal(`📜 Contrato & Termo — ${escapeHtml(prof.name)}`, contractHtml, null, 'Fechar');
+  } catch (e) {
+    console.error(e);
+    asyncAlert('Erro ao carregar contrato.');
+  }
+};
+
+window.shareContractWhatsApp = function(phone, name, title) {
+  if (!phone) {
+    asyncAlert('Este profissional não possui telefone cadastrado.');
+    return;
+  }
+  const cleanPhone = phone.replace(/\D/g, '');
+  const fullPhone = cleanPhone.length <= 11 ? `55${cleanPhone}` : cleanPhone;
+  const msg = `Olá, ${name}! Segue o registro do seu ${title} no BellaSync. Nosso contrato está formalizado no sistema. Qualquer dúvida estou à disposição!`;
+  const url = `https://wa.me/${fullPhone}?text=${encodeURIComponent(msg)}`;
+  window.open(url, '_blank');
+};
+
+// --- GESTÃO PESSOAL (FINANÇAS PESSOAIS) ---
+window.openPersonalFinanceModal = function() {
+  const today = new Date().toISOString().split('T')[0];
+  const html = `
+    <div class="form-group">
+      <label>Descrição do Lançamento</label>
+      <input type="text" class="form-control" id="mPFinDesc" placeholder="Ex: Aluguel Apartamento, Mercado Semanal, Plano de Saúde, Extra Freela">
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
+      <div class="form-group" style="margin: 0;">
+        <label>Tipo de Lançamento</label>
+        <select class="form-control" id="mPFinType">
+          <option value="fixo">🔒 Gasto Fixo (Aluguel, Luz, Internet, etc.)</option>
+          <option value="variavel">🛍️ Gasto Variável (Mercado, Lazer, Farmácia)</option>
+          <option value="ganho">💰 Ganho Pessoal (Freelas, Aulas, Pró-Labore Extra)</option>
+        </select>
+      </div>
+      <div class="form-group" style="margin: 0;">
+        <label>Categoria</label>
+        <select class="form-control" id="mPFinCategory">
+          <option value="Moradia">Moradia</option>
+          <option value="Alimentação">Alimentação</option>
+          <option value="Transporte">Transporte</option>
+          <option value="Saúde & Farmácia">Saúde & Farmácia</option>
+          <option value="Lazer & Família">Lazer & Família</option>
+          <option value="Educação & Cursos">Educação & Cursos</option>
+          <option value="Contas & Boletos">Contas & Boletos</option>
+          <option value="Ganhos Extras">Ganhos Extras</option>
+          <option value="Outros">Outros</option>
+        </select>
+      </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
+      <div class="form-group" style="margin: 0;">
+        <label>Valor (R$)</label>
+        <input type="number" step="0.50" class="form-control" id="mPFinAmount" placeholder="150.00">
+      </div>
+      <div class="form-group" style="margin: 0;">
+        <label>Data</label>
+        <input type="date" class="form-control" id="mPFinDate" value="${today}">
+      </div>
+    </div>
+  `;
+
+  openModal('💳 Novo Lançamento Financeiro Pessoal', html, async () => {
+    const description = document.getElementById('mPFinDesc').value.trim();
+    const type = document.getElementById('mPFinType').value;
+    const category = document.getElementById('mPFinCategory').value;
+    const amount = Number(document.getElementById('mPFinAmount').value) || 0;
+    const date = document.getElementById('mPFinDate').value || today;
+
+    if (!description) {
+      asyncAlert('A descrição do lançamento é obrigatória.');
+      return;
+    }
+    if (amount <= 0) {
+      asyncAlert('Informe um valor válido maior que zero.');
+      return;
+    }
+
+    try {
+      const res = await tenantFetch('/api/personal-finances', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ description, type, category, amount, date })
+      });
+
+      if (!res.ok) {
+        asyncAlert('Erro ao cadastrar lançamento pessoal.');
+        return;
+      }
+
+      closeModal();
+      await loadInitialData();
+      renderBalanco(document.getElementById('viewContainer'), document.getElementById('topBarActions'));
+      asyncAlert('Lançamento pessoal adicionado com sucesso!', 'Sucesso', 'success');
+    } catch (e) {
+      console.error(e);
+      asyncAlert('Erro ao conectar ao servidor.');
+    }
+  });
+};
+
+window.deletePersonalFinanceItem = async function(id) {
+  const confirmed = await asyncConfirm('Deseja excluir este lançamento financeiro pessoal?');
+  if (!confirmed) return;
+
+  try {
+    const res = await tenantFetch(`/api/personal-finances/${id}`, { method: 'DELETE' });
+    if (res.ok) {
+      await loadInitialData();
+      renderBalanco(document.getElementById('viewContainer'), document.getElementById('topBarActions'));
+      asyncAlert('Lançamento excluído com sucesso!', 'Sucesso', 'success');
+    } else {
+      asyncAlert('Erro ao excluir lançamento.');
+    }
+  } catch (e) {
+    console.error(e);
+    asyncAlert('Erro ao conectar ao servidor.');
   }
 };
