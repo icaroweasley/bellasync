@@ -2620,7 +2620,7 @@ app.post('/api/products', requireManager, (req, res) => {
     id: 'prod_' + Date.now(),
     tenantId: tenantId,
     name: req.body.name,
-    category: req.body.category || 'Geral',
+    category: (req.body.category || 'Geral').trim(),
     brand: req.body.brand || '',
     barcode: req.body.barcode || '',
     canSell: req.body.canSell ?? true,
@@ -2629,6 +2629,19 @@ app.post('/api/products', requireManager, (req, res) => {
     stock: Number(req.body.stock) || 0
   };
   db.products.push(newProd);
+
+  if (newProd.category) {
+    if (!db.productCategories) db.productCategories = [];
+    const exists = db.productCategories.some(c => c.tenantId === tenantId && c.name.toLowerCase() === newProd.category.toLowerCase());
+    if (!exists) {
+      db.productCategories.push({
+        id: 'pcat_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+        tenantId,
+        name: newProd.category
+      });
+    }
+  }
+
   saveDb(db);
   res.status(201).json(newProd);
 });
@@ -2642,7 +2655,18 @@ app.put('/api/products/:id', requireManager, (req, res) => {
   }
 
   if (req.body.name) prod.name = req.body.name;
-  if (req.body.category) prod.category = req.body.category;
+  if (req.body.category) {
+    prod.category = req.body.category.trim();
+    if (!db.productCategories) db.productCategories = [];
+    const exists = db.productCategories.some(c => c.tenantId === tenantId && c.name.toLowerCase() === prod.category.toLowerCase());
+    if (!exists) {
+      db.productCategories.push({
+        id: 'pcat_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+        tenantId,
+        name: prod.category
+      });
+    }
+  }
   if (req.body.brand !== undefined) prod.brand = req.body.brand;
   if (req.body.price !== undefined) prod.price = Number(req.body.price) || 0;
   if (req.body.stock !== undefined) prod.stock = Number(req.body.stock) || 0;
@@ -2661,6 +2685,140 @@ app.delete('/api/products/:id', requireManager, (req, res) => {
   const removed = db.products.splice(idx, 1)[0];
   saveDb(db);
   res.json({ message: 'Produto excluído com sucesso.', removed });
+});
+
+// 6.1 Categorias de Produtos (Listagem, Criação, Edição e Exclusão)
+app.get('/api/product-categories', (req, res) => {
+  const db = getDb();
+  const tenantId = getTenantId(req);
+  if (!db.productCategories) db.productCategories = [];
+
+  const explicit = db.productCategories.filter(c => c.tenantId === tenantId);
+  const productsCategories = (db.products || [])
+    .filter(p => p.tenantId === tenantId && p.category)
+    .map(p => p.category.trim())
+    .filter(Boolean);
+
+  const defaultDefaults = [
+    'Produtos para Cabelo',
+    'Tratamentos & Máscaras',
+    'Finalizadores & Modeladores',
+    'Lavatório & Profissional',
+    'Alimentos & Bebidas',
+    'Outros Produtos'
+  ];
+
+  const allNames = Array.from(new Set([
+    ...explicit.map(c => c.name.trim()),
+    ...productsCategories,
+    ...(explicit.length === 0 && productsCategories.length === 0 ? defaultDefaults : [])
+  ])).filter(Boolean);
+
+  let modified = false;
+  allNames.forEach(name => {
+    const exists = explicit.some(c => c.name.toLowerCase() === name.toLowerCase());
+    if (!exists) {
+      const newCat = { id: 'pcat_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5), tenantId, name };
+      db.productCategories.push(newCat);
+      explicit.push(newCat);
+      modified = true;
+    }
+  });
+
+  if (modified) saveDb(db);
+
+  const result = explicit.map(cat => {
+    const productsCount = (db.products || []).filter(p => p.tenantId === tenantId && p.category && p.category.toLowerCase() === cat.name.toLowerCase()).length;
+    return {
+      id: cat.id,
+      name: cat.name,
+      productsCount
+    };
+  }).sort((a, b) => a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' }));
+
+  res.json(result);
+});
+
+app.post('/api/product-categories', requireManager, (req, res) => {
+  const db = getDb();
+  const tenantId = getTenantId(req);
+  const name = (req.body.name || '').trim();
+  if (!name) {
+    return res.status(400).json({ error: 'O nome da categoria é obrigatório.' });
+  }
+
+  if (!db.productCategories) db.productCategories = [];
+  const existing = db.productCategories.find(c => c.tenantId === tenantId && c.name.toLowerCase() === name.toLowerCase());
+  if (existing) {
+    const productsCount = (db.products || []).filter(p => p.tenantId === tenantId && p.category && p.category.toLowerCase() === existing.name.toLowerCase()).length;
+    return res.json({ id: existing.id, name: existing.name, productsCount });
+  }
+
+  const newCat = {
+    id: 'pcat_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+    tenantId,
+    name
+  };
+  db.productCategories.push(newCat);
+  saveDb(db);
+
+  res.status(201).json({ id: newCat.id, name: newCat.name, productsCount: 0 });
+});
+
+app.put('/api/product-categories/:id', requireManager, (req, res) => {
+  const db = getDb();
+  const tenantId = getTenantId(req);
+  const newName = (req.body.name || req.body.newName || '').trim();
+  if (!newName) {
+    return res.status(400).json({ error: 'O novo nome da categoria é obrigatório.' });
+  }
+
+  if (!db.productCategories) db.productCategories = [];
+  const cat = db.productCategories.find(c => (c.id === req.params.id || c.name.toLowerCase() === req.params.id.toLowerCase()) && c.tenantId === tenantId);
+
+  if (!cat) {
+    return res.status(404).json({ error: 'Categoria não encontrada.' });
+  }
+
+  const oldName = cat.name;
+  cat.name = newName;
+
+  let affectedProducts = 0;
+  (db.products || []).forEach(p => {
+    if (p.tenantId === tenantId && p.category && p.category.toLowerCase() === oldName.toLowerCase()) {
+      p.category = newName;
+      affectedProducts++;
+    }
+  });
+
+  saveDb(db);
+  res.json({ id: cat.id, name: cat.name, oldName, affectedProducts });
+});
+
+app.delete('/api/product-categories/:id', requireManager, (req, res) => {
+  const db = getDb();
+  const tenantId = getTenantId(req);
+  const fallbackCategory = (req.query.fallbackCategory || req.body.fallbackCategory || 'Geral').trim();
+
+  if (!db.productCategories) db.productCategories = [];
+  const idx = db.productCategories.findIndex(c => (c.id === req.params.id || c.name.toLowerCase() === req.params.id.toLowerCase()) && c.tenantId === tenantId);
+
+  if (idx === -1) {
+    return res.status(404).json({ error: 'Categoria não encontrada.' });
+  }
+
+  const removed = db.productCategories.splice(idx, 1)[0];
+
+  let affectedProducts = 0;
+  (db.products || []).forEach(p => {
+    if (p.tenantId === tenantId && p.category && p.category.toLowerCase() === removed.name.toLowerCase()) {
+      p.category = fallbackCategory;
+      affectedProducts++;
+    }
+  });
+
+  saveDb(db);
+  res.json({ message: 'Categoria de produto excluída com sucesso.', removed, affectedProducts });
 });
 
 // =============================================================

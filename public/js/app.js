@@ -164,6 +164,7 @@ let state = {
   commissions: [],
   packages: [],
   categories: [],
+  productCategories: [],
   workstations: [],
   workstationsSummary: {},
   productSales: [],
@@ -1147,7 +1148,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 async function loadInitialData() {
   try {
-    const [settings, profs, servs, clis, apps, prods, exps, comms, pkgs, cats, gCfg, fCfg, wsData, salesData, pFinData] = await Promise.all([
+    const [settings, profs, servs, clis, apps, prods, exps, comms, pkgs, cats, gCfg, fCfg, wsData, salesData, pFinData, prodCats] = await Promise.all([
       tenantFetch('/api/settings').then(r => r.json()),
       tenantFetch('/api/professionals').then(r => r.json()),
       tenantFetch('/api/services').then(r => r.json()),
@@ -1162,7 +1163,8 @@ async function loadInitialData() {
       tenantFetch('/api/fiscal/config').then(r => r.json()).catch(() => null),
       tenantFetch('/api/workstations').then(r => r.json()).catch(() => ({ stations: [], summary: {} })),
       tenantFetch('/api/sales').then(r => r.json()).catch(() => []),
-      tenantFetch('/api/personal-finances').then(r => r.json()).catch(() => [])
+      tenantFetch('/api/personal-finances').then(r => r.json()).catch(() => []),
+      tenantFetch('/api/product-categories').then(r => r.json()).catch(() => [])
     ]);
 
     state = {
@@ -1176,6 +1178,7 @@ async function loadInitialData() {
       commissions: comms,
       packages: pkgs || [],
       categories: cats || [],
+      productCategories: prodCats || [],
       googleConfig: gCfg || settings?.googleContacts || {},
       fiscalConfig: fCfg || settings?.fiscal || {},
       workstations: wsData?.stations || [],
@@ -3862,6 +3865,14 @@ function renderProducts(container, actions) {
   }
 
   // ABA ESTOQUE DE PRODUTOS
+  window.selectedProductCategoryFilter = window.selectedProductCategoryFilter || 'ALL';
+  window.filterProductsByCategory = function(catName) {
+    window.selectedProductCategoryFilter = catName;
+    const container = document.getElementById('viewContainer');
+    const actions = document.getElementById('topBarActions');
+    if (container) renderProducts(container, actions);
+  };
+
   actions.innerHTML = `
     <div style="display:flex; align-items:center; gap:8px;">
       <button class="btn-falcon btn-primary" onclick="openDirectSaleModal()" style="height:36px; font-size:0.82rem; padding:0 14px; background:#16a34a; border-color:#16a34a; display:inline-flex; align-items:center; gap:6px;">
@@ -3869,6 +3880,10 @@ function renderProducts(container, actions) {
         <span>Venda Balcão</span>
       </button>
       ${isManager ? `
+        <button class="btn-falcon btn-secondary" onclick="openProductCategoriesManagerModal()" style="display:inline-flex; align-items:center; gap:6px; font-size:0.84rem; padding:6px 14px; height:36px; border-radius:10px; cursor:pointer;" title="Gerenciar Categorias de Produtos">
+          <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+          Categorias
+        </button>
         <button class="btn-falcon btn-secondary" onclick="openNewProductModal()" style="height:36px; font-size:0.82rem; padding:0 14px;">
           + Novo Produto
         </button>
@@ -3892,35 +3907,86 @@ function renderProducts(container, actions) {
     return;
   }
 
-  const prodsHtml = state.products.map(p => `
-    <div class="data-item-card">
-      <div class="item-main-info">
-        <h4>${p.name}</h4>
-        <p>${p.category} • Marca: ${p.brand || 'Geral'} • Estoque: <strong>${p.stock} un.</strong></p>
-      </div>
-      <div class="item-actions-group">
-        <span class="item-badge-price" style="margin-right: 6px;">R$ ${p.price.toFixed(2)}</span>
-        <button class="btn-card-action edit" onclick="openDirectSaleModal('${p.id}')" title="Vender este produto no balcão" style="background:#f0fdf4; border-color:#bbf7d0; color:#16a34a;">
-          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
-          <span>Vender</span>
-        </button>
-        ${isManager ? `
-          <button class="btn-card-action edit" onclick="openEditProductModal('${p.id}')" title="Editar Produto">
-            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-            <span>Editar</span>
+  const allProductCategories = getProductCategories();
+  const selectedCat = window.selectedProductCategoryFilter || 'ALL';
+
+  const categoryChipsHtml = allProductCategories.length > 0 ? `
+    <div style="display:flex; gap:6px; overflow-x:auto; padding:4px 0 10px 0; margin-bottom:8px; align-items:center; flex-wrap:wrap;">
+      <button type="button" onclick="filterProductsByCategory('ALL')" style="cursor:pointer; font-size:0.8rem; font-weight:600; padding:5px 12px; border-radius:20px; border:1px solid ${selectedCat === 'ALL' ? 'var(--orange)' : '#e2e8f0'}; background:${selectedCat === 'ALL' ? 'var(--orange)' : '#ffffff'}; color:${selectedCat === 'ALL' ? '#ffffff' : '#475569'}; transition:all 0.15s ease;">
+        Todas (${(state.products || []).length})
+      </button>
+      ${allProductCategories.map(c => {
+        const isSel = selectedCat.toLowerCase() === c.name.toLowerCase();
+        return `
+          <button type="button" onclick="filterProductsByCategory('${c.name.replace(/'/g, "\\'")}')" style="cursor:pointer; font-size:0.8rem; font-weight:600; padding:5px 12px; border-radius:20px; border:1px solid ${isSel ? 'var(--orange)' : '#e2e8f0'}; background:${isSel ? 'var(--orange)' : '#ffffff'}; color:${isSel ? '#ffffff' : '#475569'}; transition:all 0.15s ease;">
+            ${c.name} (${c.productsCount})
           </button>
-          <button class="btn-card-action delete" onclick="deleteProduct('${p.id}')" title="Excluir Produto">
-            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-            <span>Excluir</span>
-          </button>
-        ` : ''}
-      </div>
+        `;
+      }).join('')}
     </div>
-  `).join('');
+  ` : '';
+
+  const headerActionsHtml = isManager ? `
+    <div style="display: flex; justify-content: flex-end; align-items: center; margin-bottom: 12px;">
+      <button type="button" class="btn-falcon btn-secondary" onclick="openProductCategoriesManagerModal()" style="display:inline-flex; align-items:center; gap:6px; font-size:0.82rem; font-weight:600; padding:6px 12px; border-radius:10px;">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+        Gerenciar Categorias
+      </button>
+    </div>
+  ` : '';
+
+  const filteredProducts = (state.products || []).filter(p => {
+    if (selectedCat === 'ALL') return true;
+    return p.category && p.category.toLowerCase() === selectedCat.toLowerCase();
+  });
+
+  let prodsListHtml = '';
+  if (filteredProducts.length === 0) {
+    prodsListHtml = `
+      <div style="padding: 24px; text-align: center; color: var(--muted); font-size: 0.9rem; background: #fff; border-radius: 12px; border: 1px solid #e2e8f0; margin-top: 8px;">
+        Nenhum produto cadastrado na categoria <strong>"${selectedCat}"</strong>.
+        <div style="margin-top: 12px;">
+          <button type="button" class="btn-falcon btn-secondary" onclick="filterProductsByCategory('ALL')" style="font-size: 0.82rem; padding: 6px 14px;">Ver Todos os Produtos</button>
+        </div>
+      </div>
+    `;
+  } else {
+    prodsListHtml = `
+      <div class="data-list">
+        ${filteredProducts.map(p => `
+          <div class="data-item-card">
+            <div class="item-main-info">
+              <h4>${p.name}</h4>
+              <p>${p.category} • Marca: ${p.brand || 'Geral'} • Estoque: <strong>${p.stock} un.</strong></p>
+            </div>
+            <div class="item-actions-group">
+              <span class="item-badge-price" style="margin-right: 6px;">R$ ${p.price.toFixed(2)}</span>
+              <button class="btn-card-action edit" onclick="openDirectSaleModal('${p.id}')" title="Vender este produto no balcão" style="background:#f0fdf4; border-color:#bbf7d0; color:#16a34a;">
+                <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+                <span>Vender</span>
+              </button>
+              ${isManager ? `
+                <button class="btn-card-action edit" onclick="openEditProductModal('${p.id}')" title="Editar Produto">
+                  <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                  <span>Editar</span>
+                </button>
+                <button class="btn-card-action delete" onclick="deleteProduct('${p.id}')" title="Excluir Produto">
+                  <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                  <span>Excluir</span>
+                </button>
+              ` : ''}
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  }
 
   container.innerHTML = `
     ${subnavTabsHtml}
-    <div class="data-list">${prodsHtml}</div>
+    ${headerActionsHtml}
+    ${categoryChipsHtml}
+    ${prodsListHtml}
   `;
 }
 
@@ -7211,6 +7277,539 @@ window.deleteCategoryAction = async function(id, name, count) {
   }
 };
 
+// ==========================================
+// GESTÃO E AUTOCOMPLETE DE CATEGORIAS DE PRODUTOS
+// ==========================================
+
+function getProductCategories() {
+  const fromState = Array.isArray(state.productCategories) ? state.productCategories : [];
+  const fromProducts = (state.products || []).map(p => p.category).filter(Boolean);
+  
+  const map = new Map();
+  
+  fromState.forEach(c => {
+    const name = (typeof c === 'string' ? c : c.name || '').trim();
+    if (!name) return;
+    const lower = name.toLowerCase();
+    if (!map.has(lower)) {
+      map.set(lower, {
+        id: typeof c === 'object' && c.id ? c.id : 'pcat_' + lower,
+        name: name,
+        productsCount: (state.products || []).filter(p => p.category && p.category.toLowerCase() === lower).length
+      });
+    }
+  });
+
+  fromProducts.forEach(rawName => {
+    const name = rawName.trim();
+    if (!name) return;
+    const lower = name.toLowerCase();
+    if (!map.has(lower)) {
+      map.set(lower, {
+        id: 'pcat_' + lower,
+        name: name,
+        productsCount: (state.products || []).filter(p => p.category && p.category.toLowerCase() === lower).length
+      });
+    }
+  });
+
+  const list = Array.from(map.values());
+  return list.sort((a, b) => a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' }));
+}
+
+window.initProductCategoryAutocomplete = function(inputId, suggestionsBoxId) {
+  const input = document.getElementById(inputId);
+  const box = document.getElementById(suggestionsBoxId);
+  if (!input || !box) return;
+
+  const wrapper = input.closest('.category-autocomplete-wrapper');
+  let activeIndex = -1;
+
+  function closeDropdown() {
+    box.classList.remove('open');
+    box.innerHTML = '';
+    if (wrapper) wrapper.classList.remove('is-open');
+    activeIndex = -1;
+  }
+
+  function render(matches, query) {
+    if (!matches || matches.length === 0) {
+      if (query && query.trim()) {
+        const cleanQ = query.trim();
+        box.innerHTML = `
+          <div class="category-autocomplete-item" onclick="selectProductCategoryDirectly('${inputId}', '${cleanQ.replace(/'/g, "\\'")}', '${suggestionsBoxId}')">
+            <div>
+              <span class="category-autocomplete-item-name">+ Usar "${cleanQ}"</span>
+              <div style="font-size:0.73rem; color:var(--muted); margin-top:1px;">Será cadastrada como nova categoria de produto</div>
+            </div>
+            <span style="font-size:0.75rem; font-weight:700; color:var(--orange);">Novo</span>
+          </div>
+        `;
+        box.classList.add('open');
+        if (wrapper) wrapper.classList.add('is-open');
+        activeIndex = 0;
+        return;
+      }
+      box.innerHTML = `<div class="category-autocomplete-empty">Nenhuma categoria de produto cadastrada ainda.</div>`;
+      box.classList.add('open');
+      if (wrapper) wrapper.classList.add('is-open');
+      activeIndex = -1;
+      return;
+    }
+
+    box.innerHTML = matches.map((c, idx) => `
+      <div class="category-autocomplete-item ${idx === activeIndex ? 'active' : ''}" data-idx="${idx}" onclick="selectProductCategoryDirectly('${inputId}', '${c.name.replace(/'/g, "\\'")}', '${suggestionsBoxId}')">
+        <span class="category-autocomplete-item-name">${c.name}</span>
+        <span class="category-autocomplete-item-badge">${c.productsCount} produto${c.productsCount === 1 ? '' : 's'}</span>
+      </div>
+    `).join('');
+
+    box.classList.add('open');
+    if (wrapper) wrapper.classList.add('is-open');
+  }
+
+  function getFiltered(q) {
+    const all = getProductCategories();
+    if (!q || !q.trim()) return all;
+    const cleanQ = q.trim().toLowerCase();
+    return all.filter(c => c.name.toLowerCase().includes(cleanQ));
+  }
+
+  input.addEventListener('focus', () => {
+    const q = input.value;
+    const matches = getFiltered(q);
+    render(matches, q);
+  });
+
+  input.addEventListener('click', () => {
+    const q = input.value;
+    const matches = getFiltered(q);
+    render(matches, q);
+  });
+
+  input.addEventListener('input', () => {
+    const q = input.value;
+    const matches = getFiltered(q);
+    render(matches, q);
+  });
+
+  input.addEventListener('keydown', (e) => {
+    if (!box.classList.contains('open')) {
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        const q = input.value;
+        const matches = getFiltered(q);
+        render(matches, q);
+      }
+      return;
+    }
+    const items = box.querySelectorAll('.category-autocomplete-item');
+    if (items.length === 0) return;
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      activeIndex = (activeIndex + 1) % items.length;
+      items.forEach((it, i) => it.classList.toggle('active', i === activeIndex));
+      items[activeIndex]?.scrollIntoView({ block: 'nearest' });
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      activeIndex = (activeIndex - 1 + items.length) % items.length;
+      items.forEach((it, i) => it.classList.toggle('active', i === activeIndex));
+      items[activeIndex]?.scrollIntoView({ block: 'nearest' });
+    } else if (e.key === 'Enter') {
+      if (activeIndex >= 0 && items[activeIndex]) {
+        e.preventDefault();
+        items[activeIndex].click();
+      }
+    } else if (e.key === 'Escape') {
+      closeDropdown();
+    }
+  });
+
+  document.addEventListener('click', (e) => {
+    if (wrapper && wrapper.contains(e.target)) {
+      return;
+    }
+    closeDropdown();
+  });
+};
+
+window.selectProductCategoryDirectly = function(inputId, catName, suggestionsBoxId) {
+  const input = document.getElementById(inputId);
+  const box = document.getElementById(suggestionsBoxId);
+  if (input) input.value = catName;
+  if (box) {
+    box.classList.remove('open');
+    box.innerHTML = '';
+    const wrapper = box.closest('.category-autocomplete-wrapper');
+    if (wrapper) wrapper.classList.remove('is-open');
+  }
+};
+
+window.toggleProductCategoryQuickDropdown = function(inputId, suggestionsBoxId, event) {
+  const ev = event || window.event;
+  if (ev) {
+    if (ev.preventDefault) ev.preventDefault();
+    if (ev.stopPropagation) ev.stopPropagation();
+  }
+  const input = document.getElementById(inputId);
+  const box = document.getElementById(suggestionsBoxId);
+  if (!input || !box) return;
+
+  const wrapper = box.closest('.category-autocomplete-wrapper');
+
+  if (box.classList.contains('open')) {
+    box.classList.remove('open');
+    box.innerHTML = '';
+    if (wrapper) wrapper.classList.remove('is-open');
+  } else {
+    const all = getProductCategories();
+    if (!all || all.length === 0) {
+      box.innerHTML = '<div class="category-autocomplete-empty">Nenhuma categoria cadastrada ainda.</div>';
+    } else {
+      box.innerHTML = all.map((c, idx) => `
+        <div class="category-autocomplete-item" onclick="selectProductCategoryDirectly('${inputId}', '${c.name.replace(/'/g, "\\'")}', '${suggestionsBoxId}')">
+          <span class="category-autocomplete-item-name">${c.name}</span>
+          <span class="category-autocomplete-item-badge">${c.productsCount} produto${c.productsCount === 1 ? '' : 's'}</span>
+        </div>
+      `).join('');
+    }
+    box.classList.add('open');
+    if (wrapper) wrapper.classList.add('is-open');
+  }
+};
+
+// ==========================================
+// POPUP SELETOR DE CATEGORIA DE PRODUTOS (ESCOLHA RÁPIDA)
+// ==========================================
+window.activeProductCategoryTargetInputId = null;
+window.selectedProductCategoryInPicker = '';
+
+window.openProductCategoryPickerModal = function(targetInputId) {
+  window.activeProductCategoryTargetInputId = targetInputId;
+  const quickBox = document.getElementById(targetInputId + 'Suggestions');
+  if (quickBox) {
+    quickBox.classList.remove('open');
+    quickBox.innerHTML = '';
+    const wrapper = quickBox.closest('.category-autocomplete-wrapper');
+    if (wrapper) wrapper.classList.remove('is-open');
+  }
+  const input = document.getElementById(targetInputId);
+  window.selectedProductCategoryInPicker = input ? input.value.trim() : '';
+
+  const searchInput = document.getElementById('productCategoryPickerSearch');
+  if (searchInput) searchInput.value = '';
+
+  renderProductCategoryPickerList();
+
+  const modal = document.getElementById('productCategoryPickerModal');
+  if (modal) {
+    modal.classList.add('open');
+    modal.classList.add('active');
+  }
+  updateBodyScrollLock();
+};
+
+window.closeProductCategoryPickerModal = function() {
+  const modal = document.getElementById('productCategoryPickerModal');
+  if (modal) {
+    modal.classList.remove('open');
+    modal.classList.remove('active');
+  }
+  updateBodyScrollLock();
+};
+
+window.filterProductCategoryPickerList = function() {
+  const searchInput = document.getElementById('productCategoryPickerSearch');
+  const q = searchInput ? searchInput.value.trim().toLowerCase() : '';
+  renderProductCategoryPickerList(q);
+};
+
+window.renderProductCategoryPickerList = function(query = '') {
+  const container = document.getElementById('productCategoryPickerList');
+  if (!container) return;
+
+  const all = getProductCategories();
+  const filtered = query ? all.filter(c => c.name.toLowerCase().includes(query)) : all;
+
+  if (filtered.length === 0) {
+    if (query) {
+      container.innerHTML = `
+        <div style="padding: 14px; text-align: center;">
+          <p style="font-size: 0.84rem; color: var(--muted); margin: 0 0 10px 0;">Nenhuma categoria existente com esse nome.</p>
+          <button type="button" class="btn-falcon btn-primary" onclick="selectProductPickerNewCustom('${query.replace(/'/g, "\\'")}')" style="font-size: 0.8rem; padding: 6px 12px;">
+            + Usar "${query}"
+          </button>
+        </div>
+      `;
+      return;
+    }
+    container.innerHTML = `<div style="padding: 16px; text-align: center; color: var(--muted); font-size: 0.84rem;">Nenhuma categoria encontrada.</div>`;
+    return;
+  }
+
+  container.innerHTML = filtered.map(c => {
+    const isChecked = window.selectedProductCategoryInPicker.toLowerCase() === c.name.toLowerCase();
+    return `
+      <label class="category-picker-row ${isChecked ? 'selected' : ''}" onclick="pickProductCategoryRadio(this, '${c.name.replace(/'/g, "\\'")}')" ondblclick="confirmProductCategoryPickerSelection('${c.name.replace(/'/g, "\\'")}')">
+        <input type="radio" name="prodCatPickerRadio" value="${c.name}" ${isChecked ? 'checked' : ''}>
+        <span class="category-picker-row-text">${c.name}</span>
+        <span style="font-size: 0.72rem; color: var(--muted); background: rgba(0,0,0,0.04); padding: 2px 7px; border-radius: 6px;">${c.productsCount}</span>
+      </label>
+    `;
+  }).join('');
+};
+
+window.pickProductCategoryRadio = function(labelEl, catName) {
+  window.selectedProductCategoryInPicker = catName;
+  document.querySelectorAll('#productCategoryPickerList .category-picker-row').forEach(l => l.classList.remove('selected'));
+  labelEl.classList.add('selected');
+  const radio = labelEl.querySelector('input[type="radio"]');
+  if (radio) radio.checked = true;
+};
+
+window.selectProductPickerNewCustom = function(catName) {
+  window.selectedProductCategoryInPicker = catName;
+  confirmProductCategoryPickerSelection();
+};
+
+window.confirmProductCategoryPickerSelection = function(directCatName) {
+  const chosen = directCatName || window.selectedProductCategoryInPicker;
+  if (!chosen) {
+    asyncAlert('Por favor selecione ou informe uma categoria.');
+    return;
+  }
+  if (window.activeProductCategoryTargetInputId) {
+    const target = document.getElementById(window.activeProductCategoryTargetInputId);
+    if (target) {
+      target.value = chosen;
+    }
+  }
+  closeProductCategoryPickerModal();
+};
+
+// ==========================================
+// GERENCIADOR DE CATEGORIAS DE PRODUTOS (CRUD COMPLETO)
+// ==========================================
+window.productCategoryManagerOpenedFromPicker = false;
+
+window.openProductCategoriesManagerModal = function(fromPicker = false) {
+  window.productCategoryManagerOpenedFromPicker = !!fromPicker;
+  if (fromPicker) {
+    closeProductCategoryPickerModal();
+  }
+  const modal = document.getElementById('productCategoryManagerModal');
+  if (modal) {
+    modal.classList.add('open');
+    modal.classList.add('active');
+  }
+  renderProductCategoryManagerList();
+  updateBodyScrollLock();
+};
+
+window.closeProductCategoriesManagerModal = function() {
+  const modal = document.getElementById('productCategoryManagerModal');
+  if (modal) {
+    modal.classList.remove('open');
+    modal.classList.remove('active');
+  }
+  updateBodyScrollLock();
+  if (window.productCategoryManagerOpenedFromPicker && window.activeProductCategoryTargetInputId) {
+    openProductCategoryPickerModal(window.activeProductCategoryTargetInputId);
+  }
+};
+
+window.renderProductCategoryManagerList = function() {
+  const container = document.getElementById('productCategoryManagerList');
+  const badge = document.getElementById('productCategoryCountBadge');
+  if (!container) return;
+
+  const all = getProductCategories();
+  if (badge) badge.innerText = `${all.length} categoria${all.length === 1 ? '' : 's'}`;
+
+  if (all.length === 0) {
+    container.innerHTML = `<div style="padding: 20px; text-align: center; color: var(--muted); font-size: 0.85rem;">Nenhuma categoria cadastrada ainda. Adicione uma no campo acima.</div>`;
+    return;
+  }
+
+  container.innerHTML = all.map(c => `
+    <div id="prodCatManagerRow_${c.id}" style="display: flex; align-items: center; justify-content: space-between; padding: 9px 12px; border-radius: 10px; margin-bottom: 4px; background: #ffffff; border: 1px solid #f1f5f9; transition: background 0.15s ease;">
+      <div style="flex: 1; min-width: 0; padding-right: 8px;">
+        <strong style="font-size: 0.88rem; color: var(--ink); display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${c.name}</strong>
+        <span style="font-size: 0.73rem; color: var(--muted);">${c.productsCount} produto${c.productsCount === 1 ? '' : 's'} vinculado${c.productsCount === 1 ? '' : 's'}</span>
+      </div>
+      <div style="display: flex; gap: 6px; align-items: center; flex-shrink: 0;">
+        <button type="button" onclick="startInlineEditProductCategory('${c.id}', '${c.name.replace(/'/g, "\\'")}')" title="Renomear Categoria" style="background: #f1f5f9; border: 1px solid #e2e8f0; color: var(--ink); border-radius: 8px; padding: 5px 9px; font-size: 0.75rem; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
+          <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+          Editar
+        </button>
+        <button type="button" onclick="deleteProductCategoryAction('${c.id}', '${c.name.replace(/'/g, "\\'")}', ${c.productsCount})" title="Excluir Categoria" style="background: #fef2f2; border: 1px solid #fecaca; color: #dc2626; border-radius: 8px; padding: 5px 9px; font-size: 0.75rem; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
+          <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+          Excluir
+        </button>
+      </div>
+    </div>
+  `).join('');
+};
+
+window.addNewProductCategoryFromManager = async function() {
+  const input = document.getElementById('newProductCategoryInput');
+  if (!input) return;
+  const name = input.value.trim();
+  if (!name) {
+    asyncAlert('Por favor digite o nome da categoria.');
+    return;
+  }
+
+  try {
+    const res = await tenantFetch('/api/product-categories', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name })
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      asyncAlert(err.error || 'Erro ao adicionar categoria.');
+      return;
+    }
+    const created = await res.json();
+    if (!state.productCategories) state.productCategories = [];
+    if (!state.productCategories.some(c => c.name.toLowerCase() === created.name.toLowerCase())) {
+      state.productCategories.push(created);
+    }
+    input.value = '';
+    renderProductCategoryManagerList();
+    if (currentView === 'produtos') {
+      const container = document.getElementById('viewContainer');
+      const actions = document.getElementById('topBarActions');
+      if (container) renderProducts(container, actions);
+    }
+  } catch (e) {
+    console.error(e);
+    asyncAlert('Erro ao comunicar com o servidor.');
+  }
+};
+
+window.startInlineEditProductCategory = function(id, currentName) {
+  const row = document.getElementById(`prodCatManagerRow_${id}`);
+  if (!row) return;
+
+  row.innerHTML = `
+    <div style="display: flex; gap: 6px; width: 100%; align-items: center;">
+      <input type="text" id="inlineEditProdCatInput_${id}" value="${currentName}" class="form-control" style="flex: 1; font-size: 0.85rem; padding: 6px 10px; height: 34px; border-radius: 8px;" onkeydown="if(event.key==='Enter'){event.preventDefault();saveInlineProductCategoryEdit('${id}', '${currentName.replace(/'/g, "\\'")}');} else if(event.key==='Escape'){renderProductCategoryManagerList();}">
+      <button type="button" class="btn-falcon btn-primary" onclick="saveInlineProductCategoryEdit('${id}', '${currentName.replace(/'/g, "\\'")}')" style="padding: 6px 12px; font-size: 0.78rem; height: 34px; border-radius: 8px;">Salvar</button>
+      <button type="button" class="btn-falcon btn-secondary" onclick="renderProductCategoryManagerList()" style="padding: 6px 10px; font-size: 0.78rem; height: 34px; border-radius: 8px;">Cancelar</button>
+    </div>
+  `;
+  setTimeout(() => {
+    const inp = document.getElementById(`inlineEditProdCatInput_${id}`);
+    if (inp) {
+      inp.focus();
+      inp.select();
+    }
+  }, 50);
+};
+
+window.saveInlineProductCategoryEdit = async function(id, oldName) {
+  const input = document.getElementById(`inlineEditProdCatInput_${id}`);
+  if (!input) return;
+  const newName = input.value.trim();
+  if (!newName) {
+    asyncAlert('O nome da categoria não pode ser vazio.');
+    return;
+  }
+  if (newName.toLowerCase() === oldName.toLowerCase()) {
+    renderProductCategoryManagerList();
+    return;
+  }
+
+  try {
+    const res = await tenantFetch(`/api/product-categories/${encodeURIComponent(id)}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: newName, oldName })
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      asyncAlert(err.error || 'Erro ao renomear categoria.');
+      return;
+    }
+    const data = await res.json();
+    
+    if (Array.isArray(state.productCategories)) {
+      const found = state.productCategories.find(c => c.id === id || c.name.toLowerCase() === oldName.toLowerCase());
+      if (found) found.name = newName;
+    }
+    if (Array.isArray(state.products)) {
+      state.products.forEach(p => {
+        if (p.category && p.category.toLowerCase() === oldName.toLowerCase()) {
+          p.category = newName;
+        }
+      });
+    }
+
+    renderProductCategoryManagerList();
+
+    if (currentView === 'produtos') {
+      const container = document.getElementById('viewContainer');
+      const actions = document.getElementById('topBarActions');
+      if (container) renderProducts(container, actions);
+    }
+
+    asyncAlert(`Categoria renomeada para "${newName}" com sucesso!${data.affectedProducts > 0 ? ` (${data.affectedProducts} produto(s) atualizado(s))` : ''}`, 'Categoria Atualizada', 'success');
+  } catch (e) {
+    console.error(e);
+    asyncAlert('Erro ao atualizar categoria.');
+  }
+};
+
+window.deleteProductCategoryAction = async function(id, name, count) {
+  let msg = '';
+  if (count > 0) {
+    msg = `A categoria "${name}" possui ${count} produto(s) vinculado(s).\n\nAo excluir esta categoria, os produtos vinculados serão mantidos e transferidos para a categoria "Geral".\n\nDeseja continuar com a exclusão?`;
+  } else {
+    msg = `Tem certeza que deseja excluir a categoria "${name}"?`;
+  }
+
+  const ok = await asyncConfirm(msg, 'Excluir Categoria');
+  if (!ok) return;
+
+  try {
+    const res = await tenantFetch(`/api/product-categories/${encodeURIComponent(id)}`, {
+      method: 'DELETE'
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      asyncAlert(err.error || 'Erro ao excluir categoria.');
+      return;
+    }
+
+    if (Array.isArray(state.productCategories)) {
+      state.productCategories = state.productCategories.filter(c => c.id !== id && c.name.toLowerCase() !== name.toLowerCase());
+    }
+    if (Array.isArray(state.products) && count > 0) {
+      state.products.forEach(p => {
+        if (p.category && p.category.toLowerCase() === name.toLowerCase()) {
+          p.category = 'Geral';
+        }
+      });
+    }
+
+    renderProductCategoryManagerList();
+
+    if (currentView === 'produtos') {
+      const container = document.getElementById('viewContainer');
+      const actions = document.getElementById('topBarActions');
+      if (container) renderProducts(container, actions);
+    }
+
+    asyncAlert(`Categoria "${name}" excluída com sucesso.`, 'Categoria Excluída', 'success');
+  } catch (e) {
+    console.error(e);
+    asyncAlert('Erro ao excluir categoria.');
+  }
+};
+
 window.openNewServiceModal = function() {
   if (!isManager) {
     asyncAlert('Apenas gestores têm permissão para adicionar serviços.');
@@ -7830,9 +8429,25 @@ window.openNewProductModal = function() {
       <label>Nome do Produto</label>
       <input type="text" class="form-control" id="mProdName" placeholder="Ex: Shampoo Revitalizante 300ml">
     </div>
+    <div class="form-group category-autocomplete-wrapper">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+        <label style="margin: 0;">Categoria</label>
+        <button type="button" onclick="openProductCategoryPickerModal('mProdCat')" style="background: none; border: none; color: var(--orange); font-size: 0.8rem; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; padding: 0;">
+          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"></path></svg>
+          Ver Lista
+        </button>
+      </div>
+      <div style="position: relative; display: flex; align-items: center;">
+        <input type="text" class="form-control" id="mProdCat" placeholder="Selecione ou digite uma categoria..." autocomplete="off" style="padding-right: 40px;">
+        <button type="button" class="category-dropdown-arrow-btn" onclick="toggleProductCategoryQuickDropdown('mProdCat', 'mProdCatSuggestions', event)" title="Ver categorias existentes">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"></polyline></svg>
+        </button>
+      </div>
+      <div id="mProdCatSuggestions" class="category-autocomplete-dropdown"></div>
+    </div>
     <div class="form-group">
-      <label>Categoria</label>
-      <input type="text" class="form-control" id="mProdCat" placeholder="Ex: Cabelo, Barba, Cuidados">
+      <label>Marca</label>
+      <input type="text" class="form-control" id="mProdBrand" placeholder="Ex: L'Oréal, Wella, Truss...">
     </div>
     <div class="form-group">
       <label>Preço de Venda (R$)</label>
@@ -7845,12 +8460,13 @@ window.openNewProductModal = function() {
   `;
 
   openModal('Cadastrar Produto', html, async () => {
-    const name = document.getElementById('mProdName').value;
-    const category = document.getElementById('mProdCat').value;
+    const name = document.getElementById('mProdName').value.trim();
+    const category = document.getElementById('mProdCat').value.trim();
+    const brand = (document.getElementById('mProdBrand')?.value || '').trim();
     const price = Number(document.getElementById('mProdPrice').value);
     const stock = Number(document.getElementById('mProdStock').value);
 
-    if (!name || !price) {
+    if (!name || isNaN(price)) {
       asyncAlert('Nome e Preço são obrigatórios!');
       return;
     }
@@ -7858,13 +8474,17 @@ window.openNewProductModal = function() {
     await tenantFetch('/api/products', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, category, price, stock })
+      body: JSON.stringify({ name, category, brand, price, stock })
     });
 
     closeModal();
     await loadInitialData();
     renderView('produtos');
   });
+
+  setTimeout(() => {
+    initProductCategoryAutocomplete('mProdCat', 'mProdCatSuggestions');
+  }, 50);
 };
 
 // -------------------------------------------------------------
@@ -8417,9 +9037,21 @@ window.openEditProductModal = function(productId) {
       <label>Nome do Produto</label>
       <input type="text" class="form-control" id="mEditProdName" value="${prod.name || ''}">
     </div>
-    <div class="form-group">
-      <label>Categoria</label>
-      <input type="text" class="form-control" id="mEditProdCat" value="${prod.category || ''}">
+    <div class="form-group category-autocomplete-wrapper">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+        <label style="margin: 0;">Categoria</label>
+        <button type="button" onclick="openProductCategoryPickerModal('mEditProdCat')" style="background: none; border: none; color: var(--orange); font-size: 0.8rem; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; padding: 0;">
+          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"></path></svg>
+          Ver Lista
+        </button>
+      </div>
+      <div style="position: relative; display: flex; align-items: center;">
+        <input type="text" class="form-control" id="mEditProdCat" value="${prod.category || ''}" placeholder="Selecione ou digite uma categoria..." autocomplete="off" style="padding-right: 40px;">
+        <button type="button" class="category-dropdown-arrow-btn" onclick="toggleProductCategoryQuickDropdown('mEditProdCat', 'mEditProdCatSuggestions', event)" title="Ver categorias existentes">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"></polyline></svg>
+        </button>
+      </div>
+      <div id="mEditProdCatSuggestions" class="category-autocomplete-dropdown"></div>
     </div>
     <div class="form-group">
       <label>Marca</label>
@@ -8463,6 +9095,10 @@ window.openEditProductModal = function(productId) {
     await loadInitialData();
     renderView('produtos');
   });
+
+  setTimeout(() => {
+    initProductCategoryAutocomplete('mEditProdCat', 'mEditProdCatSuggestions');
+  }, 50);
 };
 
 window.deleteProduct = async function(productId) {

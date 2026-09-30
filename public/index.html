@@ -14,7 +14,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/crm.css?v=20260930_v280">
+  <link rel="stylesheet" href="/css/crm.css?v=20260930_v281">
 </head>
 <body>
   <!-- Animated Colorful Gradient Orbs with Blur Background -->
@@ -378,6 +378,72 @@
     </div>
   </div>
 
+  <!-- Modal Seletor de Categoria de Produtos (Ver Lista / Escolha Rápida) -->
+  <div class="modal-backdrop" id="productCategoryPickerModal" style="z-index: 10010;">
+    <div class="modal-dialog" style="max-width: 380px; border-radius: 20px; padding: 20px 22px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+        <h3 style="font-size: 1.15rem; font-weight: 700; color: var(--ink); margin: 0;">Categorias de Produtos</h3>
+        <button type="button" onclick="closeProductCategoryPickerModal()" style="background: none; border: none; font-size: 1.4rem; color: var(--muted); cursor: pointer; line-height: 1;">&times;</button>
+      </div>
+
+      <div style="margin-bottom: 10px;">
+        <input type="text" id="productCategoryPickerSearch" class="form-control" placeholder="Buscar ou filtrar categoria..." oninput="filterProductCategoryPickerList()" style="font-size: 0.85rem; padding: 8px 12px; border-radius: 10px;">
+      </div>
+
+      <div id="productCategoryPickerList" style="max-height: 250px; overflow-y: auto; margin-bottom: 14px; border: 1px solid #e2e8f0; border-radius: 12px; padding: 6px; background: #fafafa;">
+        <!-- Lista dinâmica de categorias de produtos -->
+      </div>
+
+      <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 10px; border-top: 1px solid #f1f5f9;">
+        <button type="button" onclick="openProductCategoriesManagerModal(true)" style="background: none; border: none; color: var(--orange); font-size: 0.82rem; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; padding: 4px 0;">
+          ⚙️ Gerenciar
+        </button>
+        <div style="display: flex; gap: 8px;">
+          <button type="button" class="btn-falcon btn-secondary" onclick="closeProductCategoryPickerModal()" style="padding: 7px 14px; font-size: 0.84rem; font-weight: 600;">CANCELAR</button>
+          <button type="button" class="btn-falcon btn-primary" onclick="confirmProductCategoryPickerSelection()" style="padding: 7px 18px; font-size: 0.84rem; font-weight: 600;">OK</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Gerenciador de Categorias de Produtos (Visualizar, Criar, Editar e Excluir) -->
+  <div class="modal-backdrop" id="productCategoryManagerModal" style="z-index: 10015;">
+    <div class="modal-dialog" style="max-width: 480px; border-radius: 20px; padding: 22px 24px;">
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px;">
+        <div>
+          <h3 style="font-size: 1.18rem; font-weight: 700; color: var(--ink); margin: 0;">Gerenciar Categorias de Produtos</h3>
+          <p style="font-size: 0.8rem; color: var(--muted); margin: 3px 0 0 0;">Crie, renomeie ou exclua as categorias de estoque e produtos.</p>
+        </div>
+        <button type="button" onclick="closeProductCategoryManagerModal()" style="background: none; border: none; font-size: 1.4rem; color: var(--muted); cursor: pointer; line-height: 1;">&times;</button>
+      </div>
+
+      <!-- Formulário de Nova Categoria -->
+      <div style="background: #f8fafc; border: 1.5px solid #fed7aa; border-radius: 12px; padding: 12px; margin-bottom: 16px;">
+        <label style="font-size: 0.8rem; font-weight: 700; color: var(--ink); display: block; margin-bottom: 6px;">Nova Categoria de Produto</label>
+        <div style="display: flex; gap: 8px;">
+          <input type="text" id="newProductCategoryInput" class="form-control" placeholder="Ex: Shampoos, Máscaras, Óleos, Bebidas..." style="flex: 1; font-size: 0.85rem; padding: 8px 12px; border-radius: 10px;" onkeydown="if(event.key==='Enter'){event.preventDefault();addNewProductCategoryFromManager();}">
+          <button type="button" class="btn-falcon btn-primary" onclick="addNewProductCategoryFromManager()" style="padding: 8px 14px; font-size: 0.84rem; font-weight: 600; white-space: nowrap; border-radius: 10px;">
+            + Adicionar
+          </button>
+        </div>
+      </div>
+
+      <!-- Lista de Categorias Cadastradas -->
+      <div style="margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center;">
+        <span style="font-size: 0.8rem; font-weight: 700; color: var(--ink);">Categorias Cadastradas</span>
+        <span id="productCategoryCountBadge" style="font-size: 0.75rem; color: var(--muted); font-weight: 600;"></span>
+      </div>
+
+      <div id="productCategoryManagerList" style="max-height: 270px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 12px; padding: 6px; margin-bottom: 16px; background: #ffffff;">
+        <!-- Itens de categoria com botões de Editar e Excluir -->
+      </div>
+
+      <div style="display: flex; justify-content: flex-end;">
+        <button type="button" class="btn-falcon btn-secondary" onclick="closeProductCategoryManagerModal()" style="padding: 8px 20px; font-size: 0.85rem; font-weight: 600;">Fechar</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Modal Editar Perfil / Foto do Gestor ou Profissional -->
   <div class="modal-backdrop" id="userProfileModal" style="z-index: 9999;">
     <div class="modal-dialog" style="max-width: 440px;">
@@ -632,6 +698,6 @@
     </div>
   </div>
 
-  <script src="/js/app.js?v=20260930_v280"></script>
+  <script src="/js/app.js?v=20260930_v281"></script>
 </body>
 </html>
