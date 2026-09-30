@@ -22,7 +22,7 @@ function escapeHtml(str) {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
+    .replace(/'/g, '&#39;');
 }
 window.escapeHtml = escapeHtml;
 
@@ -1481,6 +1481,7 @@ function renderView(view) {
     });
   }
 }
+window.renderView = renderView;
 
 // 1. Render Agenda
 // Helper de Formatação da Data (ex: "seg, 21/09/2026")
@@ -5938,35 +5939,28 @@ window.saveSettings = async function() {
 
 
 // Modais Genéricos de Cadastro
-function openModal(title, bodyHtml, onConfirm, confirmText, hideFooter) {
+function openModal(title, bodyHtml, onConfirm, confirmText = 'Salvar', hideCancel = false) {
   const titleEl = document.getElementById('modalTitle');
   if (titleEl) titleEl.innerText = title;
-
   const bodyEl = document.getElementById('modalBody');
   if (bodyEl) bodyEl.innerHTML = bodyHtml;
 
-  const footer = document.getElementById('modalFooter');
-  const cancelBtn = document.getElementById('modalCancelBtn');
   const confirmBtn = document.getElementById('modalConfirmBtn');
+  const cancelBtn = document.getElementById('modalCancelBtn');
 
-  if (footer) {
-    footer.style.display = hideFooter ? 'none' : 'flex';
+  if (cancelBtn) {
+    cancelBtn.style.display = hideCancel ? 'none' : 'inline-block';
+    cancelBtn.innerText = onConfirm ? 'Cancelar' : 'Fechar';
   }
 
   if (confirmBtn) {
-    confirmBtn.innerText = confirmText || 'Salvar';
-    if (!onConfirm && confirmText === 'Fechar') {
+    if (!onConfirm) {
       confirmBtn.style.display = 'none';
-      if (cancelBtn) cancelBtn.innerText = 'Fechar';
     } else {
-      confirmBtn.style.display = onConfirm ? '' : 'none';
-      if (cancelBtn) cancelBtn.innerText = 'Cancelar';
-    }
-
-    // Substitui handler
-    const newBtn = confirmBtn.cloneNode(true);
-    confirmBtn.parentNode.replaceChild(newBtn, confirmBtn);
-    if (onConfirm) {
+      confirmBtn.style.display = 'inline-block';
+      confirmBtn.innerText = confirmText || 'Salvar';
+      const newBtn = confirmBtn.cloneNode(true);
+      confirmBtn.parentNode.replaceChild(newBtn, confirmBtn);
       newBtn.addEventListener('click', onConfirm);
     }
   }
@@ -5978,6 +5972,7 @@ function openModal(title, bodyHtml, onConfirm, confirmText, hideFooter) {
   }
   updateBodyScrollLock();
 }
+window.openModal = openModal;
 
 function closeModal() {
   const modal = document.getElementById('genericModal');
@@ -5986,16 +5981,18 @@ function closeModal() {
     modal.classList.remove('active');
   }
   const cancelBtn = document.getElementById('modalCancelBtn');
-  if (cancelBtn) cancelBtn.innerText = 'Cancelar';
+  if (cancelBtn) {
+    cancelBtn.style.display = 'inline-block';
+    cancelBtn.innerText = 'Cancelar';
+  }
   const confirmBtn = document.getElementById('modalConfirmBtn');
   if (confirmBtn) {
-    confirmBtn.style.display = '';
+    confirmBtn.style.display = 'inline-block';
     confirmBtn.innerText = 'Salvar';
   }
-  const footer = document.getElementById('modalFooter');
-  if (footer) footer.style.display = 'flex';
   updateBodyScrollLock();
 }
+window.closeModal = closeModal;
 
 window.openNewAppointmentModal = function(defaultTime = "10:00") {
   if (!state.professionals || state.professionals.length === 0) {
@@ -9439,17 +9436,25 @@ window.openDirectSaleModal = function(preSelectedProductId) {
     return;
   }
 
-  const defaultProd = preSelectedProductId ? products.find(p => p.id === preSelectedProductId) || products[0] : products[0];
+  let defaultProd = products[0];
+  if (typeof preSelectedProductId === 'string' && preSelectedProductId) {
+    const found = products.find(p => p.id === preSelectedProductId);
+    if (found) defaultProd = found;
+  }
 
   const html = `
     <div class="form-group">
       <label>Selecionar Produto do Estoque</label>
-      <select class="form-control" id="mSaleProduct" onchange="updateDirectSaleTotals()">
-        ${products.map(p => `
-          <option value="${p.id}" data-price="${p.price || 0}" data-stock="${p.stockQuantity !== undefined ? p.stockQuantity : 99}" ${p.id === defaultProd.id ? 'selected' : ''}>
-            ${escapeHtml(p.name)} — R$ ${(Number(p.price) || 0).toFixed(2)} (Estoque: ${p.stockQuantity !== undefined ? p.stockQuantity : 'N/A'})
-          </option>
-        `).join('')}
+      <select class="form-control" id="mSaleProduct" onchange="const u = document.getElementById('mSaleUnitPrice'); if (u && u.dataset) delete u.dataset.manuallyEdited; updateDirectSaleTotals();">
+        ${products.map(p => {
+          const pStock = p.stock !== undefined ? p.stock : (p.stockQuantity !== undefined ? p.stockQuantity : 0);
+          const pPrice = Number(p.price) || 0;
+          return `
+            <option value="${p.id}" data-price="${pPrice}" data-stock="${pStock}" ${p.id === defaultProd.id ? 'selected' : ''}>
+              ${escapeHtml(p.name)} — R$ ${pPrice.toFixed(2)} (Estoque: ${pStock} un.)
+            </option>
+          `;
+        }).join('')}
       </select>
     </div>
 
@@ -9460,7 +9465,7 @@ window.openDirectSaleModal = function(preSelectedProductId) {
       </div>
       <div class="form-group" style="margin: 0;">
         <label>Preço Unitário (R$)</label>
-        <input type="number" step="0.01" class="form-control" id="mSaleUnitPrice" value="${Number(defaultProd.price || 0).toFixed(2)}" oninput="updateDirectSaleTotals()">
+        <input type="number" step="0.01" class="form-control" id="mSaleUnitPrice" value="${Number(defaultProd.price || 0).toFixed(2)}" oninput="if(this.dataset) this.dataset.manuallyEdited='1'; updateDirectSaleTotals()">
       </div>
     </div>
 
@@ -9521,6 +9526,7 @@ window.openDirectSaleModal = function(preSelectedProductId) {
           productId: prodId,
           quantity: qty,
           unitPrice,
+          items: [{ productId: prodId, quantity: qty, unitPrice }],
           clientName,
           professionalId,
           paymentMethod
@@ -9535,7 +9541,7 @@ window.openDirectSaleModal = function(preSelectedProductId) {
 
       closeModal();
       await loadInitialData();
-      renderProducts(document.getElementById('viewContainer'), document.getElementById('topBarActions'));
+      renderView('produtos');
       asyncAlert('Venda balcão registrada com sucesso e estoque atualizado!', 'Sucesso', 'success');
     } catch (e) {
       console.error(e);
@@ -9560,7 +9566,7 @@ window.updateDirectSaleTotals = function() {
 
   const qty = Number(qtyInput?.value) || 1;
   const unitPrice = Number(unitInput?.value) || 0;
-  const total = qty * unitPrice;
+  const total = Math.max(0, qty * unitPrice);
 
   if (totalDisplay) {
     totalDisplay.innerText = `R$ ${total.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -9575,8 +9581,8 @@ window.deleteProductSale = async function(saleId) {
     const res = await tenantFetch(`/api/sales/${saleId}`, { method: 'DELETE' });
     if (res.ok) {
       await loadInitialData();
-      renderProducts(document.getElementById('viewContainer'), document.getElementById('topBarActions'));
-      asyncAlert('Venda estornada com sucesso!', 'Sucesso', 'success');
+      renderView('produtos');
+      asyncAlert('Venda estornada com sucesso e estoque recomposto!', 'Sucesso', 'success');
     } else {
       asyncAlert('Erro ao excluir venda.');
     }
@@ -9688,7 +9694,7 @@ window.openWorkstationModal = function(wsId) {
 
       closeModal();
       await loadInitialData();
-      renderProfessionals(document.getElementById('viewContainer'), document.getElementById('topBarActions'));
+      renderView('profissionais');
       asyncAlert(`Posto "${name}" salvo com sucesso!`, 'Sucesso', 'success');
     } catch (e) {
       console.error(e);
@@ -9709,7 +9715,7 @@ window.deleteWorkstation = async function(wsId) {
     const res = await tenantFetch(`/api/workstations/${wsId}`, { method: 'DELETE' });
     if (res.ok) {
       await loadInitialData();
-      renderProfessionals(document.getElementById('viewContainer'), document.getElementById('topBarActions'));
+      renderView('profissionais');
       asyncAlert('Posto de trabalho removido com sucesso!', 'Sucesso', 'success');
     } else {
       asyncAlert('Erro ao excluir posto.');
@@ -9901,7 +9907,7 @@ window.openPersonalFinanceModal = function() {
 
       closeModal();
       await loadInitialData();
-      renderBalanco(document.getElementById('viewContainer'), document.getElementById('topBarActions'));
+      renderView('balanco');
       asyncAlert('Lançamento pessoal adicionado com sucesso!', 'Sucesso', 'success');
     } catch (e) {
       console.error(e);
@@ -9918,7 +9924,7 @@ window.deletePersonalFinanceItem = async function(id) {
     const res = await tenantFetch(`/api/personal-finances/${id}`, { method: 'DELETE' });
     if (res.ok) {
       await loadInitialData();
-      renderBalanco(document.getElementById('viewContainer'), document.getElementById('topBarActions'));
+      renderView('balanco');
       asyncAlert('Lançamento excluído com sucesso!', 'Sucesso', 'success');
     } else {
       asyncAlert('Erro ao excluir lançamento.');

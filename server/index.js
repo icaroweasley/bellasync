@@ -1709,12 +1709,40 @@ app.get('/api/contracts/professional/:id', (req, res) => {
   const salonAddress = tenant.address || db.settings?.address || 'Campo Grande - MS';
   const station = (db.workstations || []).find(w => w.id === prof.workstationId) || { name: 'Estação de Beleza Compartilhada', type: 'Cadeira' };
 
+  const isLocacao = prof.contractType === 'locacao_fixa';
+  const isHibrido = prof.contractType === 'hibrido';
+  const rentVal = Number(prof.rentAmount) || Number(station.monthlyRent) || 800;
+  const dueDay = prof.rentDueDay || 5;
+  const commPercent = prof.commissionDefault || 50;
+
+  let contractTitle = 'Contrato de Parceria Profissional (Lei Salão-Parceiro)';
+  if (isLocacao) {
+    contractTitle = 'Contrato de Locação de Bem Móvel & Estação de Trabalho';
+  } else if (isHibrido) {
+    contractTitle = 'Contrato Misto de Parceria & Locação de Estação';
+  }
+
+  const clauses = [
+    `DO OBJETO: O SALÃO-PARCEIRO cede ao PROFISSIONAL-PARCEIRO o uso da estação de trabalho móvel "${station.name}" (${station.type}), incluindo a infraestrutura física de recepção, lavatório, energia, climatização e sanitários, para a execução autônoma de seus serviços de beleza.`,
+    `DA AUTONOMIA E INEXISTÊNCIA DE VÍNCULO EMPREGATÍCIO: As partes declaram expressamente que a relação ora celebrada tem natureza puramente cível e autônoma, regida pela Lei Federal nº 13.352/2016 (Lei Salão-Parceiro) e pelos artigos 565 e seguintes do Código Civil Brasileiro, não havendo subordinação jurídica, controle de ponto, cumprimento obrigatório de jornada rígida ou exclusividade.`,
+    isLocacao 
+      ? `DO ALUGUEL E CONDIÇÃO FINANCEIRA: O PROFISSIONAL pagará ao SALÃO o valor fixo mensal de R$ ${rentVal.toFixed(2)} referente à locação do espaço/estação de trabalho, com vencimento impreterível todo dia ${dueDay} de cada mês civil.`
+      : isHibrido
+      ? `DA REMUNERAÇÃO HÍBRIDA: O PROFISSIONAL pagará a taxa de locação de posto de R$ ${rentVal.toFixed(2)}/mês (vencimento dia ${dueDay}) e receberá a cota-parte de ${commPercent}% sobre os valores brutos recebidos dos atendimentos realizados.`
+      : `DA COTA-PARTE E RETENÇÃO: Conforme estabelecido na Lei 13.352/2016, a cota-parte do PROFISSIONAL-PARCEIRO será de ${commPercent}% sobre o valor dos serviços executados, retendo o SALÃO-PARCEIRO a cota remanescente a título de taxa de uso de infraestrutura e intermediação de agendamentos.`,
+    `DA BIOSSEGURANÇA E HIGIENE: O PROFISSIONAL compromete-se a cumprir rigorosamente as normas sanitárias e de biossegurança (esterilização de instrumentos, descarte apropriado de materiais perfurocortantes e uso de EPIs), respondendo tecnicamente pela segurança dos procedimentos que executar.`,
+    `DA COBRANÇA E EMISSÃO DE NOTAS FISCAIS: O SALÃO-PARCEIRO atuará como centralizador de recebimentos (cartões, Pix ou dinheiro) e repassará pontualmente as cotas devidas, cabendo a cada parte o recolhimento dos tributos e encargos previdenciários incidentes sobre sua respectiva cota.`,
+    `DA VIGÊNCIA E RESCISÃO: Este instrumento vigorará por prazo indeterminado a partir da data de sua emissão, podendo ser rescindido por qualquer das partes sem qualquer ônus ou penalidade mediante aviso prévio por escrito com antecedência mínima de 30 (trinta) dias.`
+  ];
+
   res.json({
+    contractTitle,
+    date: new Date().toLocaleDateString('pt-BR'),
     salon: {
       name: salonName,
       phone: salonPhone,
       address: salonAddress,
-      cnpj: tenant.cnpj || '00.000.000/0001-00'
+      document: tenant.cnpj || tenant.document || '00.000.000/0001-00'
     },
     professional: {
       id: prof.id,
@@ -1724,19 +1752,18 @@ app.get('/api/contracts/professional/:id', (req, res) => {
       rg: prof.rg || '',
       mei: prof.mei || '',
       phone: prof.phone || '',
-      pixKey: prof.pixKey || prof.phone || '',
-      contractType: prof.contractType || 'locacao',
-      rentAmount: prof.rentAmount || 800,
-      rentDueDay: prof.rentDueDay || 10,
-      commissionPercent: prof.commissionDefault || 50
+      contractType: prof.contractType || 'comissao',
+      rentAmount: rentVal,
+      rentDueDay: dueDay,
+      commissionDefault: commPercent
     },
     workstation: {
       id: station.id,
       name: station.name,
       type: station.type,
-      monthlyRent: station.monthlyRent || prof.rentAmount || 800
+      notes: station.notes || ''
     },
-    generatedDate: new Date().toLocaleDateString('pt-BR')
+    clauses
   });
 });
 
@@ -2654,10 +2681,14 @@ app.get('/api/sales', (req, res) => {
 app.post('/api/sales', (req, res) => {
   const db = getDb();
   const tenantId = getTenantId(req);
-  const { clientId, clientName, clientPhone, professionalId, professionalName, items, discount, paymentMethod, notes, date } = req.body;
+  let { clientId, clientName, clientPhone, professionalId, professionalName, items, productId, quantity, unitPrice, discount, paymentMethod, notes, date } = req.body;
 
   if (!items || !Array.isArray(items) || items.length === 0) {
-    return res.status(400).json({ error: 'Nenhum produto selecionado para a venda.' });
+    if (productId) {
+      items = [{ productId, quantity: Number(quantity) || 1, unitPrice: Number(unitPrice) || 0 }];
+    } else {
+      return res.status(400).json({ error: 'Nenhum produto selecionado para a venda.' });
+    }
   }
 
   let subtotal = 0;
@@ -2690,6 +2721,11 @@ app.post('/api/sales', (req, res) => {
   const disc = Number(discount) || 0;
   const total = Math.max(0, subtotal - disc);
   const today = date || new Date().toISOString().split('T')[0];
+
+  if (professionalId && !professionalName) {
+    const prof = (db.professionals || []).find(p => p.id === professionalId && p.tenantId === tenantId);
+    if (prof) professionalName = prof.name;
+  }
 
   const newSale = {
     id: 'sale_' + Date.now(),
