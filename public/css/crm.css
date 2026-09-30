@@ -3283,6 +3283,82 @@ input[type="checkbox"] {
   border-color: #fed7aa;
 }
 
+/* Universal Custom Datepicker Trigger & Popover enhancements */
+.custom-datepicker-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.custom-datepicker-trigger-btn {
+  width: 100% !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 10px !important;
+  padding: 9px 12px !important;
+  background: #ffffff !important;
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 10px !important;
+  font-size: 0.88rem !important;
+  font-weight: 500 !important;
+  color: #0f172a !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+  box-sizing: border-box !important;
+  outline: none !important;
+}
+
+.custom-datepicker-trigger-btn:hover {
+  border-color: var(--orange, #ff6900) !important;
+  background: #fffdfb !important;
+  box-shadow: 0 2px 8px rgba(255, 105, 0, 0.12) !important;
+}
+
+.custom-datepicker-trigger-btn:focus {
+  border-color: var(--orange, #ff6900) !important;
+  box-shadow: 0 0 0 3px rgba(255, 105, 0, 0.15) !important;
+}
+
+.custom-datepicker-trigger-btn svg {
+  color: var(--orange, #ff6900) !important;
+  flex-shrink: 0 !important;
+}
+
+.custom-datepicker-trigger-btn .custom-datepicker-label {
+  flex: 1 !important;
+  text-align: left !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.popover-day-cell.disabled-day {
+  color: #cbd5e1 !important;
+  background: transparent !important;
+  cursor: not-allowed !important;
+  opacity: 0.35 !important;
+  pointer-events: none !important;
+}
+
+.btn-popover-clear {
+  padding: 6px 12px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #ef4444;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.btn-popover-clear:hover {
+  background: #fef2f2;
+  border-color: #fca5a5;
+  color: #dc2626;
+}
+
 /* Modo Lista da Agenda (Screenshot 5) */
 .btn-add-appointment-banner {
   width: 100%;
