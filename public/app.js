@@ -2987,11 +2987,31 @@ function renderCommissions(container, actions) {
       </div>
     `;
   } else {
-    // ABA "PAGAS": Filtro por Período (Dia, Mês, Todas), Calendário e Profissional
+    // ABA "PAGAS": Filtro por Período (Dia, Período, Mês, Todas), Calendário e Profissional
     const periodMode = window.paidCommissionPeriodMode || 'day';
     const selectedCommDate = window.selectedCommissionDate || new Date().toISOString().split('T')[0];
     const selectedMonth = window.selectedCommissionMonth || new Date().toISOString().slice(0, 7);
     const selectedProf = window.selectedCommissionProf || '';
+
+    // Inicializa datas para período personalizado (início e fim)
+    if (!window.paidCommissionStartDate) {
+      const now = new Date();
+      const y = now.getFullYear();
+      const m = String(now.getMonth() + 1).padStart(2, '0');
+      window.paidCommissionStartDate = `${y}-${m}-01`;
+    }
+    if (!window.paidCommissionEndDate) {
+      window.paidCommissionEndDate = new Date().toISOString().split('T')[0];
+    }
+    const startD = window.paidCommissionStartDate;
+    const endD = window.paidCommissionEndDate;
+
+    const formatSimpleDate = (isoDate) => {
+      if (!isoDate) return '';
+      const parts = isoDate.split('-');
+      if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+      return isoDate;
+    };
 
     // Filtra pelo profissional selecionado se for gestor
     let filteredPaid = paid;
@@ -3012,6 +3032,13 @@ function renderCommissions(container, actions) {
         return d === selectedCommDate;
       });
       periodLabel = `Dia ${formatFormattedDateTitle(selectedCommDate, false)}`;
+    } else if (periodMode === 'range') {
+      displayList = filteredPaid.filter(c => {
+        const d = (c.paymentDate || c.date || '').split('T')[0];
+        if (!d) return false;
+        return d >= startD && d <= endD;
+      });
+      periodLabel = `Período de ${formatSimpleDate(startD)} até ${formatSimpleDate(endD)}`;
     } else if (periodMode === 'month') {
       displayList = filteredPaid.filter(c => {
         const d = (c.paymentDate || c.date || '').split('T')[0];
@@ -3046,10 +3073,13 @@ function renderCommissions(container, actions) {
     tabContentHtml = `
       <div class="commission-date-filter-bar">
         <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-          <!-- 1. Seletor de Período (Dia, Mês, Todas) -->
+          <!-- 1. Seletor de Período (Dia, Período, Mês, Todas) -->
           <div class="comm-period-pills">
             <button type="button" class="comm-period-btn ${periodMode === 'day' ? 'active' : ''}" onclick="setPaidCommPeriodMode('day')">
               📅 Por Dia
+            </button>
+            <button type="button" class="comm-period-btn ${periodMode === 'range' ? 'active' : ''}" onclick="setPaidCommPeriodMode('range')">
+              📆 Por Período
             </button>
             <button type="button" class="comm-period-btn ${periodMode === 'month' ? 'active' : ''}" onclick="setPaidCommPeriodMode('month')">
               🗓️ Por Mês
@@ -3070,7 +3100,7 @@ function renderCommissions(container, actions) {
           ` : ''}
         </div>
 
-        <!-- 3. Navegador de Data / Mês -->
+        <!-- 3. Navegador de Data / Período / Mês -->
         <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
           ${periodMode === 'day' ? `
             <div class="agenda-header-datepicker" style="margin:0;">
@@ -3086,6 +3116,22 @@ function renderCommissions(container, actions) {
 
               <button type="button" class="btn-date-nav" onclick="navigatePaidCommissionDate(1)" title="Próximo dia">
                 <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"></path></svg>
+              </button>
+            </div>
+          ` : periodMode === 'range' ? `
+            <div class="agenda-header-datepicker comm-range-nav" style="margin:0; gap:6px;">
+              <span style="font-size:0.75rem; font-weight:700; color:var(--muted); text-transform:uppercase; margin-left:4px;">De:</span>
+              <button type="button" class="btn-date-picker-trigger" id="paidCommStartDateTrigger" onclick="openPaidCommRangePicker('start', event)" style="font-size:0.84rem; padding:4px 10px; height:34px;" title="Clique para escolher a data inicial no calendário">
+                <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                <span>${formatSimpleDate(startD)}</span>
+                <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"></path></svg>
+              </button>
+
+              <span style="font-size:0.75rem; font-weight:700; color:var(--muted); text-transform:uppercase;">Até:</span>
+              <button type="button" class="btn-date-picker-trigger" id="paidCommEndDateTrigger" onclick="openPaidCommRangePicker('end', event)" style="font-size:0.84rem; padding:4px 10px; height:34px;" title="Clique para escolher a data final no calendário">
+                <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                <span>${formatSimpleDate(endD)}</span>
+                <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"></path></svg>
               </button>
             </div>
           ` : periodMode === 'month' ? `
@@ -3131,10 +3177,10 @@ function renderCommissions(container, actions) {
             buttonOnClick: ""
           }) : renderEmptyStateHtml({
             icon: `<svg width="30" height="30" fill="none" stroke="var(--orange)" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>`,
-            title: `Nenhum Pagamento ${periodMode === 'day' ? 'nesta Data' : periodMode === 'month' ? 'neste Mês' : 'no Filtro'}`,
+            title: `Nenhum Pagamento ${periodMode === 'day' ? 'nesta Data' : periodMode === 'range' ? 'neste Período' : periodMode === 'month' ? 'neste Mês' : 'no Filtro'}`,
             description: `Nenhuma comissão ou vale pago foi encontrado para ${periodLabel}. Navegue no calendário ou altere o período.`,
-            buttonText: periodMode === 'day' ? "Ir para Hoje" : "Ver Todas",
-            buttonOnClick: periodMode === 'day' ? "goToTodayPaidCommissionDate()" : "setPaidCommPeriodMode('all')"
+            buttonText: "",
+            buttonOnClick: ""
           })
         ) : renderCommissionsList(displayList, false)}
       </div>
@@ -3245,13 +3291,58 @@ window.openPaidCommDatePicker = function(e) {
   });
 };
 
-window.goToTodayPaidCommissionDate = function() {
-  window.selectedCommissionDate = new Date().toISOString().split('T')[0];
-  window.selectedCommissionMonth = new Date().toISOString().slice(0, 7);
-  window.paidCommissionPeriodMode = 'day';
-  const container = document.getElementById('viewContainer');
-  const actions = document.getElementById('topBarActions');
-  renderCommissions(container, actions);
+window.openPaidCommRangePicker = function(type, e) {
+  if (e) e.stopPropagation();
+  const triggerBtn = document.getElementById(type === 'start' ? 'paidCommStartDateTrigger' : 'paidCommEndDateTrigger');
+  if (!triggerBtn) return;
+
+  let listComms = state.commissions || [];
+  const myProf = (state.professionals || []).find(p => 
+    (currentUser?.professionalId && p.id === currentUser.professionalId) ||
+    (p.email && currentUser?.email && p.email.toLowerCase() === currentUser.email.toLowerCase()) ||
+    (p.name && currentUser?.name && p.name.trim().toLowerCase() === currentUser.name.trim().toLowerCase())
+  );
+  const myProfId = myProf ? myProf.id : currentUser?.professionalId;
+  const myProfName = myProf ? myProf.name : currentUser?.name;
+  if (!isManager && myProfId) {
+    listComms = listComms.filter(c => c.professionalId === myProfId || (c.professionalName && c.professionalName === myProfName));
+  }
+  if (isManager && window.selectedCommissionProf) {
+    listComms = listComms.filter(c => c.professionalId === window.selectedCommissionProf);
+  }
+  const paid = listComms.filter(c => c.status === 'paga');
+
+  const paidDatesSet = new Set();
+  paid.forEach(c => {
+    const d = (c.paymentDate || c.date || '').split('T')[0];
+    if (d) paidDatesSet.add(d);
+  });
+
+  const curVal = type === 'start' 
+    ? (window.paidCommissionStartDate || new Date().toISOString().split('T')[0])
+    : (window.paidCommissionEndDate || new Date().toISOString().split('T')[0]);
+
+  openUniversalDatePicker(triggerBtn, {
+    value: curVal,
+    markedDates: paidDatesSet,
+    onSelect: (newDateStr) => {
+      if (type === 'start') {
+        window.paidCommissionStartDate = newDateStr;
+        if (window.paidCommissionEndDate && newDateStr > window.paidCommissionEndDate) {
+          window.paidCommissionEndDate = newDateStr;
+        }
+      } else {
+        window.paidCommissionEndDate = newDateStr;
+        if (window.paidCommissionStartDate && newDateStr < window.paidCommissionStartDate) {
+          window.paidCommissionStartDate = newDateStr;
+        }
+      }
+      window.paidCommissionPeriodMode = 'range';
+      const container = document.getElementById('viewContainer');
+      const actions = document.getElementById('topBarActions');
+      renderCommissions(container, actions);
+    }
+  });
 };
 
 window.switchCommissionTab = function(type) {
