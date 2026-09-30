@@ -3373,6 +3373,38 @@ input[type="checkbox"] {
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
 }
 
+.comm-period-pills {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: #f1f5f9;
+  padding: 3px;
+  border-radius: 10px;
+}
+
+.comm-period-btn {
+  border: none;
+  background: transparent;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 0.80rem;
+  font-weight: 600;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.comm-period-btn:hover {
+  color: #0f172a;
+}
+
+.comm-period-btn.active {
+  background: #ffffff;
+  color: var(--orange, #ff6900);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
 @media (max-width: 640px) {
   .commission-date-filter-bar {
     flex-direction: column;
@@ -3380,6 +3412,15 @@ input[type="checkbox"] {
   }
   .commission-date-filter-bar .agenda-header-datepicker {
     width: 100%;
+  }
+  .comm-period-pills {
+    width: 100%;
+    display: flex;
+  }
+  .comm-period-btn {
+    flex: 1 1 0;
+    text-align: center;
+    justify-content: center;
   }
 }
 
