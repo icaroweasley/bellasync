@@ -3072,7 +3072,8 @@ function renderCommissions(container, actions) {
 
     tabContentHtml = `
       <div class="commission-date-filter-bar">
-        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+        <!-- Linha Superior: Pílulas de Período e Seletor de Profissional (Largura total no mobile) -->
+        <div class="comm-filter-top-row">
           <!-- 1. Seletor de Período (Dia, Período, Mês, Todas) -->
           <div class="comm-period-pills">
             <button type="button" class="comm-period-btn ${periodMode === 'day' ? 'active' : ''}" onclick="setPaidCommPeriodMode('day')">
@@ -3089,78 +3090,86 @@ function renderCommissions(container, actions) {
             </button>
           </div>
 
-          <!-- 2. Filtro por Profissional (para Gestores) -->
+          <!-- 2. Filtro por Profissional (para Gestores - 100% largura no mobile) -->
           ${isManager && (state.professionals || []).length > 0 ? `
-            <select class="form-control" style="height:34px; font-size:0.80rem; padding:2px 8px; border-radius:9px; border:1px solid #cbd5e1; background:#ffffff; min-width:140px; max-width:180px;" onchange="setPaidCommProfFilter(this.value)">
-              <option value="">Todos os Profissionais</option>
-              ${(state.professionals || []).map(p => `
-                <option value="${p.id}" ${selectedProf === p.id ? 'selected' : ''}>${escapeHtml(p.name)}</option>
-              `).join('')}
-            </select>
+            <div class="comm-prof-filter-wrap">
+              <select class="form-control comm-prof-select" onchange="setPaidCommProfFilter(this.value)">
+                <option value="">Todos os Profissionais</option>
+                ${(state.professionals || []).map(p => `
+                  <option value="${p.id}" ${selectedProf === p.id ? 'selected' : ''}>${escapeHtml(p.name)}</option>
+                `).join('')}
+              </select>
+            </div>
           ` : ''}
         </div>
 
-        <!-- 3. Navegador de Data / Período / Mês -->
-        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-          ${periodMode === 'day' ? `
-            <div class="agenda-header-datepicker" style="margin:0;">
-              <button type="button" class="btn-date-nav" onclick="navigatePaidCommissionDate(-1)" title="Dia anterior">
-                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"></path></svg>
-              </button>
+        <!-- Linha Inferior: Controles de Data e Total Pago (Sempre embaixo das datas no mobile) -->
+        <div class="comm-filter-bottom-row">
+          <div class="comm-date-controls-row">
+            ${periodMode === 'day' ? `
+              <div class="agenda-header-datepicker comm-day-nav">
+                <button type="button" class="btn-date-nav" onclick="navigatePaidCommissionDate(-1)" title="Dia anterior">
+                  <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"></path></svg>
+                </button>
 
-              <button type="button" class="btn-date-picker-trigger" id="paidCommDatePickerTrigger" onclick="openPaidCommDatePicker(event)" style="font-size:0.86rem;">
-                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-                <span id="paidCommDateDisplay">${formatFormattedDateTitle(selectedCommDate, true)}</span>
-                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"></path></svg>
-              </button>
+                <button type="button" class="btn-date-picker-trigger" id="paidCommDatePickerTrigger" onclick="openPaidCommDatePicker(event)">
+                  <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                  <span id="paidCommDateDisplay">${formatFormattedDateTitle(selectedCommDate, true)}</span>
+                  <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"></path></svg>
+                </button>
 
-              <button type="button" class="btn-date-nav" onclick="navigatePaidCommissionDate(1)" title="Próximo dia">
-                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"></path></svg>
-              </button>
-            </div>
-          ` : periodMode === 'range' ? `
-            <div class="agenda-header-datepicker comm-range-nav" style="margin:0; gap:6px;">
-              <span style="font-size:0.75rem; font-weight:700; color:var(--muted); text-transform:uppercase; margin-left:4px;">De:</span>
-              <button type="button" class="btn-date-picker-trigger" id="paidCommStartDateTrigger" onclick="openPaidCommRangePicker('start', event)" style="font-size:0.84rem; padding:4px 10px; height:34px;" title="Clique para escolher a data inicial no calendário">
-                <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-                <span>${formatSimpleDate(startD)}</span>
-                <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"></path></svg>
-              </button>
+                <button type="button" class="btn-date-nav" onclick="navigatePaidCommissionDate(1)" title="Próximo dia">
+                  <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"></path></svg>
+                </button>
+              </div>
+            ` : periodMode === 'range' ? `
+              <div class="comm-range-row">
+                <div class="comm-range-item">
+                  <span class="comm-range-badge">De:</span>
+                  <button type="button" class="btn-date-picker-trigger comm-range-btn" id="paidCommStartDateTrigger" onclick="openPaidCommRangePicker('start', event)" title="Escolher data inicial">
+                    <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                    <span>${formatSimpleDate(startD)}</span>
+                    <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"></path></svg>
+                  </button>
+                </div>
 
-              <span style="font-size:0.75rem; font-weight:700; color:var(--muted); text-transform:uppercase;">Até:</span>
-              <button type="button" class="btn-date-picker-trigger" id="paidCommEndDateTrigger" onclick="openPaidCommRangePicker('end', event)" style="font-size:0.84rem; padding:4px 10px; height:34px;" title="Clique para escolher a data final no calendário">
-                <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-                <span>${formatSimpleDate(endD)}</span>
-                <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"></path></svg>
-              </button>
-            </div>
-          ` : periodMode === 'month' ? `
-            <div class="agenda-header-datepicker" style="margin:0;">
-              <button type="button" class="btn-date-nav" onclick="navigatePaidCommissionMonth(-1)" title="Mês anterior">
-                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"></path></svg>
-              </button>
+                <div class="comm-range-item">
+                  <span class="comm-range-badge">Até:</span>
+                  <button type="button" class="btn-date-picker-trigger comm-range-btn" id="paidCommEndDateTrigger" onclick="openPaidCommRangePicker('end', event)" title="Escolher data final">
+                    <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                    <span>${formatSimpleDate(endD)}</span>
+                    <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"></path></svg>
+                  </button>
+                </div>
+              </div>
+            ` : periodMode === 'month' ? `
+              <div class="agenda-header-datepicker comm-month-nav">
+                <button type="button" class="btn-date-nav" onclick="navigatePaidCommissionMonth(-1)" title="Mês anterior">
+                  <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"></path></svg>
+                </button>
 
-              <button type="button" class="btn-date-picker-trigger" id="paidCommDatePickerTrigger" onclick="openPaidCommDatePicker(event)" style="font-size:0.86rem;" title="Clique para escolher uma data no calendário">
-                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-                <span>${monthFormattedName}</span>
-                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"></path></svg>
-              </button>
+                <button type="button" class="btn-date-picker-trigger" id="paidCommDatePickerTrigger" onclick="openPaidCommDatePicker(event)" title="Clique para escolher uma data no calendário">
+                  <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                  <span>${monthFormattedName}</span>
+                  <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"></path></svg>
+                </button>
 
-              <button type="button" class="btn-date-nav" onclick="navigatePaidCommissionMonth(1)" title="Próximo mês">
-                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"></path></svg>
+                <button type="button" class="btn-date-nav" onclick="navigatePaidCommissionMonth(1)" title="Próximo mês">
+                  <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"></path></svg>
+                </button>
+              </div>
+            ` : `
+              <button type="button" class="btn-falcon btn-secondary comm-all-calendar-btn" onclick="openPaidCommDatePicker(event)" id="paidCommDatePickerTrigger">
+                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                <span>Abrir Calendário</span>
               </button>
-            </div>
-          ` : `
-            <button type="button" class="btn-falcon btn-secondary" onclick="openPaidCommDatePicker(event)" id="paidCommDatePickerTrigger" style="display:inline-flex; align-items:center; gap:6px; height:36px; padding:0 12px; font-size:0.82rem; border-radius:10px;">
-              <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-              <span>Abrir Calendário</span>
-            </button>
-          `}
+            `}
+          </div>
 
-          <!-- 4. Resumo Financeiro do Período -->
-          <div style="font-size:0.82rem; font-weight:700; color:${totalPaid >= 0 ? '#15803d' : '#dc2626'}; background:${totalPaid >= 0 ? '#f0fdf4' : '#fef2f2'}; border:1px solid ${totalPaid >= 0 ? '#bbf7d0' : '#fecaca'}; padding:6px 12px; border-radius:10px; display:inline-flex; align-items:center; gap:4px;">
+          <!-- 4. Resumo Financeiro do Período (Sempre embaixo no mobile) -->
+          <div class="comm-total-badge ${totalPaid >= 0 ? 'positive' : 'negative'}">
             <span>Total Pago: R$ ${Math.abs(totalPaid).toFixed(2)}</span>
-            <span style="font-weight:500; font-size:0.75rem; color:var(--muted);">(${displayList.length})</span>
+            <span class="comm-total-count">(${displayList.length})</span>
           </div>
         </div>
       </div>
