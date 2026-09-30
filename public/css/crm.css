@@ -2323,6 +2323,37 @@ input[type="checkbox"] {
   }
 }
 
+/* Card de Clientes - Botões de Ação Fixos no Mobile (Grid 2x2 Sempre) */
+.client-actions-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 640px) {
+  .client-actions-group {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px !important;
+    width: 100% !important;
+    margin-top: 10px !important;
+  }
+
+  .client-actions-group .btn-card-action {
+    width: 100% !important;
+    justify-content: center !important;
+    padding: 8px 6px !important;
+    box-sizing: border-box !important;
+    font-size: 0.82rem !important;
+    height: 36px !important;
+  }
+
+  .client-actions-group:not(.has-google) .btn-card-action:first-child {
+    grid-column: span 2 !important;
+  }
+}
+
 .btn-card-action {
   display: inline-flex !important;
   align-items: center !important;
