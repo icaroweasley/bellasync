@@ -1293,7 +1293,7 @@ function updateFabButton(view) {
       show = true;
       break;
     case 'profissionais':
-      title = 'Novo Profissional';
+      title = 'Adicionar Profissional ou Estação';
       show = isManager;
       break;
     case 'servicos':
@@ -1323,6 +1323,10 @@ function updateFabButton(view) {
       break;
   }
 
+  if (view !== 'profissionais' && typeof window.closeFabMenu === 'function') {
+    window.closeFabMenu();
+  }
+
   fab.style.display = show ? 'grid' : 'none';
   fab.title = title;
 }
@@ -1330,33 +1334,146 @@ function updateFabButton(view) {
 window.handleFabClick = function() {
   switch (currentView) {
     case 'agenda':
+      if (typeof window.closeFabMenu === 'function') window.closeFabMenu();
       openNewAppointmentModal();
       break;
     case 'comissões':
+      if (typeof window.closeFabMenu === 'function') window.closeFabMenu();
       if (isManager) openNewCommissionModal();
       break;
     case 'clientes':
+      if (typeof window.closeFabMenu === 'function') window.closeFabMenu();
       openNewClientModal();
       break;
     case 'profissionais':
-      if (isManager) openNewProfessionalModal();
+      if (isManager) {
+        window.toggleProfissionaisFabMenu();
+      }
       break;
     case 'servicos':
+      if (typeof window.closeFabMenu === 'function') window.closeFabMenu();
       if (isManager) openNewServiceModal();
       break;
     case 'pacotes':
+      if (typeof window.closeFabMenu === 'function') window.closeFabMenu();
       if (isManager) openNewPackageModal();
       break;
     case 'produtos':
+      if (typeof window.closeFabMenu === 'function') window.closeFabMenu();
       if (isManager) openNewProductModal();
       break;
     case 'despesas':
+      if (typeof window.closeFabMenu === 'function') window.closeFabMenu();
       if (isManager) openNewExpenseModal();
       break;
     default:
+      if (typeof window.closeFabMenu === 'function') window.closeFabMenu();
       break;
   }
 };
+
+window.toggleProfissionaisFabMenu = function() {
+  const existing = document.getElementById('fabActionMenu');
+  if (existing) {
+    window.closeFabMenu();
+    return;
+  }
+
+  const fab = document.getElementById('fabBtn');
+  if (!fab) return;
+
+  const menu = document.createElement('div');
+  menu.id = 'fabActionMenu';
+  menu.className = 'fab-action-menu';
+  menu.setAttribute('role', 'menu');
+  menu.innerHTML = `
+    <div class="fab-action-menu-header">O que deseja cadastrar?</div>
+    <button type="button" class="fab-action-item" id="fabActionNovoProf" title="Cadastrar novo profissional na equipe">
+      <div class="fab-action-icon" style="background: rgba(255, 105, 0, 0.12); color: #ff6900;">
+        <svg width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+          <circle cx="9" cy="7" r="4"></circle>
+          <line x1="19" y1="8" x2="19" y2="14"></line>
+          <line x1="22" y1="11" x2="16" y2="11"></line>
+        </svg>
+      </div>
+      <div class="fab-action-text">
+        <strong>Novo Profissional</strong>
+        <small>Adicionar membro à equipe</small>
+      </div>
+    </button>
+    <button type="button" class="fab-action-item" id="fabActionNovaEstacao" title="Cadastrar nova cadeira ou estação">
+      <div class="fab-action-icon" style="background: rgba(14, 165, 233, 0.12); color: #0284c7;">
+        <svg width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path d="M6 19v2M18 19v2M5 11V7a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v4M4 11a2 2 0 0 0-2 2v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a2 2 0 0 0-2-2H4zM6 15v-4M18 15v-4"/>
+        </svg>
+      </div>
+      <div class="fab-action-text">
+        <strong>Nova Estação</strong>
+        <small>Cadastrar cadeira ou bancada</small>
+      </div>
+    </button>
+  `;
+
+  document.body.appendChild(menu);
+  fab.classList.add('is-active');
+
+  const btnProf = document.getElementById('fabActionNovoProf');
+  if (btnProf) {
+    btnProf.addEventListener('click', (e) => {
+      e.stopPropagation();
+      window.closeFabMenu();
+      if (typeof openNewProfessionalModal === 'function') {
+        openNewProfessionalModal();
+      } else if (typeof openProfessionalModal === 'function') {
+        openProfessionalModal();
+      }
+    });
+  }
+
+  const btnEstacao = document.getElementById('fabActionNovaEstacao');
+  if (btnEstacao) {
+    btnEstacao.addEventListener('click', (e) => {
+      e.stopPropagation();
+      window.closeFabMenu();
+      if (typeof openWorkstationModal === 'function') {
+        openWorkstationModal();
+      }
+    });
+  }
+
+  setTimeout(() => {
+    window._fabMenuOutsideClick = function(e) {
+      const currentMenu = document.getElementById('fabActionMenu');
+      const currentFab = document.getElementById('fabBtn');
+      if (currentMenu && !currentMenu.contains(e.target) && (!currentFab || !currentFab.contains(e.target))) {
+        window.closeFabMenu();
+      }
+    };
+    document.addEventListener('click', window._fabMenuOutsideClick);
+  }, 20);
+};
+
+window.closeFabMenu = function() {
+  const existing = document.getElementById('fabActionMenu');
+  if (existing) existing.remove();
+  const fab = document.getElementById('fabBtn');
+  if (fab) fab.classList.remove('is-active');
+  if (window._fabMenuOutsideClick) {
+    document.removeEventListener('click', window._fabMenuOutsideClick);
+    window._fabMenuOutsideClick = null;
+  }
+};
+
+if (!window._fabEscapeListenerAdded) {
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && document.getElementById('fabActionMenu')) {
+      window.closeFabMenu();
+    }
+  });
+  window._fabEscapeListenerAdded = true;
+}
+
 
 // Aliases para compatibilidade caso chamados por botões vazios
 window.openCommissionModal = () => window.openNewCommissionModal && window.openNewCommissionModal();
@@ -1411,6 +1528,8 @@ function renderView(view) {
   const overlayEl = document.getElementById('sidebarOverlay');
   if (sidebarEl) sidebarEl.classList.remove('open');
   if (overlayEl) overlayEl.classList.remove('active');
+
+  if (typeof window.closeFabMenu === 'function') window.closeFabMenu();
 
   const container = document.getElementById('viewContainer');
   if (!container) return;
@@ -2836,12 +2955,7 @@ window.showAllPaidCommissions = window.showAllPaidCommissions || false;
 
 function renderCommissions(container, actions) {
   if (actions) {
-    actions.innerHTML = isManager ? `
-      <button class="btn-falcon btn-primary" onclick="openCommissionModal()" style="display:inline-flex; align-items:center; gap:6px; font-size:0.84rem; padding:6px 14px; height:38px; border-radius:10px; cursor:pointer;" title="Lançar Vale ou Adiantamento">
-        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-        <span>Lançar Vale / Comissão</span>
-      </button>
-    ` : '';
+    actions.innerHTML = '';
   }
 
   const myProf = (state.professionals || []).find(p => 
@@ -3146,6 +3260,7 @@ window.payCommission = async function(id) {
 
 // 3. Render Profissionais
 window.switchProfessionalsTab = function(tab) {
+  if (typeof window.closeFabMenu === 'function') window.closeFabMenu();
   activeProfessionalsTab = tab;
   const container = document.getElementById('viewContainer');
   const actions = document.getElementById('topBarActions');
@@ -3178,12 +3293,7 @@ function renderProfessionals(container, actions) {
   `;
 
   if (activeProfessionalsTab === 'cadeiras') {
-    actions.innerHTML = isManager ? `
-      <button class="btn-falcon btn-primary" onclick="openWorkstationModal()" style="height:36px; font-size:0.82rem; padding:0 14px; display:inline-flex; align-items:center; gap:6px;">
-        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-        <span>Nova Estação</span>
-      </button>
-    ` : '';
+    if (actions) actions.innerHTML = '';
 
     const overviewHtml = `
       <div class="ws-overview-card">
@@ -3283,17 +3393,7 @@ function renderProfessionals(container, actions) {
   }
 
   // ABA 1: EQUIPE DE PROFISSIONAIS
-  actions.innerHTML = isManager ? `
-    <div style="display:flex; align-items:center; gap:8px;">
-      <span style="font-size:0.82rem; font-weight:600; color:var(--muted); background:rgba(255,255,255,0.85); padding:6px 12px; border-radius:999px; border:1px solid rgba(0,0,0,0.06); height:36px; display:inline-flex; align-items:center; box-sizing:border-box;">
-        💺 <strong>${occupiedWs}/${totalWs}</strong> locadas
-      </span>
-      <button class="btn-falcon btn-primary" onclick="openNewProfessionalModal()" style="height:36px; font-size:0.82rem; padding:0 14px; display:inline-flex; align-items:center; gap:6px;">
-        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-        <span>Novo Profissional</span>
-      </button>
-    </div>
-  ` : '';
+  if (actions) actions.innerHTML = '';
 
   if (!state.professionals || state.professionals.length === 0) {
     container.innerHTML = `

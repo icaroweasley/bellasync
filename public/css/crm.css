@@ -4546,3 +4546,112 @@ input[type="checkbox"] {
   font-weight: 800;
   color: #16a34a;
 }
+
+/* ========================================================
+   FAB ACTION MENU (Pop-up de Ações Rápidas no Botão +)
+   ======================================================== */
+.fab-action-menu {
+  position: fixed;
+  right: 32px;
+  bottom: 100px;
+  width: 250px;
+  background: #ffffff;
+  border-radius: 18px;
+  border: 1px solid rgba(226, 232, 240, 0.95);
+  box-shadow: 0 16px 36px -4px rgba(15, 23, 42, 0.18), 0 6px 16px rgba(15, 23, 42, 0.08);
+  padding: 8px;
+  z-index: 99999;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  transform-origin: bottom right;
+  animation: fabMenuPop 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes fabMenuPop {
+  0% {
+    opacity: 0;
+    transform: translateY(12px) scale(0.92);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.fab-action-menu-header {
+  padding: 6px 12px 4px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #94a3b8;
+}
+
+.fab-action-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  transition: all 0.15s ease;
+  font-family: inherit;
+}
+
+.fab-action-item:hover {
+  background: #f8fafc;
+  transform: translateX(-2px);
+}
+
+.fab-action-item:active {
+  transform: scale(0.98);
+}
+
+.fab-action-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+.fab-action-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.fab-action-text strong {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #0f172a;
+  line-height: 1.25;
+}
+
+.fab-action-text small {
+  font-size: 0.74rem;
+  color: #64748b;
+  line-height: 1.2;
+}
+
+.fab-button svg {
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.fab-button.is-active svg {
+  transform: rotate(45deg) !important;
+}
+
+@media (max-width: 768px) {
+  .fab-action-menu {
+    right: 18px;
+    bottom: 84px;
+    width: calc(100vw - 36px);
+    max-width: 280px;
+  }
+}
