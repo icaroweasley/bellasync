@@ -3946,50 +3946,103 @@ input[type="checkbox"] {
   box-sizing: border-box !important;
 }
 
-.prof-services-badge {
+/* Card Badges dos Profissionais (Todos os indicadores agora são cards uniformes) */
+.prof-badge-card {
   font-size: 0.72rem !important;
   font-weight: 600 !important;
-  color: #1e40af !important;
-  background: #eff6ff !important;
-  border: 1px solid #bfdbfe !important;
-  padding: 3px 8px !important;
+  padding: 4px 9px !important;
   border-radius: 8px !important;
   display: inline-flex !important;
   align-items: center !important;
   gap: 4px !important;
   white-space: nowrap !important;
-  line-height: 1.2 !important;
+  line-height: 1.25 !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02) !important;
+  transition: all 0.15s ease !important;
+  box-sizing: border-box !important;
 }
 
-.prof-deposit-badge {
+.prof-badge-card.clickable {
+  cursor: pointer !important;
+}
+
+.prof-badge-card.clickable:hover {
+  transform: translateY(-1px) !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06) !important;
+}
+
+/* 1. Serviços */
+.prof-badge-card.badge-services,
+.prof-services-badge {
+  background: #eff6ff !important;
+  color: #1d4ed8 !important;
+  border: 1px solid #bfdbfe !important;
   font-size: 0.72rem !important;
-  font-weight: 700 !important;
-  color: #7c3aed !important;
+  font-weight: 600 !important;
+  padding: 4px 9px !important;
+  border-radius: 8px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  white-space: nowrap !important;
+  line-height: 1.25 !important;
+}
+
+/* 2. Comissão */
+.prof-badge-card.badge-commission {
+  background: #fffbeb !important;
+  color: #b45309 !important;
+  border: 1px solid #fde68a !important;
+}
+
+/* 3. Locatário */
+.prof-badge-card.badge-locatario {
+  background: #ecfdf5 !important;
+  color: #047857 !important;
+  border: 1px solid #a7f3d0 !important;
+}
+
+/* 4. Sinal Ativo */
+.prof-badge-card.badge-deposit,
+.prof-deposit-badge {
   background: #f5f3ff !important;
+  color: #6d28d9 !important;
   border: 1px solid #ddd6fe !important;
-  padding: 3px 8px !important;
+  font-size: 0.72rem !important;
+  font-weight: 600 !important;
+  padding: 4px 9px !important;
   border-radius: 8px !important;
   display: inline-flex !important;
   align-items: center !important;
   gap: 4px !important;
   white-space: nowrap !important;
   cursor: pointer !important;
-  line-height: 1.2 !important;
+  line-height: 1.25 !important;
   transition: all 0.15s ease !important;
 }
 
+.prof-badge-card.badge-deposit:hover,
 .prof-deposit-badge:hover {
   background: #ede9fe !important;
   border-color: #c4b5fd !important;
+  transform: translateY(-1px) !important;
 }
 
+/* 5. Sem Sinal Obrigatório (Agora Card estilizado) */
+.prof-badge-card.badge-no-deposit,
 .prof-deposit-badge.none {
   font-size: 0.72rem !important;
-  color: #94a3b8 !important;
-  font-weight: 500 !important;
-  background: transparent !important;
-  border: none !important;
-  padding: 2px 4px !important;
+  color: #64748b !important;
+  font-weight: 600 !important;
+  background: #f8fafc !important;
+  border: 1px solid #e2e8f0 !important;
+  padding: 4px 9px !important;
+  border-radius: 8px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  white-space: nowrap !important;
+  line-height: 1.25 !important;
   cursor: default !important;
 }
 
@@ -4158,6 +4211,48 @@ input[type="checkbox"] {
   background: #ffffff;
   color: var(--orange, #ff6900);
   box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+
+.subnav-label-mobile {
+  display: none;
+}
+
+.subnav-label-desktop {
+  display: inline;
+}
+
+@media (max-width: 768px) {
+  .subnav-tabs {
+    display: flex !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    padding: 4px !important;
+    gap: 4px !important;
+    margin-bottom: 16px !important;
+    border-radius: 12px !important;
+    overflow-x: hidden !important;
+  }
+
+  .subnav-tab-btn {
+    flex: 1 1 0 !important;
+    min-width: 0 !important;
+    justify-content: center !important;
+    text-align: center !important;
+    padding: 8px 4px !important;
+    font-size: 0.81rem !important;
+    white-space: nowrap !important;
+    border-radius: 9px !important;
+    gap: 4px !important;
+  }
+
+  .subnav-label-desktop {
+    display: none !important;
+  }
+
+  .subnav-label-mobile {
+    display: inline !important;
+  }
 }
 
 /* =============================================================

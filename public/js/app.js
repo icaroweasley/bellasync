@@ -3284,10 +3284,10 @@ function renderProfessionals(container, actions) {
   const subnavTabsHtml = `
     <div class="subnav-tabs">
       <button class="subnav-tab-btn ${activeProfessionalsTab === 'equipe' ? 'active' : ''}" onclick="switchProfessionalsTab('equipe')">
-        👥 Equipe de Profissionais (${profCount})
+        👥 <span class="subnav-label-desktop">Equipe de Profissionais (${profCount})</span><span class="subnav-label-mobile">Equipe (${profCount})</span>
       </button>
       <button class="subnav-tab-btn ${activeProfessionalsTab === 'cadeiras' ? 'active' : ''}" onclick="switchProfessionalsTab('cadeiras')">
-        💺 Cadeiras & Locação (${totalWs})
+        💺 <span class="subnav-label-desktop">Cadeiras & Locação (${totalWs})</span><span class="subnav-label-mobile">Cadeiras (${totalWs})</span>
       </button>
     </div>
   `;
@@ -3438,27 +3438,27 @@ function renderProfessionals(container, actions) {
 
       <!-- Linha 2: Badges lado a lado (Serviços + Locação/Comissão + Sinal) -->
       <div class="prof-badges-strip">
-        <span class="prof-services-badge" title="Serviços atendidos no agendamento online">
+        <span class="prof-badge-card badge-services" title="Serviços atendidos no agendamento online">
           ✂️ ${Array.isArray(p.serviceIds) ? `${p.serviceIds.length} serviços` : 'Todos os serviços'}
         </span>
 
         ${isLocatario ? `
-          <span class="prof-deposit-badge" style="background:#ecfdf5; color:#059669; border:1px solid #a7f3d0;" title="Profissional locatário de estação de trabalho">
+          <span class="prof-badge-card badge-locatario" title="Profissional locatário de estação de trabalho">
             🏢 Locatário: ${ws ? ws.name : 'Cadeira'} (R$ ${rentVal.toFixed(0)}/mês)
           </span>
         ` : `
-          <span class="prof-deposit-badge none" title="Comissão padrão sobre serviços">
-            ✂️ Comissão ${p.commissionDefault || 50}%
+          <span class="prof-badge-card badge-commission" title="Comissão padrão sobre serviços">
+            💰 Comissão ${p.commissionDefault || 50}%
           </span>
         `}
 
         ${p.requireDeposit ? `
-          <span class="prof-deposit-badge" onclick="openEditProfessionalModal('${p.id}')" title="Sinal configurado: ${p.depositType === 'fixed' ? `R$ ${(Number(p.depositFixedAmount) || 50).toFixed(0)} fixos` : `${p.depositPercent || 30}%`} via ${p.pixBank || 'Pix'} (Clique para editar)">
+          <span class="prof-badge-card badge-deposit clickable" onclick="openEditProfessionalModal('${p.id}')" title="Sinal configurado: ${p.depositType === 'fixed' ? `R$ ${(Number(p.depositFixedAmount) || 50).toFixed(0)} fixos` : `${p.depositPercent || 30}%`} via ${p.pixBank || 'Pix'} (Clique para editar)">
             💳 Sinal ${p.depositType === 'fixed' ? `R$ ${(Number(p.depositFixedAmount) || 50).toFixed(0)}` : `${p.depositPercent || 30}%`}${p.pixBank ? ` (${p.pixBank})` : ''}
           </span>
         ` : `
-          <span class="prof-deposit-badge none" title="Sem sinal obrigatório configurado">
-            Sem sinal obrigatório
+          <span class="prof-badge-card badge-no-deposit" title="Sem sinal obrigatório configurado">
+            🛡️ Sem sinal obrigatório
           </span>
         `}
       </div>
@@ -4606,10 +4606,10 @@ function renderProducts(container, actions) {
   const subnavTabsHtml = `
     <div class="subnav-tabs">
       <button class="subnav-tab-btn ${activeProductsTab === 'estoque' ? 'active' : ''}" onclick="switchProductsTab('estoque')">
-        📦 Estoque de Produtos (${prodsCount})
+        📦 <span class="subnav-label-desktop">Estoque de Produtos (${prodsCount})</span><span class="subnav-label-mobile">Estoque (${prodsCount})</span>
       </button>
       <button class="subnav-tab-btn ${activeProductsTab === 'vendas' ? 'active' : ''}" onclick="switchProductsTab('vendas')">
-        🧾 Vendas Balcão (${salesCount})
+        🧾 <span class="subnav-label-desktop">Vendas Balcão (${salesCount})</span><span class="subnav-label-mobile">Vendas (${salesCount})</span>
       </button>
     </div>
   `;
@@ -5065,10 +5065,10 @@ function renderBalanco(container, actions) {
   const subnavTabsHtml = `
     <div class="subnav-tabs">
       <button class="subnav-tab-btn ${activeBalancoTab === 'salao' ? 'active' : ''}" onclick="switchBalancoTab('salao')">
-        🏢 Gestão do Salão
+        🏢 <span class="subnav-label-desktop">Gestão do Salão</span><span class="subnav-label-mobile">Salão</span>
       </button>
       <button class="subnav-tab-btn ${activeBalancoTab === 'pessoal' ? 'active' : ''}" onclick="switchBalancoTab('pessoal')">
-        👤 Gestão Pessoal
+        👤 <span class="subnav-label-desktop">Gestão Pessoal</span><span class="subnav-label-mobile">Pessoal</span>
       </button>
     </div>
   `;
