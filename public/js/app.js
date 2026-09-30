@@ -1488,7 +1488,7 @@ window.renderView = renderView;
 
 // 1. Render Agenda
 // Helper de Formatação da Data (ex: "seg, 21/09/2026")
-function formatFormattedDateTitle(dateStr) {
+function formatFormattedDateTitle(dateStr, includeTodayTag = false) {
   if (!dateStr) return '';
   const [y, m, d] = dateStr.split('-').map(Number);
   const dt = new Date(y, m - 1, d);
@@ -1496,7 +1496,15 @@ function formatFormattedDateTitle(dateStr) {
   const dayName = weekDays[dt.getDay()];
   const dd = String(d).padStart(2, '0');
   const mm = String(m).padStart(2, '0');
-  return `${dayName}, ${dd}/${mm}/${y}`;
+
+  const now = new Date();
+  const isToday = now.getFullYear() === y && (now.getMonth() + 1) === m && now.getDate() === d;
+
+  const formatted = `${dayName}, ${dd}/${mm}/${y}`;
+  if (includeTodayTag && isToday) {
+    return `${formatted} <span style="font-size: 0.68rem; font-weight: 700; color: #ea580c; background: #fff7ed; border: 1px solid #fed7aa; padding: 2px 7px; border-radius: 10px; margin-left: 5px; text-transform: uppercase; vertical-align: middle;">Hoje</span>`;
+  }
+  return formatted;
 }
 
 window.navigateAgendaDate = function(daysDelta) {
@@ -1638,7 +1646,9 @@ function renderPopoverCalendarContent(popover) {
   const now = new Date();
   const todayY = now.getFullYear();
   const todayM = now.getMonth();
+  const todayD = now.getDate();
   const todayName = monthNames[todayM].slice(0, 3);
+  const todayStr = `${todayY}-${String(todayM + 1).padStart(2, '0')}-${String(todayD).padStart(2, '0')}`;
 
   // MODO SELETOR DE MÊS E ANO
   if (viewMode === 'monthYear') {
@@ -1713,7 +1723,16 @@ function renderPopoverCalendarContent(popover) {
 
   for (let i = firstDay - 1; i >= 0; i--) {
     const dayNum = prevMonthDays - i;
-    cellsHtml += `<div class="popover-day-cell other-month">${dayNum}</div>`;
+    const prevDate = new Date(year, month - 1, dayNum);
+    const prevDateStr = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
+    const isToday = prevDateStr === todayStr;
+
+    cellsHtml += `
+      <div class="popover-day-cell other-month ${isToday ? 'is-today' : ''}" onclick="selectDateFromPopover('${prevDateStr}')" title="${isToday ? 'Hoje' : ''}">
+        <span class="day-num">${dayNum}</span>
+        ${isToday ? '<span class="today-marker">HOJE</span>' : ''}
+      </div>
+    `;
   }
 
   for (let day = 1; day <= daysInMonth; day++) {
@@ -1722,11 +1741,17 @@ function renderPopoverCalendarContent(popover) {
     const fullDateStr = `${year}-${currentMonthStr}-${currentDayStr}`;
 
     const isSelected = fullDateStr === selectedDate;
+    const isToday = fullDateStr === todayStr;
     const hasApp = appointmentDates.has(day);
 
+    let cellClasses = ['popover-day-cell'];
+    if (isSelected) cellClasses.push('selected');
+    if (isToday) cellClasses.push('is-today');
+
     cellsHtml += `
-      <div class="popover-day-cell ${isSelected ? 'selected' : ''}" onclick="selectDateFromPopover('${fullDateStr}')">
-        <span>${day}</span>
+      <div class="${cellClasses.join(' ')}" onclick="selectDateFromPopover('${fullDateStr}')" title="${isToday ? 'Hoje' : ''}">
+        <span class="day-num">${day}</span>
+        ${isToday ? '<span class="today-marker">HOJE</span>' : ''}
         ${hasApp ? '<span class="dot-indicator"></span>' : ''}
       </div>
     `;
@@ -1735,7 +1760,16 @@ function renderPopoverCalendarContent(popover) {
   const totalCellsSoFar = firstDay + daysInMonth;
   const trailingCells = (7 - (totalCellsSoFar % 7)) % 7;
   for (let i = 1; i <= trailingCells; i++) {
-    cellsHtml += `<div class="popover-day-cell other-month">${i}</div>`;
+    const nextDate = new Date(year, month + 1, i);
+    const nextDateStr = `${nextDate.getFullYear()}-${String(nextDate.getMonth() + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
+    const isToday = nextDateStr === todayStr;
+
+    cellsHtml += `
+      <div class="popover-day-cell other-month ${isToday ? 'is-today' : ''}" onclick="selectDateFromPopover('${nextDateStr}')" title="${isToday ? 'Hoje' : ''}">
+        <span class="day-num">${i}</span>
+        ${isToday ? '<span class="today-marker">HOJE</span>' : ''}
+      </div>
+    `;
   }
 
   popover.innerHTML = `
@@ -1867,7 +1901,7 @@ function renderAgenda(container, actions) {
 
         <button class="btn-date-picker-trigger" id="agendaDatePickerTrigger" onclick="toggleCalendarPopover(event)">
           <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-          <span>${formatFormattedDateTitle(selectedDate)}</span>
+          <span>${formatFormattedDateTitle(selectedDate, true)}</span>
           <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"></path></svg>
         </button>
 
@@ -1972,7 +2006,7 @@ function updateScheduleView() {
   if (isListMode) {
     let listHtml = `
       <div class="agenda-date-group-title">
-        ${formatFormattedDateTitle(selectedDate)}
+        ${formatFormattedDateTitle(selectedDate, true)}
       </div>
     `;
 
@@ -2960,7 +2994,9 @@ function renderPackagePopoverCalendarContent(popover) {
   const now = new Date();
   const todayY = now.getFullYear();
   const todayM = now.getMonth();
+  const todayD = now.getDate();
   const todayName = monthNames[todayM].slice(0, 3);
+  const todayStr = `${todayY}-${String(todayM + 1).padStart(2, '0')}-${String(todayD).padStart(2, '0')}`;
 
   // MODO SELETOR DE MÊS E ANO PARA PACOTES
   if (viewMode === 'monthYear') {
@@ -3036,7 +3072,16 @@ function renderPackagePopoverCalendarContent(popover) {
 
   for (let i = firstDay - 1; i >= 0; i--) {
     const dayNum = prevMonthDays - i;
-    cellsHtml += `<div class="popover-day-cell other-month">${dayNum}</div>`;
+    const prevDate = new Date(year, month - 1, dayNum);
+    const prevDateStr = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
+    const isToday = prevDateStr === todayStr;
+
+    cellsHtml += `
+      <div class="popover-day-cell other-month ${isToday ? 'is-today' : ''}" onclick="selectPackageDateFromPopover('${prevDateStr}')" title="${isToday ? 'Hoje' : ''}">
+        <span class="day-num">${dayNum}</span>
+        ${isToday ? '<span class="today-marker">HOJE</span>' : ''}
+      </div>
+    `;
   }
 
   const curSelected = window.selectedPackageDate || '';
@@ -3047,11 +3092,17 @@ function renderPackagePopoverCalendarContent(popover) {
     const fullDateStr = `${year}-${currentMonthStr}-${currentDayStr}`;
 
     const isSelected = fullDateStr === curSelected && !window.showAllPackages;
+    const isToday = fullDateStr === todayStr;
     const hasPkg = packageDates.has(day);
 
+    let cellClasses = ['popover-day-cell'];
+    if (isSelected) cellClasses.push('selected');
+    if (isToday) cellClasses.push('is-today');
+
     cellsHtml += `
-      <div class="popover-day-cell ${isSelected ? 'selected' : ''}" onclick="selectPackageDateFromPopover('${fullDateStr}')">
-        <span>${day}</span>
+      <div class="${cellClasses.join(' ')}" onclick="selectPackageDateFromPopover('${fullDateStr}')" title="${isToday ? 'Hoje' : ''}">
+        <span class="day-num">${day}</span>
+        ${isToday ? '<span class="today-marker">HOJE</span>' : ''}
         ${hasPkg ? '<span class="dot-indicator"></span>' : ''}
       </div>
     `;
@@ -3060,7 +3111,16 @@ function renderPackagePopoverCalendarContent(popover) {
   const totalCellsSoFar = firstDay + daysInMonth;
   const trailingCells = (7 - (totalCellsSoFar % 7)) % 7;
   for (let i = 1; i <= trailingCells; i++) {
-    cellsHtml += `<div class="popover-day-cell other-month">${i}</div>`;
+    const nextDate = new Date(year, month + 1, i);
+    const nextDateStr = `${nextDate.getFullYear()}-${String(nextDate.getMonth() + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
+    const isToday = nextDateStr === todayStr;
+
+    cellsHtml += `
+      <div class="popover-day-cell other-month ${isToday ? 'is-today' : ''}" onclick="selectPackageDateFromPopover('${nextDateStr}')" title="${isToday ? 'Hoje' : ''}">
+        <span class="day-num">${i}</span>
+        ${isToday ? '<span class="today-marker">HOJE</span>' : ''}
+      </div>
+    `;
   }
 
   popover.innerHTML = `
@@ -3221,7 +3281,7 @@ function renderPackages(container, actions) {
 
             <button class="btn-date-picker-trigger" id="packageDatePickerTrigger" onclick="togglePackageCalendarPopover(event)">
               <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-              <span>${formatFormattedDateTitle(selectedPkgDate)}</span>
+              <span>${formatFormattedDateTitle(selectedPkgDate, true)}</span>
               <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"></path></svg>
             </button>
 

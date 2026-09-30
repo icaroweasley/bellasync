@@ -3056,6 +3056,10 @@ input[type="checkbox"] {
   transition: all 0.15s;
 }
 
+.popover-day-cell .day-num {
+  line-height: 1;
+}
+
 .popover-day-cell:hover:not(.other-month) {
   background: #f1f5f9;
 }
@@ -3072,6 +3076,52 @@ input[type="checkbox"] {
   box-shadow: 0 4px 10px rgba(59, 130, 246, 0.35);
 }
 
+/* SINALIZAÇÃO DO DIA ATUAL (HOJE) */
+.popover-day-cell.is-today:not(.selected) {
+  border: 2px solid var(--orange, #ff6900) !important;
+  color: #ea580c !important;
+  font-weight: 800 !important;
+  background: #fff7ed !important;
+  box-shadow: 0 0 0 1px rgba(255, 105, 0, 0.15);
+}
+
+.popover-day-cell.is-today:not(.selected):hover {
+  background: #ffedd5 !important;
+  box-shadow: 0 2px 8px rgba(255, 105, 0, 0.25) !important;
+}
+
+.popover-day-cell.is-today.selected {
+  background: #3b82f6 !important;
+  color: #ffffff !important;
+  font-weight: 800 !important;
+  box-shadow: 0 0 0 2px #ffffff, 0 0 0 4.5px #ff6900, 0 4px 12px rgba(255, 105, 0, 0.4) !important;
+}
+
+.popover-day-cell.other-month.is-today {
+  border: 1.5px dashed var(--orange, #ff6900) !important;
+  color: #ea580c !important;
+  background: #fff7ed !important;
+  cursor: pointer !important;
+}
+
+.popover-day-cell .today-marker {
+  font-size: 0.48rem;
+  font-weight: 900;
+  line-height: 1;
+  text-transform: uppercase;
+  letter-spacing: -0.2px;
+  margin-top: 1px;
+}
+
+.popover-day-cell.is-today:not(.selected) .today-marker {
+  color: #ea580c;
+}
+
+.popover-day-cell.is-today.selected .today-marker {
+  color: #ffffff;
+  opacity: 0.95;
+}
+
 .popover-day-cell .dot-indicator {
   width: 4px;
   height: 4px;
@@ -3083,6 +3133,18 @@ input[type="checkbox"] {
 
 .popover-day-cell.selected .dot-indicator {
   background-color: #ffffff;
+}
+
+.popover-day-cell.is-today .dot-indicator {
+  top: 3px;
+  right: 4px;
+  bottom: auto;
+  width: 5px;
+  height: 5px;
+}
+
+.popover-day-cell.is-today.selected .dot-indicator {
+  background-color: #86efac;
 }
 
 /* Popover Month Title Button (clickable month/year header) */
