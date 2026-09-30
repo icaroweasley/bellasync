@@ -3438,26 +3438,26 @@ function renderProfessionals(container, actions) {
 
       <!-- Linha 2: Badges lado a lado (Serviços + Locação/Comissão + Sinal) -->
       <div class="prof-badges-strip">
-        <span class="prof-badge-card badge-services" title="Serviços atendidos no agendamento online">
+        <span class="prof-pill-card badge-services" title="Serviços atendidos no agendamento online">
           ✂️ ${Array.isArray(p.serviceIds) ? `${p.serviceIds.length} serviços` : 'Todos os serviços'}
         </span>
 
         ${isLocatario ? `
-          <span class="prof-badge-card badge-locatario" title="Profissional locatário de estação de trabalho">
+          <span class="prof-pill-card badge-locatario" title="Profissional locatário de estação de trabalho">
             🏢 Locatário: ${ws ? ws.name : 'Cadeira'} (R$ ${rentVal.toFixed(0)}/mês)
           </span>
         ` : `
-          <span class="prof-badge-card badge-commission" title="Comissão padrão sobre serviços">
+          <span class="prof-pill-card badge-commission" title="Comissão padrão sobre serviços">
             💰 Comissão ${p.commissionDefault || 50}%
           </span>
         `}
 
         ${p.requireDeposit ? `
-          <span class="prof-badge-card badge-deposit clickable" onclick="openEditProfessionalModal('${p.id}')" title="Sinal configurado: ${p.depositType === 'fixed' ? `R$ ${(Number(p.depositFixedAmount) || 50).toFixed(0)} fixos` : `${p.depositPercent || 30}%`} via ${p.pixBank || 'Pix'} (Clique para editar)">
+          <span class="prof-pill-card badge-deposit clickable" onclick="openEditProfessionalModal('${p.id}')" title="Sinal configurado: ${p.depositType === 'fixed' ? `R$ ${(Number(p.depositFixedAmount) || 50).toFixed(0)} fixos` : `${p.depositPercent || 30}%`} via ${p.pixBank || 'Pix'} (Clique para editar)">
             💳 Sinal ${p.depositType === 'fixed' ? `R$ ${(Number(p.depositFixedAmount) || 50).toFixed(0)}` : `${p.depositPercent || 30}%`}${p.pixBank ? ` (${p.pixBank})` : ''}
           </span>
         ` : `
-          <span class="prof-badge-card badge-no-deposit" title="Sem sinal obrigatório configurado">
+          <span class="prof-pill-card badge-no-deposit" title="Sem sinal obrigatório configurado">
             🛡️ Sem sinal obrigatório
           </span>
         `}

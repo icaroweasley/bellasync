@@ -3946,33 +3946,37 @@ input[type="checkbox"] {
   box-sizing: border-box !important;
 }
 
-/* Card Badges dos Profissionais (Todos os indicadores agora são cards uniformes) */
-.prof-badge-card {
+/* Card Badges dos Profissionais (Pills/Tags uniformes nos cards de equipe) */
+.prof-pill-card {
   font-size: 0.72rem !important;
   font-weight: 600 !important;
   padding: 4px 9px !important;
   border-radius: 8px !important;
   display: inline-flex !important;
+  flex-direction: row !important;
   align-items: center !important;
   gap: 4px !important;
   white-space: nowrap !important;
   line-height: 1.25 !important;
+  width: auto !important;
+  min-width: 0 !important;
+  max-width: none !important;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02) !important;
   transition: all 0.15s ease !important;
   box-sizing: border-box !important;
 }
 
-.prof-badge-card.clickable {
+.prof-pill-card.clickable {
   cursor: pointer !important;
 }
 
-.prof-badge-card.clickable:hover {
+.prof-pill-card.clickable:hover {
   transform: translateY(-1px) !important;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06) !important;
 }
 
 /* 1. Serviços */
-.prof-badge-card.badge-services,
+.prof-pill-card.badge-services,
 .prof-services-badge {
   background: #eff6ff !important;
   color: #1d4ed8 !important;
@@ -3989,21 +3993,21 @@ input[type="checkbox"] {
 }
 
 /* 2. Comissão */
-.prof-badge-card.badge-commission {
+.prof-pill-card.badge-commission {
   background: #fffbeb !important;
   color: #b45309 !important;
   border: 1px solid #fde68a !important;
 }
 
 /* 3. Locatário */
-.prof-badge-card.badge-locatario {
+.prof-pill-card.badge-locatario {
   background: #ecfdf5 !important;
   color: #047857 !important;
   border: 1px solid #a7f3d0 !important;
 }
 
 /* 4. Sinal Ativo */
-.prof-badge-card.badge-deposit,
+.prof-pill-card.badge-deposit,
 .prof-deposit-badge {
   background: #f5f3ff !important;
   color: #6d28d9 !important;
@@ -4021,7 +4025,7 @@ input[type="checkbox"] {
   transition: all 0.15s ease !important;
 }
 
-.prof-badge-card.badge-deposit:hover,
+.prof-pill-card.badge-deposit:hover,
 .prof-deposit-badge:hover {
   background: #ede9fe !important;
   border-color: #c4b5fd !important;
@@ -4029,7 +4033,7 @@ input[type="checkbox"] {
 }
 
 /* 5. Sem Sinal Obrigatório (Agora Card estilizado) */
-.prof-badge-card.badge-no-deposit,
+.prof-pill-card.badge-no-deposit,
 .prof-deposit-badge.none {
   font-size: 0.72rem !important;
   color: #64748b !important;
