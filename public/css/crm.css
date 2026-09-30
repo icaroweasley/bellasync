@@ -3359,14 +3359,6 @@ input[type="checkbox"] {
   color: #dc2626;
 }
 
-.commission-date-filter-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 10px;
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
 /* Barra de Filtro de Comissões Pagas */
 .commission-date-filter-bar {
   display: flex;
