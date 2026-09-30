@@ -379,11 +379,11 @@
   </div>
 
   <!-- Modal Seletor de Categoria de Produtos (Ver Lista / Escolha Rápida) -->
-  <div class="modal-backdrop" id="productCategoryPickerModal" style="z-index: 10010;">
+  <div class="modal-backdrop" id="productCategoryPickerModal" style="z-index: 10010;" onclick="if(event.target === this) closeProductCategoryPickerModal()">
     <div class="modal-dialog" style="max-width: 380px; border-radius: 20px; padding: 20px 22px;">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
         <h3 style="font-size: 1.15rem; font-weight: 700; color: var(--ink); margin: 0;">Categorias de Produtos</h3>
-        <button type="button" onclick="closeProductCategoryPickerModal()" style="background: none; border: none; font-size: 1.4rem; color: var(--muted); cursor: pointer; line-height: 1;">&times;</button>
+        <button type="button" onclick="closeProductCategoryPickerModal()" style="background: none; border: none; font-size: 1.5rem; color: var(--muted); cursor: pointer; line-height: 1; padding: 4px 8px; border-radius: 8px;" title="Fechar" aria-label="Fechar">&times;</button>
       </div>
 
       <div style="margin-bottom: 10px;">
@@ -407,14 +407,14 @@
   </div>
 
   <!-- Modal Gerenciador de Categorias de Produtos (Visualizar, Criar, Editar e Excluir) -->
-  <div class="modal-backdrop" id="productCategoryManagerModal" style="z-index: 10015;">
+  <div class="modal-backdrop" id="productCategoryManagerModal" style="z-index: 10015;" onclick="if(event.target === this) closeProductCategoryManagerModal()">
     <div class="modal-dialog" style="max-width: 480px; border-radius: 20px; padding: 22px 24px;">
       <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px;">
         <div>
           <h3 style="font-size: 1.18rem; font-weight: 700; color: var(--ink); margin: 0;">Gerenciar Categorias de Produtos</h3>
           <p style="font-size: 0.8rem; color: var(--muted); margin: 3px 0 0 0;">Crie, renomeie ou exclua as categorias de estoque e produtos.</p>
         </div>
-        <button type="button" onclick="closeProductCategoryManagerModal()" style="background: none; border: none; font-size: 1.4rem; color: var(--muted); cursor: pointer; line-height: 1;">&times;</button>
+        <button type="button" onclick="closeProductCategoryManagerModal()" style="background: none; border: none; font-size: 1.5rem; color: var(--muted); cursor: pointer; line-height: 1; padding: 4px 8px; border-radius: 8px;" title="Fechar" aria-label="Fechar">&times;</button>
       </div>
 
       <!-- Formulário de Nova Categoria -->
@@ -698,6 +698,6 @@
     </div>
   </div>
 
-  <script src="/js/app.js?v=20260930_v281"></script>
+  <script src="/js/app.js?v=20260930_v282"></script>
 </body>
 </html>

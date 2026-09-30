@@ -7078,6 +7078,7 @@ window.openCategoriesManagerModal = function(fromPicker = false) {
   renderCategoryManagerList();
   updateBodyScrollLock();
 };
+window.openCategoryManagerModal = window.openCategoriesManagerModal;
 
 window.closeCategoryManagerModal = function() {
   const modal = document.getElementById('categoryManagerModal');
@@ -7090,6 +7091,7 @@ window.closeCategoryManagerModal = function() {
     openCategoryPickerModal(window.activeCategoryTargetInputId);
   }
 };
+window.closeCategoriesManagerModal = window.closeCategoryManagerModal;
 
 window.renderCategoryManagerList = function() {
   const container = document.getElementById('categoryManagerList');
@@ -7606,8 +7608,9 @@ window.openProductCategoriesManagerModal = function(fromPicker = false) {
   renderProductCategoryManagerList();
   updateBodyScrollLock();
 };
+window.openProductCategoryManagerModal = window.openProductCategoriesManagerModal;
 
-window.closeProductCategoriesManagerModal = function() {
+window.closeProductCategoryManagerModal = function() {
   const modal = document.getElementById('productCategoryManagerModal');
   if (modal) {
     modal.classList.remove('open');
@@ -7618,6 +7621,7 @@ window.closeProductCategoriesManagerModal = function() {
     openProductCategoryPickerModal(window.activeProductCategoryTargetInputId);
   }
 };
+window.closeProductCategoriesManagerModal = window.closeProductCategoryManagerModal;
 
 window.renderProductCategoryManagerList = function() {
   const container = document.getElementById('productCategoryManagerList');
