@@ -15,6 +15,17 @@ if (!currentUser || !currentTenant) {
   window.location.href = '/login';
 }
 
+function escapeHtml(str) {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+window.escapeHtml = escapeHtml;
+
 function getButterflyAvatar(name) {
   let hash = 0;
   const str = String(name || 'Profissional');
@@ -5927,15 +5938,38 @@ window.saveSettings = async function() {
 
 
 // Modais Genéricos de Cadastro
-function openModal(title, bodyHtml, onConfirm) {
-  document.getElementById('modalTitle').innerText = title;
-  document.getElementById('modalBody').innerHTML = bodyHtml;
+function openModal(title, bodyHtml, onConfirm, confirmText, hideFooter) {
+  const titleEl = document.getElementById('modalTitle');
+  if (titleEl) titleEl.innerText = title;
+
+  const bodyEl = document.getElementById('modalBody');
+  if (bodyEl) bodyEl.innerHTML = bodyHtml;
+
+  const footer = document.getElementById('modalFooter');
+  const cancelBtn = document.getElementById('modalCancelBtn');
   const confirmBtn = document.getElementById('modalConfirmBtn');
 
-  // Substitui handler
-  const newBtn = confirmBtn.cloneNode(true);
-  confirmBtn.parentNode.replaceChild(newBtn, confirmBtn);
-  newBtn.addEventListener('click', onConfirm);
+  if (footer) {
+    footer.style.display = hideFooter ? 'none' : 'flex';
+  }
+
+  if (confirmBtn) {
+    confirmBtn.innerText = confirmText || 'Salvar';
+    if (!onConfirm && confirmText === 'Fechar') {
+      confirmBtn.style.display = 'none';
+      if (cancelBtn) cancelBtn.innerText = 'Fechar';
+    } else {
+      confirmBtn.style.display = onConfirm ? '' : 'none';
+      if (cancelBtn) cancelBtn.innerText = 'Cancelar';
+    }
+
+    // Substitui handler
+    const newBtn = confirmBtn.cloneNode(true);
+    confirmBtn.parentNode.replaceChild(newBtn, confirmBtn);
+    if (onConfirm) {
+      newBtn.addEventListener('click', onConfirm);
+    }
+  }
 
   const modal = document.getElementById('genericModal');
   if (modal) {
@@ -5951,6 +5985,15 @@ function closeModal() {
     modal.classList.remove('open');
     modal.classList.remove('active');
   }
+  const cancelBtn = document.getElementById('modalCancelBtn');
+  if (cancelBtn) cancelBtn.innerText = 'Cancelar';
+  const confirmBtn = document.getElementById('modalConfirmBtn');
+  if (confirmBtn) {
+    confirmBtn.style.display = '';
+    confirmBtn.innerText = 'Salvar';
+  }
+  const footer = document.getElementById('modalFooter');
+  if (footer) footer.style.display = 'flex';
   updateBodyScrollLock();
 }
 
@@ -9503,14 +9546,16 @@ window.openDirectSaleModal = function(preSelectedProductId) {
 
 window.updateDirectSaleTotals = function() {
   const prodSelect = document.getElementById('mSaleProduct');
-  const selOpt = prodSelect ? prodSelect.options[prodSelect.selectedIndex] : null;
+  const selOpt = prodSelect && prodSelect.selectedIndex >= 0 ? prodSelect.options[prodSelect.selectedIndex] : null;
   const unitInput = document.getElementById('mSaleUnitPrice');
   const qtyInput = document.getElementById('mSaleQty');
   const totalDisplay = document.getElementById('mSaleTotalDisplay');
 
-  if (selOpt && (!unitInput.dataset.manuallyEdited || unitInput.dataset.lastProd !== selOpt.value)) {
-    unitInput.value = Number(selOpt.dataset.price || 0).toFixed(2);
-    unitInput.dataset.lastProd = selOpt.value;
+  if (selOpt && unitInput) {
+    if (!unitInput.dataset?.manuallyEdited || unitInput.dataset?.lastProd !== selOpt.value) {
+      unitInput.value = Number(selOpt.dataset.price || 0).toFixed(2);
+      if (unitInput.dataset) unitInput.dataset.lastProd = selOpt.value;
+    }
   }
 
   const qty = Number(qtyInput?.value) || 1;
