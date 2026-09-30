@@ -1301,7 +1301,7 @@ function updateFabButton(view) {
       show = isManager;
       break;
     case 'produtos':
-      title = 'Novo Produto';
+      title = 'Adicionar Produto ou Venda Balcão';
       show = isManager;
       break;
     case 'despesas':
@@ -1323,7 +1323,7 @@ function updateFabButton(view) {
       break;
   }
 
-  if (view !== 'profissionais' && typeof window.closeFabMenu === 'function') {
+  if (view !== 'profissionais' && view !== 'produtos' && typeof window.closeFabMenu === 'function') {
     window.closeFabMenu();
   }
 
@@ -1359,8 +1359,9 @@ window.handleFabClick = function() {
       if (isManager) openNewPackageModal();
       break;
     case 'produtos':
-      if (typeof window.closeFabMenu === 'function') window.closeFabMenu();
-      if (isManager) openNewProductModal();
+      if (isManager) {
+        window.toggleProdutosFabMenu();
+      }
       break;
     case 'despesas':
       if (typeof window.closeFabMenu === 'function') window.closeFabMenu();
@@ -1370,6 +1371,110 @@ window.handleFabClick = function() {
       if (typeof window.closeFabMenu === 'function') window.closeFabMenu();
       break;
   }
+};
+
+window.toggleProdutosFabMenu = function() {
+  const existing = document.getElementById('fabActionMenu');
+  if (existing) {
+    window.closeFabMenu();
+    return;
+  }
+
+  const fab = document.getElementById('fabBtn');
+  if (!fab) return;
+
+  const menu = document.createElement('div');
+  menu.id = 'fabActionMenu';
+  menu.className = 'fab-action-menu';
+  menu.setAttribute('role', 'menu');
+  menu.innerHTML = `
+    <div class="fab-action-menu-header">Produtos & Estoque</div>
+    <button type="button" class="fab-action-item" id="fabActionNovoProduto" title="Cadastrar novo produto no estoque">
+      <div class="fab-action-icon" style="background: rgba(255, 105, 0, 0.12); color: #ff6900;">
+        <svg width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
+          <line x1="3" y1="6" x2="21" y2="6"></line>
+          <path d="M16 10a4 4 0 0 1-8 0"></path>
+        </svg>
+      </div>
+      <div class="fab-action-text">
+        <strong>Novo Produto</strong>
+        <small>Cadastrar item para estoque ou revenda</small>
+      </div>
+    </button>
+    <button type="button" class="fab-action-item" id="fabActionVendaBalcao" title="Realizar venda direta de produto">
+      <div class="fab-action-icon" style="background: rgba(22, 163, 74, 0.12); color: #16a34a;">
+        <svg width="19" height="19" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+          <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+        </svg>
+      </div>
+      <div class="fab-action-text">
+        <strong>Venda Balcão</strong>
+        <small>Registrar saída rápida de produto</small>
+      </div>
+    </button>
+    <button type="button" class="fab-action-item" id="fabActionGerenciarCategoriasProd" title="Gerenciar categorias de produtos">
+      <div class="fab-action-icon" style="background: rgba(99, 102, 241, 0.12); color: #6366f1;">
+        <svg width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+          <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+        </svg>
+      </div>
+      <div class="fab-action-text">
+        <strong>Gerenciar Categorias</strong>
+        <small>Criar ou editar categorias de produtos</small>
+      </div>
+    </button>
+  `;
+
+  document.body.appendChild(menu);
+  fab.classList.add('is-active');
+
+  const btnProd = document.getElementById('fabActionNovoProduto');
+  if (btnProd) {
+    btnProd.addEventListener('click', (e) => {
+      e.stopPropagation();
+      window.closeFabMenu();
+      if (typeof openNewProductModal === 'function') {
+        openNewProductModal();
+      } else if (typeof openProductModal === 'function') {
+        openProductModal();
+      }
+    });
+  }
+
+  const btnVenda = document.getElementById('fabActionVendaBalcao');
+  if (btnVenda) {
+    btnVenda.addEventListener('click', (e) => {
+      e.stopPropagation();
+      window.closeFabMenu();
+      if (typeof openDirectSaleModal === 'function') {
+        openDirectSaleModal();
+      }
+    });
+  }
+
+  const btnCat = document.getElementById('fabActionGerenciarCategoriasProd');
+  if (btnCat) {
+    btnCat.addEventListener('click', (e) => {
+      e.stopPropagation();
+      window.closeFabMenu();
+      if (typeof openProductCategoriesManagerModal === 'function') {
+        openProductCategoriesManagerModal();
+      }
+    });
+  }
+
+  setTimeout(() => {
+    window._fabMenuOutsideClick = function(e) {
+      const currentMenu = document.getElementById('fabActionMenu');
+      const currentFab = document.getElementById('fabBtn');
+      if (currentMenu && !currentMenu.contains(e.target) && (!currentFab || !currentFab.contains(e.target))) {
+        window.closeFabMenu();
+      }
+    };
+    document.addEventListener('click', window._fabMenuOutsideClick);
+  }, 20);
 };
 
 window.toggleProfissionaisFabMenu = function() {
@@ -3703,14 +3808,6 @@ function renderClients(container, actions) {
       <span style="font-size:0.84rem; font-weight:500; color:var(--muted); background:rgba(255,255,255,0.7); padding:6px 14px; border-radius:999px; border:1px solid rgba(0,0,0,0.06); height:38px; display:inline-flex; align-items:center; box-sizing:border-box;">
         <strong style="color:var(--ink); margin-right:4px;">${state.clients.length}</strong> clientes
       </span>
-      ${isManager ? `
-        <button class="btn-falcon btn-secondary" onclick="renderView('configuracoes')" style="display:inline-flex; align-items:center; gap:6px; font-size:0.82rem; font-weight:600; padding:6px 12px; height:38px; border-radius:10px; cursor:pointer;" title="Configurações de Sincronização com Google Contatos">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
-            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15h-2v-6h2v6zm4 0h-2v-6h2v6zm-2-8c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1z" fill="var(--orange)"/>
-          </svg>
-          Google Contatos
-        </button>
-      ` : ''}
     </div>
   `;
 
@@ -3747,7 +3844,7 @@ function renderClients(container, actions) {
           <span>WhatsApp</span>
         </a>
         ${isManager ? `
-          <button class="btn-card-action" onclick="syncSingleClientToGoogle('${c.id}')" title="Enviar ou atualizar no Google Contatos" style="color:${c.googleContactSynced ? '#15803d' : 'var(--orange)'};">
+          <button class="btn-card-action" onclick="syncSingleClientToGoogle('${c.id}', this)" title="Enviar ou atualizar no Google Contatos" style="color:${c.googleContactSynced ? '#15803d' : 'var(--orange)'};">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15h-2v-6h2v6zm4 0h-2v-6h2v6zm-2-8c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1z" fill="currentColor"/></svg>
             <span>${c.googleContactSynced ? 'Google ✓' : 'Salvar Google'}</span>
           </button>
@@ -3771,12 +3868,7 @@ function renderClients(container, actions) {
 
 // 5. Render Serviços
 function renderServices(container, actions) {
-  actions.innerHTML = isManager ? `
-    <button class="btn-falcon btn-secondary" onclick="openCategoriesManagerModal()" style="display:inline-flex; align-items:center; gap:6px; font-size:0.84rem; padding:6px 14px; height:38px; border-radius:10px; cursor:pointer;" title="Gerenciar Categorias de Serviços">
-      <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
-      Categorias
-    </button>
-  ` : '';
+  actions.innerHTML = '';
 
   if (!state.services || state.services.length === 0) {
     container.innerHTML = renderEmptyStateHtml({
@@ -3825,17 +3917,7 @@ function renderServices(container, actions) {
     </div>
   `).join('');
 
-  const headerActionsHtml = isManager ? `
-    <div style="display: flex; justify-content: flex-end; align-items: center; margin-bottom: 12px;">
-      <button type="button" class="btn-falcon btn-secondary" onclick="openCategoriesManagerModal()" style="display:inline-flex; align-items:center; gap:6px; font-size:0.82rem; font-weight:600; padding:6px 12px; border-radius:10px;">
-        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
-        Gerenciar Categorias
-      </button>
-    </div>
-  ` : '';
-
   container.innerHTML = `
-    ${headerActionsHtml}
     <div class="data-list">${servsHtml}</div>
   `;
 }
@@ -4790,12 +4872,7 @@ function renderProducts(container, actions) {
   `;
 
   if (activeProductsTab === 'vendas') {
-    actions.innerHTML = `
-      <button class="btn-falcon btn-primary" onclick="openDirectSaleModal()" style="height:36px; font-size:0.82rem; padding:0 14px; background:#16a34a; border-color:#16a34a; display:inline-flex; align-items:center; gap:6px;">
-        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
-        <span>Nova Venda Balcão</span>
-      </button>
-    `;
+    actions.innerHTML = '';
 
     const sales = state.productSales || [];
     if (sales.length === 0) {
@@ -4852,23 +4929,7 @@ function renderProducts(container, actions) {
     if (container) renderProducts(container, actions);
   };
 
-  actions.innerHTML = `
-    <div style="display:flex; align-items:center; gap:8px;">
-      <button class="btn-falcon btn-primary" onclick="openDirectSaleModal()" style="height:36px; font-size:0.82rem; padding:0 14px; background:#16a34a; border-color:#16a34a; display:inline-flex; align-items:center; gap:6px;">
-        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
-        <span>Venda Balcão</span>
-      </button>
-      ${isManager ? `
-        <button class="btn-falcon btn-secondary" onclick="openProductCategoriesManagerModal()" style="display:inline-flex; align-items:center; gap:6px; font-size:0.84rem; padding:6px 14px; height:36px; border-radius:10px; cursor:pointer;" title="Gerenciar Categorias de Produtos">
-          <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
-          Categorias
-        </button>
-        <button class="btn-falcon btn-secondary" onclick="openNewProductModal()" style="height:36px; font-size:0.82rem; padding:0 14px;">
-          + Novo Produto
-        </button>
-      ` : ''}
-    </div>
-  `;
+  actions.innerHTML = '';
 
   if (!state.products || state.products.length === 0) {
     container.innerHTML = `
@@ -4889,7 +4950,7 @@ function renderProducts(container, actions) {
   const allProductCategories = getProductCategories();
   const selectedCat = window.selectedProductCategoryFilter || 'ALL';
 
-  const categoryChipsHtml = allProductCategories.length > 0 ? `
+  const categoryChipsHtml = (allProductCategories.length > 0 || isManager) ? `
     <div style="display:flex; gap:6px; overflow-x:auto; padding:4px 0 10px 0; margin-bottom:8px; align-items:center; flex-wrap:wrap;">
       <button type="button" onclick="filterProductsByCategory('ALL')" style="cursor:pointer; font-size:0.8rem; font-weight:600; padding:5px 12px; border-radius:20px; border:1px solid ${selectedCat === 'ALL' ? 'var(--orange)' : '#e2e8f0'}; background:${selectedCat === 'ALL' ? 'var(--orange)' : '#ffffff'}; color:${selectedCat === 'ALL' ? '#ffffff' : '#475569'}; transition:all 0.15s ease;">
         Todas (${(state.products || []).length})
@@ -4902,15 +4963,12 @@ function renderProducts(container, actions) {
           </button>
         `;
       }).join('')}
-    </div>
-  ` : '';
-
-  const headerActionsHtml = isManager ? `
-    <div style="display: flex; justify-content: flex-end; align-items: center; margin-bottom: 12px;">
-      <button type="button" class="btn-falcon btn-secondary" onclick="openProductCategoriesManagerModal()" style="display:inline-flex; align-items:center; gap:6px; font-size:0.82rem; font-weight:600; padding:6px 12px; border-radius:10px;">
-        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
-        Gerenciar Categorias
-      </button>
+      ${isManager ? `
+        <button type="button" onclick="openProductCategoriesManagerModal()" style="cursor:pointer; font-size:0.78rem; font-weight:600; padding:5px 11px; border-radius:20px; border:1.5px dashed #cbd5e1; background:#f8fafc; color:#64748b; display:inline-flex; align-items:center; gap:5px; transition:all 0.15s ease;" title="Gerenciar Categorias de Produtos">
+          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+          <span>Gerenciar</span>
+        </button>
+      ` : ''}
     </div>
   ` : '';
 
@@ -4963,7 +5021,6 @@ function renderProducts(container, actions) {
 
   container.innerHTML = `
     ${subnavTabsHtml}
-    ${headerActionsHtml}
     ${categoryChipsHtml}
     ${prodsListHtml}
   `;
@@ -6172,7 +6229,21 @@ window.syncAllClientsToGoogleClick = async function() {
   }
 };
 
-window.syncSingleClientToGoogle = async function(clientId) {
+window.syncSingleClientToGoogle = async function(clientId, btnEl) {
+  let originalHtml = '';
+  if (btnEl) {
+    originalHtml = btnEl.innerHTML;
+    btnEl.disabled = true;
+    btnEl.style.pointerEvents = 'none';
+    btnEl.style.opacity = '0.75';
+    btnEl.innerHTML = `
+      <svg class="spin" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <circle cx="12" cy="12" r="10" stroke-opacity="0.25"></circle>
+        <path d="M12 2a10 10 0 0 1 10 10" stroke-linecap="round"></path>
+      </svg>
+      <span>Salvando...</span>
+    `;
+  }
   try {
     const res = await tenantFetch('/api/integrations/google/sync-client/' + clientId, { method: 'POST' });
     const data = await res.json();
@@ -6182,6 +6253,12 @@ window.syncSingleClientToGoogle = async function(clientId) {
     renderView('clientes');
     asyncAlert(data.message || 'Cliente sincronizado com sucesso no Google Contatos!', 'Google Contatos', 'success');
   } catch (err) {
+    if (btnEl) {
+      btnEl.disabled = false;
+      btnEl.style.pointerEvents = '';
+      btnEl.style.opacity = '';
+      btnEl.innerHTML = originalHtml;
+    }
     asyncAlert(err.message, 'Atenção', 'warning');
   }
 };
@@ -8988,12 +9065,13 @@ window.openNewExpenseModal = function() {
         <option value="Dinheiro">Dinheiro</option>
       </select>
     </div>
-    <div class="form-group" style="display:flex; align-items:center; gap:8px; margin-top:8px;">
-      <input type="checkbox" id="mExpRecurring">
-      <label for="mExpRecurring" style="margin:0; font-weight:600; color:var(--ink); font-size:0.88rem; cursor:pointer;">
-        Despesa Recorrente (Repetir todo mês automaticamente)
-      </label>
-    </div>
+    <label style="display: flex; flex-direction: row; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 12px; border: 1.5px solid #e2e8f0; background: #ffffff; cursor: pointer; margin-top: 6px; margin-bottom: 8px; transition: all 0.15s ease;">
+      <input type="checkbox" id="mExpRecurring" onchange="this.closest('label').style.borderColor = this.checked ? '#fed7aa' : '#e2e8f0'; this.closest('label').style.background = this.checked ? '#fffaf5' : '#ffffff';" style="width: 18px; height: 18px; accent-color: var(--orange); flex-shrink: 0; cursor: pointer; margin: 0;">
+      <div>
+        <span style="font-size: 0.88rem; font-weight: 600; color: var(--ink); display: block;">Despesa Recorrente</span>
+        <span style="font-size: 0.75rem; color: var(--muted); display: block; margin-top: 1px;">Repetir todo mês automaticamente</span>
+      </div>
+    </label>
     <div class="form-group" id="mExpInstallmentsWrapper" style="display:none; background: #fff7ed; padding: 12px; border-radius: 10px; border: 1px solid #ffedd5; margin-top:8px;">
       <label style="color: var(--orange); font-weight: 600;">Parcelamento</label>
       <select class="form-control" id="mExpInstallments" onchange="updateExpenseInstallmentPreview()">

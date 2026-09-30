@@ -2056,7 +2056,7 @@ input[type="checkbox"] {
     border-radius: 14px !important;
   }
 
-  .data-item-card > div:last-child {
+  .data-item-card > div:last-child:not(.client-actions-group) {
     width: 100% !important;
     display: flex !important;
     justify-content: space-between !important;
@@ -2332,14 +2332,18 @@ input[type="checkbox"] {
 }
 
 @media (max-width: 640px) {
+  .data-item-card > div.client-actions-group,
   .client-actions-group {
     display: grid !important;
     grid-template-columns: 1fr 1fr !important;
     gap: 8px !important;
     width: 100% !important;
     margin-top: 10px !important;
+    justify-content: stretch !important;
+    align-items: stretch !important;
   }
 
+  .data-item-card > div.client-actions-group .btn-card-action,
   .client-actions-group .btn-card-action {
     width: 100% !important;
     justify-content: center !important;
@@ -2351,6 +2355,21 @@ input[type="checkbox"] {
 
   .client-actions-group:not(.has-google) .btn-card-action:first-child {
     grid-column: span 2 !important;
+  }
+}
+
+.spin {
+  animation: spin 0.8s linear infinite;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
   }
 }
 
