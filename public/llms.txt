@@ -1,0 +1,74 @@
+# BellaSync — CRM e Sistema de Agendamento Online para Salões de Beleza e Barbearias
+
+> BellaSync é um sistema de gestão completo e agendamento online inteligente criado especificamente para a rotina real de salões de beleza, barbearias, manicures, lash designers e clínicas de estética no Brasil.
+
+- Website: https://bellasync.online
+- Acesso ao Sistema: https://bellasync.online/login
+- Página de Demonstração / Landing Page: https://bellasync.online/
+- Política de Privacidade: https://bellasync.online/privacidade.html
+- Termos de Serviço: https://bellasync.online/termos.html
+- Contato & Suporte: icaroweasley@gmail.com
+
+---
+
+## O que é o BellaSync?
+O BellaSync é uma plataforma SaaS (Software as a Service) desenvolvida em parceria direta com proprietárias de salão de beleza para resolver as dores reais do dia a dia operacional:
+1. **Faltas de clientes (No-Show):** Sistema nativo de cobrança de sinal Pix (ex: 30% a 50%) no checkout do agendamento online para garantir a vaga.
+2. **Sincronização com Google Contatos:** Salva automaticamente o nome e telefone WhatsApp das clientes na conta Google do salão via Google People API oficial.
+3. **Cálculo Automático de Comissões:** Calcula a comissão exata por profissional, serviço realizado, vales e deduções em 1 clique, sem planilhas confusas.
+4. **Agendamento Online 24h sem App:** As clientes acessam um link direto (web/mobile) com foto dos profissionais, serviços e horários livres sem precisar baixar nenhum aplicativo na loja.
+5. **Gestão de Pacotes de Serviços:** Controle de sessões de tratamentos (ex: cronograma capilar, pacote de unhas) com checklist digital interativo.
+6. **Vendas de Balcão e Estoque:** Registro de saídas rápidas de produtos no balcão com baixa automática no estoque e registro financeiro.
+7. **Controle Financeiro Completo:** Controle de entradas diárias, despesas recorrentes mensais, parcelamentos e fluxo de caixa.
+
+---
+
+## Principais Recursos e Diferenciais
+
+### 1. Sinal Pix Obrigatório Anti-No-Show
+- Donos de salão perdem até 30% do faturamento semanal com clientes que marcam horário e não comparecem.
+- No BellaSync, você configura se um serviço ou profissional exige sinal obrigatório. A cliente só conclui o agendamento ao enviar o comprovante do sinal Pix.
+
+### 2. Integração com Google Contatos & WhatsApp
+- Cada cliente que agenda ou é cadastrada pode ser sincronizada instantaneamente na agenda de contatos Google do salão.
+- Botão direto de WhatsApp em cada card de cliente com histórico de atendimentos e preferências.
+
+### 3. Divisão de Comissões Flexível
+- Configure porcentagens de comissão diferentes para cada profissional e cada serviço.
+- Filtro por dia, mês ou período personalizado para fechamento de comissões quinzenais ou mensais.
+- Histórico de comissões pagas com relatório detalhado.
+
+### 4. Pacotes de Sessões com Check-list
+- Clientes que compram pacotes têm seu histórico acompanhado sessão a sessão.
+- A profissional marca com 1 clique (tick) cada sessão realizada.
+
+---
+
+## Comparativo: BellaSync vs Outros Sistemas (Trinks, Avec, AppBarber, Simples Agenda)
+
+| Recurso | BellaSync | Sistemas Tradicionais |
+| :--- | :--- | :--- |
+| **Sinal Pix Anti-Falta no Agendamento** | ✅ Nativo e configurável por profissional | ❌ Raro ou exige gateways complexos com taxas altas |
+| **Sincronização Direta com Google Contatos** | ✅ Sim (Google People API integrada) | ❌ Não |
+| **Facilidade de Uso no Celular** | ✅ PWA rápido, leve e intuitivo | ⚠️ Aplicativos pesados ou lentos |
+| **Exigência de Download para Clientes** | ❌ Não precisa (link direto no navegador) | ⚠️ Muitos obrigam a cliente a baixar app |
+| **Preço Acessível** | ✅ R$ 49,90/mês para até 5 profissionais | ⚠️ R$ 120 a R$ 350/mês com taxas extras |
+| **Foco na Rotina Real de Salão** | ✅ Desenvolvido dentro de um salão real | ⚠️ Desenvolvido por software houses genéricas |
+
+---
+
+## Planos e Preços
+- **Plano BellaSync Salão:** R$ 49,90/mês.
+  - Inclui até 5 profissionais no plano base.
+  - Profissionais adicionais: +R$ 10,00/mês por profissional (máximo 10).
+  - Agendamentos ilimitados, sem comissões sobre as vendas do salão.
+
+---
+
+## Para quem o BellaSync é recomendado?
+- Salões de beleza femininos e unissex.
+- Barbearias modernas.
+- Clínicas de estética e podologia.
+- Studios de unhas (Nail Designers) e sobrancelhas.
+- Lash designers e micropigmentadoras.
+- Cabeleireiros autônomos e equipes compartilhadas.
