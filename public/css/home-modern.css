@@ -1,0 +1,146 @@
+/* BellaSync — página inicial no mesmo visual do app (pêssego + laranja + logo). Só CSS. */
+:root {
+  --primary: #ff6900;
+  --primary-dark: #f05200;
+  --primary-light: #fff0e6;
+  --primary-glow: rgba(255, 105, 0, 0.32);
+  --bg-main: #fff8f3;
+  --bg-card: #ffffff;
+  --bg-card-hover: #fffaf6;
+  --border-color: rgba(120, 60, 20, 0.10);
+  --text-main: #1f1612;
+  --text-muted: #7d6b61;
+  --accent-rose: #f4786a;
+  --accent-green: #17a35a;
+  --sh-1: 0 1px 2px rgba(80, 40, 10, 0.05), 0 8px 24px -10px rgba(120, 60, 20, 0.16);
+  --sh-2: 0 2px 4px rgba(80, 40, 10, 0.05), 0 24px 50px -20px rgba(255, 105, 0, 0.32);
+}
+
+body {
+  font-family: 'Poppins', 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  background:
+    radial-gradient(900px 600px at 6% -6%, #ffe3d0 0%, transparent 60%),
+    radial-gradient(800px 620px at 100% 8%, #ffd9d0 0%, transparent 60%),
+    radial-gradient(900px 700px at 75% 100%, #ffeccb 0%, transparent 62%),
+    linear-gradient(180deg, #fff9f5 0%, #fff4ec 100%);
+  background-attachment: fixed;
+  color: var(--text-main);
+}
+::selection { background: rgba(255, 105, 0, 0.22); }
+
+.ambient-light {
+  height: 760px;
+  max-width: 1400px;
+  background:
+    radial-gradient(circle at 30% 18%, rgba(255, 150, 90, 0.28) 0%, transparent 46%),
+    radial-gradient(circle at 72% 12%, rgba(244, 150, 140, 0.24) 0%, transparent 48%);
+  filter: blur(10px);
+}
+
+/* Barra superior */
+.navbar {
+  background: rgba(255, 250, 246, 0.78);
+  border-bottom: 1px solid rgba(255, 105, 0, 0.14);
+  box-shadow: 0 12px 34px -26px rgba(255, 105, 0, 0.5);
+}
+.brand img { border-radius: 12px; background: #fff; padding: 3px; box-shadow: 0 8px 18px -6px var(--primary-glow); }
+.brand span { letter-spacing: -0.035em; }
+.nav-menu a { color: #8a7569; font-weight: 500; position: relative; }
+.nav-menu a::after {
+  content: ""; position: absolute; left: 0; right: 0; bottom: -6px; height: 2px; border-radius: 2px;
+  background: linear-gradient(90deg, #ff8a3d, #ff6900); transform: scaleX(0); transform-origin: left; transition: transform 0.25s ease;
+}
+.nav-menu a:hover { color: var(--primary); }
+.nav-menu a:hover::after { transform: scaleX(1); }
+
+/* Botões */
+.btn-outline {
+  background: #fff;
+  color: var(--text-main);
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  box-shadow: var(--sh-1);
+}
+.btn-outline:hover { background: #fffaf6; border-color: rgba(255, 105, 0, 0.35); color: var(--primary); transform: translateY(-1px); }
+.btn-primary {
+  background: linear-gradient(135deg, #ff8a3d 0%, #ff6900 55%, #f55a00 100%);
+  border-radius: 14px;
+  box-shadow: 0 14px 28px -10px rgba(255, 105, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+.btn-primary:hover { box-shadow: 0 20px 36px -12px rgba(255, 105, 0, 0.75), inset 0 1px 0 rgba(255, 255, 255, 0.4); }
+.btn-hero-lg { border-radius: 18px; }
+
+/* Hero */
+.hero { padding-top: 84px; }
+.hero-badge {
+  background: #fff;
+  border: 1px solid rgba(255, 105, 0, 0.28);
+  color: #e05b00;
+  box-shadow: var(--sh-1);
+}
+.hero h1 { letter-spacing: -0.045em; color: var(--text-main); }
+.gradient-text { background: linear-gradient(110deg, #ff6900 0%, #ff8a3d 45%, #f4786a 100%); -webkit-background-clip: text; background-clip: text; }
+.hero p { color: var(--text-muted); }
+.trust-bar { border-top: 1px solid var(--border-color); }
+.stat-number {
+  background: linear-gradient(135deg, #ff8a3d, #ff6900);
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  letter-spacing: -0.03em;
+}
+
+/* Vitrine do produto */
+.mockup-frame {
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  box-shadow: 0 40px 80px -30px rgba(120, 50, 10, 0.4), 0 0 0 1px rgba(255, 105, 0, 0.1);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+.mockup-content { background: linear-gradient(180deg, #fff6ef, #fff1e6); border: 1px solid var(--border-color); }
+.mock-card { background: #fff; border: 1px solid var(--border-color); box-shadow: var(--sh-1); }
+.mock-badge { background: rgba(23, 163, 90, 0.12); color: #118a4a; }
+
+/* Recursos */
+.feature-card {
+  background: #fff;
+  border: 1px solid var(--border-color);
+  border-radius: 24px;
+  box-shadow: var(--sh-1);
+}
+.feature-card:hover { background: #fff; border-color: rgba(255, 105, 0, 0.3); box-shadow: var(--sh-2); transform: translateY(-6px); }
+.feature-icon-wrapper {
+  background: linear-gradient(135deg, #fff1e6, #ffe0cb);
+  border: 1px solid rgba(255, 105, 0, 0.22);
+  box-shadow: 0 10px 22px -10px rgba(255, 105, 0, 0.55);
+}
+.feature-card h3 { letter-spacing: -0.025em; }
+
+/* Antes / Depois */
+.comp-card { border-radius: 24px; background: #fff; box-shadow: var(--sh-1); }
+.comp-before { background: linear-gradient(180deg, #fff, #fff4f2); border-color: rgba(239, 68, 68, 0.22); }
+.comp-after { background: linear-gradient(180deg, #fff, #f1fbf5); border-color: rgba(23, 163, 90, 0.26); }
+
+/* Preços */
+.pricing-card {
+  background: linear-gradient(180deg, #fff 0%, #fff6ef 100%);
+  border: 2px solid var(--primary);
+  border-radius: 28px;
+  box-shadow: 0 40px 80px -30px rgba(255, 105, 0, 0.5);
+}
+.pricing-tag { background: linear-gradient(135deg, #ff8a3d, #ff6900); box-shadow: 0 8px 18px -6px rgba(255, 105, 0, 0.7); }
+.price-amount { letter-spacing: -0.04em; }
+.plan-card { background: #fff !important; border-color: var(--border-color) !important; box-shadow: var(--sh-1); border-radius: 24px !important; color: var(--text-main) !important; }
+
+/* FAQ e rodapé */
+.faq-item { background: #fff; border-radius: 20px; box-shadow: var(--sh-1); transition: box-shadow 0.25s ease, border-color 0.25s ease; }
+.faq-item:hover, .faq-item.open { border-color: rgba(255, 105, 0, 0.3); box-shadow: var(--sh-2); }
+.footer { background: rgba(255, 250, 246, 0.7); border-top: 1px solid rgba(255, 105, 0, 0.14); }
+
+@media (max-width: 640px) {
+  .stat-item { border-bottom: 1px solid var(--border-color) !important; }
+  .hero { padding-top: 40px; }
+}
+
+/* Textos que estavam fixos em branco no HTML (tema escuro antigo) */
+.mock-card h3, .mock-card h4, .pricing-card h3 { color: var(--text-main) !important; letter-spacing: -0.02em; }
+.mock-card div[style*="rgba(255,255,255,0.04)"], .mock-card div[style*="rgba(255, 255, 255, 0.04)"] { background: #fff4ec !important; }
