@@ -1,0 +1,151 @@
+{
+  "brand": {
+    "name": "BellaSync",
+    "handle": "@bellasync",
+    "niche": "SaaS para salões de beleza femininos",
+    "tone": "Sofisticado, empoderador, minimalista. Tom de voz de consultora premium.",
+    "colors": {
+      "primary": "#1a1a1a",
+      "accent": "#c9a87c",
+      "bg": "#faf8f5"
+    },
+    "fonts": {
+      "heading": "Playfair Display",
+      "body": "Montserrat"
+    },
+    "hashtags": [
+      "#salãodebeleza", "#gestãodesalão", "#beleza", "#hair",
+      "#bellasync", "#salaopremium", "#empreendedorasdebeleza",
+      "#agendaonline", "#softwaredebeleza", "#donasdesalao"
+    ]
+  },
+
+  "schedule": {
+    "timezone": "America/Sao_Paulo",
+
+    "stories": {
+      "frequency": "2/day",
+      "times": ["09:00", "18:00"],
+      "days": ["mon", "tue", "wed", "thu", "fri", "sat", "sun"],
+      "description": "2 stories por dia, todos os dias"
+    },
+
+    "posts": {
+      "frequency": "3/week",
+      "times": ["12:00"],
+      "days": ["mon", "wed", "fri"],
+      "description": "3 posts por semana (seg, qua, sex ao meio-dia)"
+    },
+
+    "reels": {
+      "frequency": "4/month",
+      "times": ["19:00"],
+      "days": ["mon"],
+      "week_of_month": [1, 2, 3, 4],
+      "description": "4 reels por mês (toda segunda às 19h)"
+    }
+  },
+
+  "content_pillars": [
+    {
+      "id": "educativo",
+      "label": "Dica / Tutorial",
+      "ratio": 0.35,
+      "examples": [
+        "Como reduzir no-shows no salão",
+        "3 métricas que todo salão precisa acompanhar",
+        "Agenda cheia = salão lucrativo?"
+      ]
+    },
+    {
+      "id": "social_proof",
+      "label": "Prova Social / Resultado",
+      "ratio": 0.25,
+      "examples": [
+        "Antes e depois de implementar o BellaSync",
+        "Depoimento de dona de salão",
+        "Números reais de um salão usando BellaSync"
+      ]
+    },
+    {
+      "id": "bastidores",
+      "label": "Bastidores / Processo",
+      "ratio": 0.20,
+      "examples": [
+        "Como a gente desenvolve cada feature",
+        "Um dia na vida do time BellaSync",
+        "De onde surgiu a ideia do BellaSync"
+      ]
+    },
+    {
+      "id": "trend",
+      "label": "Trend / Entretenimento",
+      "ratio": 0.10,
+      "examples": [
+        "POV: sua agenda ainda é no caderninho",
+        "Quando a cliente marca e não vem (meme)",
+        "Trend do momento adaptada pro nicho"
+      ]
+    },
+    {
+      "id": "cta",
+      "label": "CTA / Oferta",
+      "ratio": 0.10,
+      "examples": [
+        "Teste grátis por 7 dias",
+        "Link na bio pra conhecer",
+        "Comenta GRÁTIS que eu te mando"
+      ]
+    }
+  ],
+
+  "formats": {
+    "story": {
+      "dimensions": "1080x1920",
+      "max_duration_sec": 15,
+      "types": ["tip_card", "poll", "quiz", "behind_the_scenes", "countdown", "cta_swipe"]
+    },
+    "post": {
+      "dimensions": "1080x1350",
+      "types": ["carousel", "single_image", "infographic", "quote_card", "before_after"]
+    },
+    "reel": {
+      "dimensions": "1080x1920",
+      "max_duration_sec": 30,
+      "fps": 30,
+      "types": ["tutorial", "trend", "testimonial", "product_demo", "transformation"]
+    }
+  },
+
+  "rendering": {
+    "engine": "remotion",
+    "project_path": "E:\\reels-estudio",
+    "output_dir": ".content-engine/output",
+    "tts_engine": "edge-tts",
+    "tts_voice": "pt-BR-FranciscaNeural",
+    "tts_rate": "+4%"
+  },
+
+  "llm": {
+    "model": "claude-opus-5-5",
+    "effort": "medium"
+  },
+  "scheduler": {
+    "prepare_minutes_before": 180,
+    "auto_create": false
+  },
+  "publishing": {
+    "platform": "instagram",
+    "method": "meta_graph_api",
+    "auto_publish": false,
+    "require_approval": true,
+    "approval_method": "cli"
+  },
+
+  "logging": {
+    "log_dir": ".content-engine/logs",
+    "track_tokens": true,
+    "track_render_time": true,
+    "track_cost": true
+  }
+}

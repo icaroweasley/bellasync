@@ -1,0 +1,9 @@
+{
+  "name": "bellasync-content-engine",
+  "version": "0.2.0",
+  "private": true,
+  "description": "Esteira de conteudo BellaSync (local-first, BYOK). Isolada do CRM: so adiciona .content-engine/.",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.100.1"
+  }
+}

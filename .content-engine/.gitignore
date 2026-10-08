@@ -1,0 +1,6 @@
+# Estado local da esteira (gerado em runtime, não vai pro GitHub)
+calendar/
+output/
+logs/
+node_modules/
+.env
