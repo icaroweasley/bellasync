@@ -346,8 +346,8 @@ async function runPipeline(itemId, steps = { script: true, render: true }) {
     }
     if (steps.render) {
       if (!fs.existsSync(cenasPath)) throw new Error(`Sem ${path.basename(cenasPath)}. Rode antes: node engine.cjs script ${item.id}`);
-      console.log('  🎬 Renderizando com o Remotion (pode levar alguns minutos)...');
-      const r = await renderReel(cenasPath, mp4Path, config.rendering.project_path);
+      console.log('  🎬 Narrando (edge-tts) e renderizando com o Remotion (alguns minutos)...');
+      const r = await renderReel(cenasPath, mp4Path, config.rendering.project_path, { composition: config.rendering.composition, voice: config.rendering.tts_voice, rate: config.rendering.tts_rate });
       console.log(`     ${mp4Path} (${(r.ms / 1000).toFixed(0)}s)`);
       logRun({ item: item.id, step: 'render', ms: r.ms });
       item.output_path = mp4Path;
@@ -563,3 +563,4 @@ switch (command) {
 `);
     break;
 }
+

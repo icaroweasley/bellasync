@@ -119,6 +119,7 @@
 
   "rendering": {
     "engine": "remotion",
+    "composition": "Moderno",
     "project_path": "E:\\reels-estudio",
     "output_dir": ".content-engine/output",
     "tts_engine": "edge-tts",
@@ -149,3 +150,4 @@
     "track_cost": true
   }
 }
+
