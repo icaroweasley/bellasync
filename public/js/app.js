@@ -6336,10 +6336,12 @@ window.renderProfComandasModalBody = function() {
         return `
           <div style="background: #ffffff; border: 1px solid #e2e8f0; border-left: 4px solid ${r.isClosed ? '#16a34a' : '#f59e0b'}; border-radius: 12px; padding: 12px 14px; margin-bottom: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
             <!-- Topo: #ID, Data e Sinal de Status no Canto Direito Superior -->
-            <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; flex-wrap: wrap;">
-              <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
-                <span style="font-family: monospace; font-weight: 700; font-size: 0.76rem; background: #f1f5f9; color: #334155; padding: 2px 6px; border-radius: 5px;">#${appIdShort}</span>
-                <span style="font-size: 0.76rem; color: #64748b; font-weight: 600;">📅 ${dateFormatted} às ${r.time}</span>
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 10px;">
+              <div style="min-width: 0; flex: 1;">
+                <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                  <span style="font-family: monospace; font-weight: 800; font-size: 0.78rem; background: #f1f5f9; color: #1e293b; padding: 2px 7px; border-radius: 6px; border: 1px solid #e2e8f0;">#${appIdShort}</span>
+                  <span style="font-size: 0.78rem; color: #64748b; font-weight: 600;">📅 ${dateFormatted} às ${r.time}</span>
+                </div>
               </div>
               <span style="font-size: 0.72rem; font-weight: 700; padding: 3px 8px; border-radius: 99px; flex-shrink: 0; white-space: nowrap; ${r.isClosed ? 'background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0;' : 'background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa;'}">
                 ${r.isClosed ? '✓ Fechada' : '⏳ Em Aberto'}
