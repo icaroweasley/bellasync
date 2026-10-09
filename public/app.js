@@ -6385,14 +6385,14 @@ window.renderProfComandasModalBody = function() {
 
         return `
           <div style="background: #ffffff; border: 1px solid #e2e8f0; border-left: 4px solid ${r.isClosed ? '#16a34a' : '#f59e0b'}; border-radius: 12px; padding: 12px 14px; margin-bottom: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
-            <!-- Topo: #ID, Data, Status -->
-            <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; flex-wrap: wrap;">
-              <div style="display: flex; align-items: center; gap: 6px;">
-                <span style="font-family: monospace; font-weight: 700; font-size: 0.78rem; background: #f1f5f9; color: #334155; padding: 2px 6px; border-radius: 5px;">#${appIdShort}</span>
-                <span style="font-size: 0.76rem; color: #64748b;">📅 ${dateFormatted} às ${r.time}</span>
+            <!-- Topo: #ID, Data e Sinal de Status no Canto Direito Superior -->
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; width: 100%;">
+              <div style="display: flex; align-items: center; gap: 6px; min-width: 0; flex: 1;">
+                <span style="font-family: monospace; font-weight: 700; font-size: 0.78rem; background: #f1f5f9; color: #334155; padding: 2px 6px; border-radius: 5px; flex-shrink: 0;">#${appIdShort}</span>
+                <span style="font-size: 0.76rem; color: #64748b; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">📅 ${dateFormatted} às ${r.time}</span>
               </div>
-              <span style="font-size: 0.72rem; font-weight: 700; padding: 2px 8px; border-radius: 99px; ${r.isClosed ? 'background: #dcfce7; color: #15803d;' : 'background: #fff7ed; color: #c2410c;'}">
-                ${r.isClosed ? '✓ Comanda Fechada' : '⏳ Em Aberto'}
+              <span style="font-size: 0.72rem; font-weight: 700; padding: 3px 8px; border-radius: 99px; flex-shrink: 0; white-space: nowrap; ${r.isClosed ? 'background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0;' : 'background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa;'}">
+                ${r.isClosed ? '✓ Fechada' : '⏳ Em Aberto'}
               </span>
             </div>
 
@@ -6446,8 +6446,9 @@ window.renderProfComandasModalBody = function() {
                     <span>✏️</span> <span>Editar</span>
                   </button>
                 </div>
-                <button type="button" onclick="comandaReturnToAgenda('${r.appointmentId}')" style="width: 100%; padding: 6px 10px; font-size: 0.76rem; font-weight: 600; border-radius: 8px; background: transparent; border: 1px dashed #cbd5e1; color: #64748b; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 5px; transition: all 0.15s;" onmouseover="this.style.background='#f1f5f9'; this.style.borderColor='#94a3b8'; this.style.color='#334155';" onmouseout="this.style.background='transparent'; this.style.borderColor='#cbd5e1'; this.style.color='#64748b';">
-                  <span>↩️</span> <span>Voltar atendimento para a Agenda</span>
+                <button type="button" class="btn-falcon btn-danger" onclick="comandaReturnToAgenda('${r.appointmentId}')" style="width: 100%; padding: 9px 12px; font-size: 0.8rem; font-weight: 700; border-radius: 9px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; background: #dc2626 !important; color: #ffffff !important; border: 1.5px solid #b91c1c !important; cursor: pointer; box-shadow: 0 2px 6px rgba(220, 38, 38, 0.22); transition: all 0.15s;" onmouseover="this.style.background='#b91c1c'; this.style.borderColor='#991b1b';" onmouseout="this.style.background='#dc2626'; this.style.borderColor='#b91c1c';">
+                  <span style="font-size: 0.9rem;">↩️</span>
+                  <span>Voltar atendimento para a Agenda</span>
                 </button>
               ` : `
                 <div style="padding: 7px 10px; font-size: 0.78rem; font-weight: 600; border-radius: 8px; background: #f8fafc; border: 1px solid #e2e8f0; color: #64748b; text-align: center;">
