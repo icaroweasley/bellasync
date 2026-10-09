@@ -5560,19 +5560,17 @@ function renderBalanco(container, actions) {
 
     const myCardHtml = myProf ? `
       <div class="prof-goal-card is-me-card" onclick="openProfComandasModal('${myProf.id}')" style="cursor: pointer; margin-bottom: 0; background: #ffffff !important; border: 2px solid #ff6900 !important; box-shadow: 0 4px 18px rgba(255, 105, 0, 0.14) !important;">
-        <div class="prof-goal-header" style="margin-bottom: 14px;">
-          <div style="display: flex; align-items: center; gap: 12px; width: 100%;">
-            <img src="${myProf.avatar || getButterflyAvatar(myProf.name)}" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover; border: 2px solid var(--orange, #ff6900); flex-shrink: 0;" alt="${myProf.name}">
-            <div style="min-width: 0; flex: 1;">
-              <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
-                <h4 style="margin: 0; font-size: 1.05rem; font-weight: 800; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${myProf.name}">
-                  ${escapeHtml(myProf.name)}
-                </h4>
-                <span style="font-size: 0.7rem; background: var(--orange, #ff6900); color: #fff; padding: 2px 7px; border-radius: 99px; font-weight: 700;">Você</span>
-              </div>
-              <div style="font-size: 0.78rem; color: #64748b; margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                ${myProf.role || 'Profissional'} • Comissão <strong>(${myProf.commissionDefault || 50}%)</strong>
-              </div>
+        <div class="prof-goal-header" style="margin-bottom: 14px; width: 100%;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; width: 100%;">
+            <img src="${myProf.avatar || getButterflyAvatar(myProf.name)}" style="width: 44px; height: 44px; border-radius: 50%; object-fit: cover; border: 2px solid var(--orange, #ff6900);" alt="${myProf.name}">
+            <span style="font-size: 0.72rem; background: var(--orange, #ff6900); color: #fff; padding: 3px 10px; border-radius: 99px; font-weight: 700;">Você</span>
+          </div>
+          <div style="width: 100%;">
+            <h4 style="margin: 0; font-size: 1.12rem; font-weight: 800; color: #0f172a; width: 100%; word-break: break-word; line-height: 1.3;" title="${myProf.name}">
+              ${escapeHtml(myProf.name)}
+            </h4>
+            <div style="font-size: 0.82rem; color: #64748b; margin-top: 4px; width: 100%; word-break: break-word; line-height: 1.35;">
+              ${myProf.role || 'Profissional'} • Comissão <strong>(${myProf.commissionDefault || 50}%)</strong>
             </div>
           </div>
         </div>
@@ -5708,19 +5706,17 @@ function renderBalanco(container, actions) {
 
     return `
       <div class="prof-goal-card ${isMe ? 'is-me-card' : ''}" onclick="openProfComandasModal('${prof.id}')" style="cursor: pointer; margin-bottom: 0; ${isMe ? 'background: #ffffff !important; border: 2px solid #ff6900 !important; box-shadow: 0 4px 18px rgba(255, 105, 0, 0.14) !important;' : ''}">
-        <div class="prof-goal-header" style="margin-bottom: 14px;">
-          <div style="display: flex; align-items: center; gap: 12px; width: 100%;">
-            <img src="${prof.avatar || getButterflyAvatar(prof.name)}" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover; border: 2px solid var(--orange, #ff6900); flex-shrink: 0;" alt="${prof.name}">
-            <div style="min-width: 0; flex: 1;">
-              <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
-                <h4 style="margin: 0; font-size: 1.05rem; font-weight: 800; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${prof.name}">
-                  ${escapeHtml(prof.name)}
-                </h4>
-                ${isMe ? '<span style="font-size: 0.7rem; background: var(--orange, #ff6900); color: #fff; padding: 2px 7px; border-radius: 99px; font-weight: 700;">Você</span>' : ''}
-              </div>
-              <div style="font-size: 0.78rem; color: #64748b; margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                ${prof.role || 'Profissional'} • Comissão <strong>(${prof.commissionDefault || 50}%)</strong>
-              </div>
+        <div class="prof-goal-header" style="margin-bottom: 14px; width: 100%;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; width: 100%;">
+            <img src="${prof.avatar || getButterflyAvatar(prof.name)}" style="width: 44px; height: 44px; border-radius: 50%; object-fit: cover; border: 2px solid var(--orange, #ff6900);" alt="${prof.name}">
+            ${isMe ? '<span style="font-size: 0.72rem; background: var(--orange, #ff6900); color: #fff; padding: 3px 10px; border-radius: 99px; font-weight: 700;">Você</span>' : ''}
+          </div>
+          <div style="width: 100%;">
+            <h4 style="margin: 0; font-size: 1.12rem; font-weight: 800; color: #0f172a; width: 100%; word-break: break-word; line-height: 1.3;" title="${prof.name}">
+              ${escapeHtml(prof.name)}
+            </h4>
+            <div style="font-size: 0.82rem; color: #64748b; margin-top: 4px; width: 100%; word-break: break-word; line-height: 1.35;">
+              ${prof.role || 'Profissional'} • Comissão <strong>(${prof.commissionDefault || 50}%)</strong>
             </div>
           </div>
         </div>
@@ -6349,27 +6345,27 @@ window.renderProfComandasModalBody = function() {
             </div>
 
             <!-- Cliente & Pagamento -->
-            <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; flex-wrap: wrap;">
-              <div style="display: flex; align-items: center; gap: 8px; min-width: 0;">
-                <div style="width: 28px; height: 28px; border-radius: 50%; background: #eff6ff; color: #2563eb; display: flex; align-items: center; justify-content: center; font-size: 0.78rem; font-weight: 800; flex-shrink: 0;">
-                  ${(r.clientName || 'C').charAt(0).toUpperCase()}
-                </div>
-                <div style="min-width: 0;">
-                  <div style="font-weight: 700; font-size: 0.88rem; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+            <div style="margin-bottom: 8px; width: 100%;">
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; width: 100%; flex-wrap: wrap;">
+                <div style="display: flex; align-items: center; gap: 8px; min-width: 0; flex: 1;">
+                  <div style="width: 28px; height: 28px; border-radius: 50%; background: #eff6ff; color: #2563eb; display: flex; align-items: center; justify-content: center; font-size: 0.78rem; font-weight: 800; flex-shrink: 0;">
+                    ${(r.clientName || 'C').charAt(0).toUpperCase()}
+                  </div>
+                  <div style="font-weight: 800; font-size: 0.95rem; color: #0f172a; word-break: break-word; line-height: 1.25;">
                     ${escapeHtml(r.clientName)}
                   </div>
-                  ${r.clientPhone ? `
-                    <div style="font-size: 0.74rem; color: #64748b; display: flex; align-items: center; gap: 4px;">
-                      <a href="https://wa.me/55${phoneClean}" target="_blank" style="color: #16a34a; text-decoration: none; font-weight: 600; display: inline-flex; align-items: center; gap: 2px;">
-                        <span>💬</span> <span>${formatPhone(r.clientPhone)}</span>
-                      </a>
-                    </div>
-                  ` : ''}
+                </div>
+                <div style="font-size: 0.74rem; background: #f8fafc; border: 1px solid #e2e8f0; color: #475569; padding: 3px 7px; border-radius: 6px; font-weight: 600; flex-shrink: 0;">
+                  💳 ${escapeHtml(r.paymentMethod)}
                 </div>
               </div>
-              <div style="font-size: 0.75rem; background: #f8fafc; border: 1px solid #e2e8f0; color: #475569; padding: 3px 7px; border-radius: 6px; font-weight: 600;">
-                💳 ${escapeHtml(r.paymentMethod)}
-              </div>
+              ${r.clientPhone ? `
+                <div style="font-size: 0.75rem; color: #64748b; margin-left: 36px; display: flex; align-items: center; gap: 4px;">
+                  <a href="https://wa.me/55${phoneClean}" target="_blank" style="color: #16a34a; text-decoration: none; font-weight: 600; display: inline-flex; align-items: center; gap: 2px;">
+                    <span>💬</span> <span>${formatPhone(r.clientPhone)}</span>
+                  </a>
+                </div>
+              ` : ''}
             </div>
 
             <!-- Box dos Itens -->
