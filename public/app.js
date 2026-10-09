@@ -5561,17 +5561,16 @@ function renderBalanco(container, actions) {
     const myCardHtml = myProf ? `
       <div class="prof-goal-card is-me-card" onclick="openProfComandasModal('${myProf.id}')" style="cursor: pointer; margin-bottom: 0; background: #ffffff !important; border: 2px solid #ff6900 !important; box-shadow: 0 4px 18px rgba(255, 105, 0, 0.14) !important;">
         <div class="prof-goal-header" style="margin-bottom: 14px; width: 100%;">
-          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; width: 100%;">
-            <img src="${myProf.avatar || getButterflyAvatar(myProf.name)}" style="width: 44px; height: 44px; border-radius: 50%; object-fit: cover; border: 2px solid var(--orange, #ff6900);" alt="${myProf.name}">
-            <span style="font-size: 0.72rem; background: var(--orange, #ff6900); color: #fff; padding: 3px 10px; border-radius: 99px; font-weight: 700;">Você</span>
-          </div>
-          <div style="width: 100%;">
-            <h4 style="margin: 0; font-size: 1.12rem; font-weight: 800; color: #0f172a; width: 100%; word-break: break-word; line-height: 1.3;" title="${myProf.name}">
+          <!-- Título em Cima (100% largura do mobile) -->
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; margin-bottom: 3px;">
+            <h4 style="margin: 0; font-size: 1.15rem; font-weight: 800; color: #0f172a; width: 100%; word-break: break-word; line-height: 1.3;" title="${myProf.name}">
               ${escapeHtml(myProf.name)}
             </h4>
-            <div style="font-size: 0.82rem; color: #64748b; margin-top: 4px; width: 100%; word-break: break-word; line-height: 1.35;">
-              ${myProf.role || 'Profissional'} • Comissão <strong>(${myProf.commissionDefault || 50}%)</strong>
-            </div>
+            <span style="font-size: 0.72rem; background: var(--orange, #ff6900); color: #fff; padding: 2px 8px; border-radius: 99px; font-weight: 700; flex-shrink: 0;">Você</span>
+          </div>
+          <!-- Subtítulo em Baixo (100% largura do mobile) -->
+          <div style="font-size: 0.82rem; color: #64748b; width: 100%; word-break: break-word; line-height: 1.35;">
+            ${myProf.role || 'Profissional'} • Comissão <strong>(${myProf.commissionDefault || 50}%)</strong>
           </div>
         </div>
 
@@ -5707,17 +5706,16 @@ function renderBalanco(container, actions) {
     return `
       <div class="prof-goal-card ${isMe ? 'is-me-card' : ''}" onclick="openProfComandasModal('${prof.id}')" style="cursor: pointer; margin-bottom: 0; ${isMe ? 'background: #ffffff !important; border: 2px solid #ff6900 !important; box-shadow: 0 4px 18px rgba(255, 105, 0, 0.14) !important;' : ''}">
         <div class="prof-goal-header" style="margin-bottom: 14px; width: 100%;">
-          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; width: 100%;">
-            <img src="${prof.avatar || getButterflyAvatar(prof.name)}" style="width: 44px; height: 44px; border-radius: 50%; object-fit: cover; border: 2px solid var(--orange, #ff6900);" alt="${prof.name}">
-            ${isMe ? '<span style="font-size: 0.72rem; background: var(--orange, #ff6900); color: #fff; padding: 3px 10px; border-radius: 99px; font-weight: 700;">Você</span>' : ''}
-          </div>
-          <div style="width: 100%;">
-            <h4 style="margin: 0; font-size: 1.12rem; font-weight: 800; color: #0f172a; width: 100%; word-break: break-word; line-height: 1.3;" title="${prof.name}">
+          <!-- Título em Cima (100% largura do mobile) -->
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; margin-bottom: 3px;">
+            <h4 style="margin: 0; font-size: 1.15rem; font-weight: 800; color: #0f172a; width: 100%; word-break: break-word; line-height: 1.3;" title="${prof.name}">
               ${escapeHtml(prof.name)}
             </h4>
-            <div style="font-size: 0.82rem; color: #64748b; margin-top: 4px; width: 100%; word-break: break-word; line-height: 1.35;">
-              ${prof.role || 'Profissional'} • Comissão <strong>(${prof.commissionDefault || 50}%)</strong>
-            </div>
+            ${isMe ? '<span style="font-size: 0.72rem; background: var(--orange, #ff6900); color: #fff; padding: 2px 8px; border-radius: 99px; font-weight: 700; flex-shrink: 0;">Você</span>' : ''}
+          </div>
+          <!-- Subtítulo em Baixo (100% largura do mobile) -->
+          <div style="font-size: 0.82rem; color: #64748b; width: 100%; word-break: break-word; line-height: 1.35;">
+            ${prof.role || 'Profissional'} • Comissão <strong>(${prof.commissionDefault || 50}%)</strong>
           </div>
         </div>
 
@@ -5773,16 +5771,18 @@ function renderBalanco(container, actions) {
     ${overallSummaryHtml}
     ${chartsGridHtml}
     <div class="card-shell" style="margin-top: 24px; padding: 22px 20px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 20px; box-shadow: 0 4px 18px rgba(0,0,0,0.02);">
-      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; padding-bottom: 12px; border-bottom: 1px solid #f1f5f9; flex-wrap: wrap; gap: 8px;">
-        <div>
-          <h3 style="margin: 0; font-size: 1.15rem; font-weight: 800; color: var(--ink, #0f172a); display: flex; align-items: center; gap: 8px;">
+      <div style="margin-bottom: 18px; padding-bottom: 12px; border-bottom: 1px solid #f1f5f9; width: 100%;">
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; margin-bottom: 4px;">
+          <h3 style="margin: 0; font-size: 1.15rem; font-weight: 800; color: var(--ink, #0f172a); display: flex; align-items: center; gap: 8px; width: 100%; word-break: break-word;">
             <span>🎯</span> <span>Desempenho e Metas Individuais</span>
           </h3>
-          <p style="margin: 4px 0 0 0; font-size: 0.78rem; color: var(--muted, #64748b);">Metas mensais, faturamento bruto e comissões da equipe</p>
+          <span class="badge" style="background: #fff7ed; color: var(--orange, #ff6900); font-weight: 700; font-size: 0.76rem; padding: 3px 9px; border-radius: 99px; border: 1px solid #fed7aa; flex-shrink: 0;">
+            ${(state.professionals || []).length} prof.
+          </span>
         </div>
-        <span class="badge" style="background: #fff7ed; color: var(--orange, #ff6900); font-weight: 700; font-size: 0.78rem; padding: 4px 10px; border-radius: 99px; border: 1px solid #fed7aa;">
-          ${(state.professionals || []).length} profissional${(state.professionals || []).length !== 1 ? 'is' : ''}
-        </span>
+        <p style="margin: 0; font-size: 0.8rem; color: var(--muted, #64748b); width: 100%; word-break: break-word;">
+          Metas mensais, faturamento bruto e comissões da equipe
+        </p>
       </div>
       <div style="display: flex; flex-direction: column; gap: 14px;">
         ${profCardsHtml}
