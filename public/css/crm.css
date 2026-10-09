@@ -1172,111 +1172,98 @@ td.cell-agendado {
   margin-top: 4px;
 }
 
-/* ── Botões de Ação do Agendamento ── */
-.btn-delete-app,
-.btn-cancel-app {
-  background: transparent !important;
-  color: #dc2626 !important;
-  border: 1.5px solid #fecaca !important;
-  border-radius: 20px !important;
+/* ── Botões de Ação do Agendamento (2 Colunas, Ícone + Texto) ── */
+.btn-app-action {
+  height: 29px !important;
+  min-height: 29px !important;
   padding: 0 10px !important;
-  cursor: pointer;
-  font-size: 0.73rem !important;
+  border-radius: 20px !important;
+  font-size: 0.74rem !important;
   font-weight: 700 !important;
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
-  gap: 4px !important;
-  transition: all 0.16s ease;
-  height: 30px !important;
-  min-width: 30px;
-  box-sizing: border-box;
-  white-space: nowrap;
+  gap: 5px !important;
+  cursor: pointer !important;
+  transition: all 0.16s ease !important;
+  white-space: nowrap !important;
+  box-sizing: border-box !important;
+  width: 100% !important;
+  border-width: 1.5px !important;
+  border-style: solid !important;
+  text-decoration: none !important;
 }
 
-.btn-delete-app:hover,
-.btn-cancel-app:hover {
-  background: #dc2626 !important;
-  color: #ffffff !important;
-  border-color: #dc2626 !important;
+.btn-app-action svg {
+  flex-shrink: 0 !important;
 }
 
-.btn-delete-app svg,
-.btn-cancel-app svg {
-  flex-shrink: 0;
+.btn-app-action span {
+  display: inline !important;
+  line-height: 1 !important;
 }
 
-.btn-remind-app {
-  background: transparent !important;
-  color: #15803d !important;
-  border: 1.5px solid #bbf7d0 !important;
-  border-radius: 20px !important;
-  padding: 0 10px !important;
-  cursor: pointer;
-  font-size: 0.73rem !important;
-  font-weight: 700 !important;
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  gap: 4px !important;
-  transition: all 0.16s ease;
-  height: 30px !important;
-  min-width: 30px;
-  box-sizing: border-box;
-  white-space: nowrap;
-}
-
-.btn-remind-app:hover {
-  background: #16a34a !important;
-  color: #ffffff !important;
-  border-color: #16a34a !important;
-}
-
-.btn-remind-app svg {
-  flex-shrink: 0;
-}
-
-.btn-remind-app.disabled,
-.btn-remind-app[disabled] {
-  opacity: 0.38;
-  cursor: not-allowed;
-}
-
-/* Comanda pill — laranja */
-.btn-remind-app[style*="#c2410c"] {
+/* 1. Comanda (Laranja Terracota) */
+.btn-comanda-app {
+  background: #fffaf5 !important;
   color: #c2410c !important;
   border-color: #fed7aa !important;
 }
-.btn-remind-app[style*="#c2410c"]:hover {
+.btn-comanda-app:hover {
   background: #ea580c !important;
   color: #ffffff !important;
   border-color: #ea580c !important;
 }
 
-/* Faltou pill — vermelho suave */
+/* 2. WhatsApp (Verde) */
+.btn-whatsapp-app {
+  background: #f0fdf4 !important;
+  color: #15803d !important;
+  border-color: #bbf7d0 !important;
+}
+.btn-whatsapp-app:hover {
+  background: #16a34a !important;
+  color: #ffffff !important;
+  border-color: #16a34a !important;
+}
+.btn-whatsapp-app.disabled {
+  opacity: 0.45 !important;
+  cursor: not-allowed !important;
+  background: #f8fafc !important;
+  color: #94a3b8 !important;
+  border-color: #e2e8f0 !important;
+}
+
+/* 3. Faltou (Vermelho Suave) */
 .btn-noshow-app {
-  background: transparent !important;
+  background: #fef2f2 !important;
   color: #b91c1c !important;
   border-color: #fca5a5 !important;
-  border-radius: 20px !important;
 }
 .btn-noshow-app:hover {
   background: #ef4444 !important;
-  color: #fff !important;
+  color: #ffffff !important;
   border-color: #ef4444 !important;
 }
+.badge-faltou-grid {
+  background: #fee2e2 !important;
+  color: #b91c1c !important;
+  border-color: #fca5a5 !important;
+  cursor: default !important;
+}
 
-/* Excluir — só ícone no mobile */
-@media (max-width: 768px) {
-  .btn-delete-app span,
-  .btn-cancel-app span {
-    display: none;
-  }
-  .btn-delete-app,
-  .btn-cancel-app {
-    width: 30px !important;
-    padding: 0 !important;
-  }
+/* 4. Excluir (Vermelho Ghost) */
+.btn-delete-app,
+.btn-cancel-app {
+  background: #fff5f5 !important;
+  color: #dc2626 !important;
+  border-color: #fecaca !important;
+}
+.btn-delete-app:hover,
+.btn-cancel-app:hover {
+  background: #dc2626 !important;
+  color: #ffffff !important;
+  border-color: #dc2626 !important;
 }
 
 .salon-block-agendado .app-bottom-bar {
@@ -3809,26 +3796,19 @@ input[type="checkbox"] {
   flex-shrink: 0;
 }
 
-.agenda-list-actions-vertical {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 5px;
-  margin-top: 4px;
+.agenda-list-actions-grid {
+  display: flex !important;
+  align-items: stretch !important;
+  justify-content: flex-end !important;
+  gap: 8px !important;
+  margin-top: 6px !important;
 }
 
-.agenda-list-actions-top-row {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 5px;
-}
-
-.agenda-list-actions-bottom-row {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 5px;
+.agenda-actions-col {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 6px !important;
+  min-width: 98px !important;
 }
 
 .status-badge-pill {
