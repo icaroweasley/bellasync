@@ -5465,3 +5465,20 @@ input[type="checkbox"] {
   }
 }
 
+/* Modal de Comandas do Profissional */
+#profComandasModal .modal-dialog {
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease;
+}
+
+@media (max-width: 600px) {
+  #profComandasModal {
+    padding: 10px 8px !important;
+  }
+  #profComandasModal .modal-dialog {
+    max-height: 94vh !important;
+    width: 100% !important;
+    border-radius: 18px !important;
+  }
+}
+
+
