@@ -1825,10 +1825,10 @@ window.toggleMobileActionsDropdown = function(e) {
     </div>
 
     <div class="mobile-action-menu-item" onclick="openBlockTimeModal(); document.getElementById('mobileActionsDropdown')?.remove();">
-      <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg>
+      <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="10" y1="15" x2="10" y2="9"></line><line x1="14" y1="15" x2="14" y2="9"></line></svg>
       <div>
-        <div style="font-weight:700; color:#0f172a;">Bloquear Horários</div>
-        <div style="font-size:0.75rem; color:#64748b;">Fechar horários / folgas</div>
+        <div style="font-weight:700; color:#0f172a;">Pausa / Intervalo</div>
+        <div style="font-size:0.75rem; color:#64748b;">Almoço, folga ou pausa</div>
       </div>
     </div>
 
@@ -2611,9 +2611,9 @@ function renderAgenda(container, actions) {
           `}
         </button>
 
-        <button class="btn-falcon btn-secondary" onclick="openBlockTimeModal()" title="Bloquear horários ou fechar mais cedo">
-          <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg>
-          <span>Bloquear</span>
+        <button class="btn-falcon btn-secondary" onclick="openBlockTimeModal()" title="Pausar horários (almoço, folga ou intervalo)">
+          <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="10" y1="15" x2="10" y2="9"></line><line x1="14" y1="15" x2="14" y2="9"></line></svg>
+          <span>Pausa</span>
         </button>
 
         <button class="btn-falcon btn-secondary" onclick="openBookingRulesModal()" title="Configurar janela de dias futuros e regras de agendamento online">
@@ -2734,20 +2734,20 @@ function updateScheduleView() {
 
         if (app.status === 'indisponivel') {
           listHtml += `
-            <div class="agenda-list-item-card" style="background:#fef2f2; border-color:#fecaca;">
+            <div class="agenda-list-item-card" style="background:#fffbeb; border-color:#fde68a;">
               <div class="agenda-list-client-info">
-                <div class="agenda-list-client-avatar" style="background:#fee2e2; color:#b91c1c;">
-                  <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg>
+                <div class="agenda-list-client-avatar" style="background:#fef3c7; color:#b45309;">
+                  <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="10" y1="15" x2="10" y2="9"></line><line x1="14" y1="15" x2="14" y2="9"></line></svg>
                 </div>
                 <div style="flex: 1; min-width: 0;">
-                  <div class="agenda-list-client-name" style="color:#b91c1c;">Horário Bloqueado</div>
+                  <div class="agenda-list-client-name" style="color:#92400e;">Horário em Pausa</div>
                   <div class="agenda-list-service-sub">${app.notes || 'Sem observações'}${profSubText}</div>
                 </div>
               </div>
               <div class="agenda-list-badge-time">
-                <span class="status-badge-pill cancelado">Bloqueado</span>
+                <span class="status-badge-pill cancelado" style="background:#fef3c7; color:#92400e; border:1px solid #fde68a;">Pausa</span>
                 <span class="agenda-list-time-range">${app.startTime} - ${app.endTime}</span>
-                ${canManageThis ? `<button class="btn-delete-app" onclick="deleteAppointment('${app.id}', event)" style="margin-top:4px;">Desbloquear</button>` : ''}
+                ${canManageThis ? `<button class="btn-delete-app" onclick="deleteAppointment('${app.id}', event)" style="margin-top:4px;" title="Remover pausa e liberar horário">Remover Pausa</button>` : ''}
               </div>
             </div>
           `;
@@ -2878,14 +2878,14 @@ function updateScheduleView() {
           <td class="salon-block-indisponivel" rowspan="${rowSpan}">
             <div>
               <strong>${appStartingHere.startTime} às ${appStartingHere.endTime}</strong>
-              <div style="font-weight: 600; color: #555; margin-top: 4px;">Horário Bloqueado / Indisponível</div>
+              <div style="font-weight: 600; color: #555; margin-top: 4px;">Horário em Pausa / Intervalo</div>
               <span>${appStartingHere.notes || ''}</span>
             </div>
             ${canManageBlock ? `
               <div style="margin-top: 10px;">
-                <button class="btn-delete-app" onclick="deleteAppointment('${appStartingHere.id}', event)">
+                <button class="btn-delete-app" onclick="deleteAppointment('${appStartingHere.id}', event)" title="Remover pausa e liberar horário">
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18m-2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-                  Desbloquear Horário
+                  Remover Pausa
                 </button>
               </div>
             ` : ''}
@@ -8379,7 +8379,7 @@ window.openBlockTimeModal = function(defaultStart = "12:00") {
         <select class="form-control" id="mBlockProf" onchange="renderBlockModalTimeline()">${profOptions}</select>
       </div>
       <div class="form-group" style="flex: 1;">
-        <label>Data do Bloqueio</label>
+        <label>Data da Pausa</label>
         <input type="date" class="form-control" id="mBlockDate" value="${initialDate}" onchange="renderBlockModalTimeline()">
       </div>
     </div>
@@ -8387,19 +8387,19 @@ window.openBlockTimeModal = function(defaultStart = "12:00") {
     <div class="form-group" style="margin-bottom: 12px;">
       <label>O que você deseja fazer?</label>
       <select class="form-control" id="mBlockType" onchange="handleBlockTypeChange(this.value)">
-        <option value="intervalo">Bloquear Intervalo de Horário (Almoço, Pausa, Compromisso)</option>
-        <option value="fechar_cedo">Fechar Mais Cedo (Bloquear até o encerramento do dia - 19:00)</option>
-        <option value="dia_todo">Folga / Dia Inteiro Indisponível (08:00 às 19:00)</option>
+        <option value="intervalo">Pausa no Horário (Almoço, Café, Compromisso)</option>
+        <option value="fechar_cedo">Fechar Mais Cedo (Pausa até o encerramento do dia - 19:00)</option>
+        <option value="dia_todo">Folga / Dia Inteiro em Pausa (08:00 às 19:00)</option>
       </select>
     </div>
 
     <div style="display:flex; gap:10px; margin-bottom:12px;" id="mBlockTimesWrapper">
       <div class="form-group" style="flex:1;">
-        <label id="mBlockStartLabel">Começo do Intervalo (Início)</label>
+        <label id="mBlockStartLabel">Começo da Pausa (Início)</label>
         <input type="time" class="form-control" id="mBlockStart" value="${defaultStart}" onchange="renderBlockModalTimeline()">
       </div>
       <div class="form-group" style="flex:1;">
-        <label id="mBlockEndLabel">Fim do Intervalo (Término)</label>
+        <label id="mBlockEndLabel">Fim da Pausa (Término)</label>
         <input type="time" class="form-control" id="mBlockEnd" value="13:00" onchange="renderBlockModalTimeline()">
       </div>
     </div>
@@ -8418,20 +8418,20 @@ window.openBlockTimeModal = function(defaultStart = "12:00") {
 
     <div class="form-group" style="margin-bottom:12px;">
       <label>Motivo / Observação (Opcional)</label>
-      <input type="text" class="form-control" id="mBlockNotes" placeholder="Ex: Almoço, Consulta médica, Saída mais cedo">
+      <input type="text" class="form-control" id="mBlockNotes" placeholder="Ex: Almoço, Café, Consulta médica, Saída mais cedo">
     </div>
   `;
 
-  openModal('Bloquear Horário / Fechar Mais Cedo', html, async () => {
+  openModal('Adicionar Pausa / Fechar Mais Cedo', html, async () => {
     const profId = document.getElementById('mBlockProf').value;
     const targetDate = document.getElementById('mBlockDate').value;
     const blockType = document.getElementById('mBlockType').value;
     let startTime = document.getElementById('mBlockStart').value;
     let endTime = document.getElementById('mBlockEnd').value;
-    const notes = document.getElementById('mBlockNotes').value.trim() || (blockType === 'fechar_cedo' ? 'Fechado mais cedo' : (blockType === 'dia_todo' ? 'Folga / Dia Indisponível' : 'Pausa / Indisponível'));
+    const notes = document.getElementById('mBlockNotes').value.trim() || (blockType === 'fechar_cedo' ? 'Fechado mais cedo' : (blockType === 'dia_todo' ? 'Folga / Dia Inteiro' : 'Pausa / Intervalo'));
 
     if (!targetDate) {
-      asyncAlert('Por favor informe a data do bloqueio.');
+      asyncAlert('Por favor informe a data da pausa.');
       return;
     }
 
@@ -8457,7 +8457,7 @@ window.openBlockTimeModal = function(defaultStart = "12:00") {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         professionalId: profId,
-        clientName: 'INDISPONÍVEL',
+        clientName: 'PAUSA',
         clientPhone: '',
         serviceId: 'indisponivel',
         serviceName: notes,
@@ -8472,16 +8472,16 @@ window.openBlockTimeModal = function(defaultStart = "12:00") {
 
     if (!res.ok) {
       const err = await res.json();
-      asyncAlert(err.error || 'Erro ao bloquear horário.');
+      asyncAlert(err.error || 'Erro ao salvar pausa de horário.');
       return;
     }
 
     closeModal();
-    // Atualiza a data da agenda para a data bloqueada para o usuário ver de imediato
+    // Atualiza a data da agenda para a data da pausa para o usuário ver de imediato
     selectedDate = targetDate;
     await loadInitialData();
     renderView('agenda');
-  });
+  }, 'Confirmar Pausa');
 
   setTimeout(() => {
     handleBlockTypeChange(document.getElementById('mBlockType').value);
@@ -8584,7 +8584,7 @@ window.renderBlockModalTimeline = function() {
       if (isStart) classes.push('block-start');
       if (isEnd) classes.push('block-end');
       if (t > currentStart && t < currentEnd) classes.push('block-middle');
-      tooltip = `Pausa / Bloqueio (${currentStart} até ${currentEnd})`;
+      tooltip = `Pausa no Horário (${currentStart} até ${currentEnd})`;
     }
 
     chipsHtml += `<div class="${classes.join(' ')}" title="${tooltip}" onclick="quickSelectBlockSlot('${t}')">${t}</div>`;
