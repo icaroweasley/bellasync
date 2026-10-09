@@ -1172,24 +1172,26 @@ td.cell-agendado {
   margin-top: 4px;
 }
 
+/* ── Botões de Ação do Agendamento ── */
 .btn-delete-app,
 .btn-cancel-app {
-  background: #fef2f2 !important;
+  background: transparent !important;
   color: #dc2626 !important;
   border: 1.5px solid #fecaca !important;
-  border-radius: 8px !important;
-  padding: 0 8px !important;
+  border-radius: 20px !important;
+  padding: 0 10px !important;
   cursor: pointer;
-  font-size: 0.76rem !important;
-  font-weight: 600 !important;
+  font-size: 0.73rem !important;
+  font-weight: 700 !important;
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
   gap: 4px !important;
-  transition: all 0.18s ease;
-  min-width: 28px;
-  height: 28px !important;
+  transition: all 0.16s ease;
+  height: 30px !important;
+  min-width: 30px;
   box-sizing: border-box;
+  white-space: nowrap;
 }
 
 .btn-delete-app:hover,
@@ -1205,22 +1207,23 @@ td.cell-agendado {
 }
 
 .btn-remind-app {
-  background: #f0fdf4 !important;
+  background: transparent !important;
   color: #15803d !important;
   border: 1.5px solid #bbf7d0 !important;
-  border-radius: 8px !important;
-  padding: 0 8px !important;
+  border-radius: 20px !important;
+  padding: 0 10px !important;
   cursor: pointer;
-  font-size: 0.76rem !important;
-  font-weight: 600 !important;
+  font-size: 0.73rem !important;
+  font-weight: 700 !important;
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
   gap: 4px !important;
-  transition: all 0.18s ease;
-  min-width: 28px;
-  height: 28px !important;
+  transition: all 0.16s ease;
+  height: 30px !important;
+  min-width: 30px;
   box-sizing: border-box;
+  white-space: nowrap;
 }
 
 .btn-remind-app:hover {
@@ -1235,8 +1238,45 @@ td.cell-agendado {
 
 .btn-remind-app.disabled,
 .btn-remind-app[disabled] {
-  opacity: 0.45;
+  opacity: 0.38;
   cursor: not-allowed;
+}
+
+/* Comanda pill — laranja */
+.btn-remind-app[style*="#c2410c"] {
+  color: #c2410c !important;
+  border-color: #fed7aa !important;
+}
+.btn-remind-app[style*="#c2410c"]:hover {
+  background: #ea580c !important;
+  color: #ffffff !important;
+  border-color: #ea580c !important;
+}
+
+/* Faltou pill — vermelho suave */
+.btn-noshow-app {
+  background: transparent !important;
+  color: #b91c1c !important;
+  border-color: #fca5a5 !important;
+  border-radius: 20px !important;
+}
+.btn-noshow-app:hover {
+  background: #ef4444 !important;
+  color: #fff !important;
+  border-color: #ef4444 !important;
+}
+
+/* Excluir — só ícone no mobile */
+@media (max-width: 768px) {
+  .btn-delete-app span,
+  .btn-cancel-app span {
+    display: none;
+  }
+  .btn-delete-app,
+  .btn-cancel-app {
+    width: 30px !important;
+    padding: 0 !important;
+  }
 }
 
 .salon-block-agendado .app-bottom-bar {

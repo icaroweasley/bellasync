@@ -7429,9 +7429,26 @@ function renderComandaBody(c) {
     <div class="form-group">
       <label>Forma de pagamento (ao fechar)</label>
       <select class="form-control" id="comandaPay">${COMANDA_PAY.map(m => `<option value="${m}" ${c.paymentMethod === m ? 'selected' : ''}>${m}</option>`).join('')}</select>
+    </div>
+    <div class="form-group" style="flex-direction:row; align-items:center; gap:8px; margin-top:-4px;">
+      <input type="checkbox" id="comandaSplit" style="width:16px;height:16px;accent-color:#ff6900;cursor:pointer;" onchange="
+        const wrap = document.getElementById('comandaSplitWrap');
+        wrap.style.display = this.checked ? 'flex' : 'none';
+      ">
+      <label for="comandaSplit" style="font-size:0.82rem; color:#64748b; font-weight:500; cursor:pointer; margin:0;">Dividir pagamento em 2 formas</label>
+    </div>
+    <div id="comandaSplitWrap" style="display:none; gap:8px; align-items:center; flex-wrap:wrap;">
+      <div style="flex:1; min-width:120px;">
+        <label style="font-size:0.78rem; color:#64748b; font-weight:600;">2ª forma</label>
+        <select class="form-control" id="comandaPay2" style="margin-top:4px;">${COMANDA_PAY.map(m => `<option value="${m}">${m}</option>`).join('')}</select>
+      </div>
+      <div style="flex:1; min-width:100px;">
+        <label style="font-size:0.78rem; color:#64748b; font-weight:600;">Valor na 2ª forma (R$)</label>
+        <input type="number" class="form-control" id="comandaPay2Val" min="0" step="0.01" placeholder="0,00" style="margin-top:4px;">
+      </div>
     </div>` : `
     <div style="padding:10px 12px; border-radius:12px; background:#ecfdf5; border:1px solid #a7f3d0; color:#065f46; font-weight:600;">
-      ✓ Comanda fechada · pagamento: ${escHtml(c.paymentMethod || '—')}
+      ✓ Comanda fechada · pagamento: ${escHtml(c.paymentMethod || '—')}${c.paymentMethod2 ? ` + ${escHtml(c.paymentMethod2)}` : ''}
     </div>
     ${isManager ? `<button type="button" class="btn-falcon btn-secondary" style="margin-top:6px;" onclick="comandaReopen()">Reabrir comanda</button>` : ''}`;
 
@@ -7514,11 +7531,22 @@ window.openComandaModal = async function(appId, ev) {
   openModal(`Comanda · ${data.clientName || 'Cliente'}`, '<div id="comandaLoading">Carregando...</div>', open ? async () => {
     const cur = window.__comanda;
     const method = document.getElementById('comandaPay')?.value;
+    const isSplit = document.getElementById('comandaSplit')?.checked;
+    const method2 = isSplit ? document.getElementById('comandaPay2')?.value : null;
+    const val2 = isSplit ? Number(document.getElementById('comandaPay2Val')?.value || 0) : 0;
     // garante que o que está na tela já foi salvo
     await comandaPush();
-    const ok = await asyncConfirm(`Fechar a comanda de ${cur.clientName} no valor de ${brl(window.__comanda.total)} (${method})?\n\nIsso conclui o atendimento, lança a receita no caixa e baixa o estoque dos produtos.`, 'Fechar comanda');
+    const total = window.__comanda.total;
+    let payDesc = method;
+    if (isSplit && method2 && val2 > 0) {
+      const val1 = Math.max(0, total - val2);
+      payDesc = `${method} ${brl(val1)} + ${method2} ${brl(val2)}`;
+    }
+    const ok = await asyncConfirm(`Fechar a comanda de ${cur.clientName} no valor de ${brl(total)} (${payDesc})?\n\nIsso conclui o atendimento, lança a receita no caixa e baixa o estoque dos produtos.`, 'Fechar comanda');
     if (!ok) return;
-    const res = await comandaRequest(`/api/appointments/${cur.appointmentId}/comanda/close`, 'POST', { paymentMethod: method });
+    const payload = { paymentMethod: method };
+    if (isSplit && method2 && val2 > 0) { payload.paymentMethod2 = method2; payload.paymentValue2 = val2; }
+    const res = await comandaRequest(`/api/appointments/${cur.appointmentId}/comanda/close`, 'POST', payload);
     if (!res) return;
     closeModal(); window.__comandaDirty = false;
     await loadInitialData(); renderView('agenda');
