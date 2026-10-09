@@ -4912,8 +4912,8 @@ input[type="checkbox"] {
 }
 
 .donut-slice:hover {
-  stroke-width: 32;
-  opacity: 0.85;
+  stroke-width: 26;
+  opacity: 0.88;
 }
 
 .donut-legend-list {
