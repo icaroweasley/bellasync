@@ -2726,6 +2726,9 @@ app.post('/api/appointments/:id/comanda/close', (req, res) => {
   const paymentMethod = String(req.body.paymentMethod || '');
   if (!COMANDA_PAYMENT_METHODS.includes(paymentMethod)) return res.status(400).json({ error: 'Escolha a forma de pagamento.' });
 
+  const paymentMethod2 = req.body.paymentMethod2 && COMANDA_PAYMENT_METHODS.includes(req.body.paymentMethod2) ? String(req.body.paymentMethod2) : null;
+  const paymentValue2 = paymentMethod2 ? round2(Number(req.body.paymentValue2) || 0) : 0;
+
   const items = app.comanda.items;
   const t = comandaTotals(items, app.comanda.discount, app);
   const productItems = items.filter(i => i.type === 'produto');
@@ -2761,16 +2764,25 @@ app.post('/api/appointments/:id/comanda/close', (req, res) => {
       items: productItems.map(i => ({ productId: i.refId, productName: i.name, quantity: i.qty, unitPrice: i.unitPrice, total: i.total,
         commissionPercent: ((db.products.find(x => x.id === i.refId) || {}).commissionPercent) || 0 })),
       subtotal, discount: prodDiscount, total: round2(Math.max(0, subtotal - prodDiscount)),
-      paymentMethod, notes: 'Comanda do atendimento', date: today, monthYear: today.substring(0, 7), createdAt: new Date().toISOString()
+      paymentMethod: paymentMethod2 && paymentValue2 > 0 ? `${paymentMethod} + ${paymentMethod2}` : paymentMethod,
+      notes: 'Comanda do atendimento', date: today, monthYear: today.substring(0, 7), createdAt: new Date().toISOString()
     });
   }
 
   app.comanda.status = 'fechada';
   app.comanda.paymentMethod = paymentMethod;
+  if (paymentMethod2 && paymentValue2 > 0) {
+    app.comanda.paymentMethod2 = paymentMethod2;
+    app.comanda.paymentValue2 = paymentValue2;
+    app.paymentMethod = `${paymentMethod} (R$ ${(t.total - paymentValue2).toFixed(2)}) + ${paymentMethod2} (R$ ${paymentValue2.toFixed(2)})`;
+  } else {
+    delete app.comanda.paymentMethod2;
+    delete app.comanda.paymentValue2;
+    app.paymentMethod = paymentMethod;
+  }
   app.comanda.closedAt = new Date().toISOString();
   app.comanda.saleId = saleId;
   app.comanda.totalPaid = t.total;
-  app.paymentMethod = paymentMethod;
   app.status = 'concluido';
   app.isNoShow = false; app.noShowWithDeposit = false;
   saveDb(db);
