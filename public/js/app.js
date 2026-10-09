@@ -5560,57 +5560,58 @@ function renderBalanco(container, actions) {
 
     const myCardHtml = myProf ? `
       <div class="prof-goal-card is-me-card" onclick="openProfComandasModal('${myProf.id}')" style="cursor: pointer; margin-bottom: 0; background: #ffffff !important; border: 2px solid #ff6900 !important; box-shadow: 0 4px 18px rgba(255, 105, 0, 0.14) !important;">
-        <div class="prof-goal-header">
-          <div class="prof-goal-info">
-            <img src="${myProf.avatar || getButterflyAvatar(myProf.name)}" class="prof-goal-avatar" alt="${myProf.name}">
-            <div style="min-width:0; flex:1; overflow:hidden;">
-              <h4 class="prof-goal-title" title="${myProf.name}">${myProf.name} <span style="font-size:0.75rem; background: var(--orange, #ff6900); color:#fff; padding:2px 6px; border-radius:10px; margin-left:4px;">Você</span></h4>
-              <span class="prof-goal-role">${myProf.role || 'Profissional'} • Comissão (${myProf.commissionDefault || 50}%)</span>
+        <div class="prof-goal-header" style="margin-bottom: 14px;">
+          <div style="display: flex; align-items: center; gap: 12px; width: 100%;">
+            <img src="${myProf.avatar || getButterflyAvatar(myProf.name)}" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover; border: 2px solid var(--orange, #ff6900); flex-shrink: 0;" alt="${myProf.name}">
+            <div style="min-width: 0; flex: 1;">
+              <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                <h4 style="margin: 0; font-size: 1.05rem; font-weight: 800; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${myProf.name}">
+                  ${escapeHtml(myProf.name)}
+                </h4>
+                <span style="font-size: 0.7rem; background: var(--orange, #ff6900); color: #fff; padding: 2px 7px; border-radius: 99px; font-weight: 700;">Você</span>
+              </div>
+              <div style="font-size: 0.78rem; color: #64748b; margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                ${myProf.role || 'Profissional'} • Comissão <strong>(${myProf.commissionDefault || 50}%)</strong>
+              </div>
             </div>
-          </div>
-          <div>
-            <button class="btn-falcon btn-secondary" style="padding: 6px 12px; font-size: 0.8rem;" onclick="event.stopPropagation(); openEditGoalModal('${myProf.id}', '${myProf.name}', ${myGoal})">
-              🎯 Alterar Meta
-            </button>
           </div>
         </div>
 
-        <div class="prof-goal-stats">
+        <div class="prof-goal-stats" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px 14px; background: #f8fafc; padding: 12px 14px; border-radius: 12px; margin-bottom: 12px; border: 1px solid #f1f5f9;">
           <div class="prof-stat-item">
-            <label>Faturamento Bruto</label>
-            <span style="color: #16a34a;">R$ ${myGross.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+            <label style="font-size: 0.72rem; color: #64748b; font-weight: 600; text-transform: uppercase;">Faturamento Bruto</label>
+            <span style="font-size: 0.98rem; font-weight: 800; color: #16a34a; white-space: nowrap;">R$ ${myGross.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
           </div>
           <div class="prof-stat-item">
-            <label>Atendimentos</label>
-            <span>${myApps.length}</span>
+            <label style="font-size: 0.72rem; color: #64748b; font-weight: 600; text-transform: uppercase;">Atendimentos</label>
+            <span style="font-size: 0.98rem; font-weight: 800; color: #0f172a;">${myApps.length}</span>
           </div>
           <div class="prof-stat-item">
-            <label>Comissão a Receber</label>
-            <span style="color: #d97706;">R$ ${myComm.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+            <label style="font-size: 0.72rem; color: #64748b; font-weight: 600; text-transform: uppercase;">Comissão a Receber</label>
+            <span style="font-size: 0.98rem; font-weight: 800; color: #d97706; white-space: nowrap;">R$ ${myComm.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
           </div>
           <div class="prof-stat-item">
-            <label>Meta Mensal</label>
-            <span>R$ ${myGoal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+            <label style="font-size: 0.72rem; color: #64748b; font-weight: 600; text-transform: uppercase;">Meta Mensal</label>
+            <span style="font-size: 0.98rem; font-weight: 800; color: var(--orange, #ff6900); white-space: nowrap;">R$ ${myGoal.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}</span>
           </div>
         </div>
 
         <div class="goal-bar-wrapper">
-          <div class="goal-bar-header">
-            <span>Progresso da Meta Mensal</span>
-            <span style="color: ${myPct >= 100 ? '#16a34a' : 'var(--orange, #ff6900)'};">${myPct}% Atingido ${myPct >= 100 ? '🎉 (Meta Batida!)' : ''}</span>
+          <div class="goal-bar-header" style="display: flex; align-items: center; justify-content: space-between; font-size: 0.8rem; font-weight: 600; color: #334155; margin-bottom: 6px;">
+            <span>Progresso da Meta</span>
+            <span style="color: ${myPct >= 100 ? '#16a34a' : 'var(--orange, #ff6900)'}; font-weight: 700;">${myPct}% Atingido ${myPct >= 100 ? '🎉' : ''}</span>
           </div>
           <div class="goal-bar-track">
             <div class="goal-bar-fill" style="width: ${myPct}%; background: ${myPct >= 100 ? 'linear-gradient(90deg, #16a34a 0%, #22c55e 100%)' : 'linear-gradient(90deg, #ff6900 0%, #ff8c00 100%)'};"></div>
           </div>
         </div>
 
-        <div class="prof-goal-card-footer" style="margin-top: 14px; padding-top: 12px; border-top: 1px dashed #e2e8f0; display: flex; align-items: center; justify-content: space-between;">
-          <div style="display: flex; align-items: center; gap: 6px; font-size: 0.84rem; color: #475569;">
-            <span style="font-size: 1rem;">📋</span>
-            <span style="font-weight: 600;">${myApps.length} comanda${myApps.length !== 1 ? 's' : ''} no mês</span>
-          </div>
-          <div style="display: flex; align-items: center; gap: 4px; color: var(--orange, #ff6900); font-weight: 700; font-size: 0.82rem;">
-            <span>Ver Suas Comandas</span>
+        <div class="prof-goal-card-footer" style="margin-top: 14px; padding-top: 12px; border-top: 1px solid #f1f5f9; display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+          <button type="button" class="btn-falcon btn-secondary" style="padding: 6px 12px; font-size: 0.78rem; font-weight: 700; border-radius: 8px; border: 1px solid #cbd5e1; display: inline-flex; align-items: center; gap: 5px;" onclick="event.stopPropagation(); openEditGoalModal('${myProf.id}', '${myProf.name}', ${myGoal})">
+            <span>🎯</span> <span>Alterar Meta</span>
+          </button>
+          <div style="display: flex; align-items: center; gap: 6px; color: var(--orange, #ff6900); font-weight: 700; font-size: 0.82rem;">
+            <span>Ver Suas Comandas (${myApps.length})</span>
             <span>→</span>
           </div>
         </div>
@@ -5707,57 +5708,58 @@ function renderBalanco(container, actions) {
 
     return `
       <div class="prof-goal-card ${isMe ? 'is-me-card' : ''}" onclick="openProfComandasModal('${prof.id}')" style="cursor: pointer; margin-bottom: 0; ${isMe ? 'background: #ffffff !important; border: 2px solid #ff6900 !important; box-shadow: 0 4px 18px rgba(255, 105, 0, 0.14) !important;' : ''}">
-        <div class="prof-goal-header">
-          <div class="prof-goal-info">
-            <img src="${prof.avatar || getButterflyAvatar(prof.name)}" class="prof-goal-avatar" alt="${prof.name}">
-            <div style="min-width:0; flex:1; overflow:hidden;">
-              <h4 class="prof-goal-title" title="${prof.name}">${prof.name} ${isMe ? '<span style="font-size:0.75rem; background: var(--orange, #ff6900); color:#fff; padding:2px 6px; border-radius:10px; margin-left:4px;">Você</span>' : ''}</h4>
-              <span class="prof-goal-role">${prof.role || 'Profissional'} • Comissão (${prof.commissionDefault || 50}%)</span>
+        <div class="prof-goal-header" style="margin-bottom: 14px;">
+          <div style="display: flex; align-items: center; gap: 12px; width: 100%;">
+            <img src="${prof.avatar || getButterflyAvatar(prof.name)}" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover; border: 2px solid var(--orange, #ff6900); flex-shrink: 0;" alt="${prof.name}">
+            <div style="min-width: 0; flex: 1;">
+              <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                <h4 style="margin: 0; font-size: 1.05rem; font-weight: 800; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${prof.name}">
+                  ${escapeHtml(prof.name)}
+                </h4>
+                ${isMe ? '<span style="font-size: 0.7rem; background: var(--orange, #ff6900); color: #fff; padding: 2px 7px; border-radius: 99px; font-weight: 700;">Você</span>' : ''}
+              </div>
+              <div style="font-size: 0.78rem; color: #64748b; margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                ${prof.role || 'Profissional'} • Comissão <strong>(${prof.commissionDefault || 50}%)</strong>
+              </div>
             </div>
-          </div>
-          <div>
-            <button class="btn-falcon btn-secondary" style="padding: 6px 12px; font-size: 0.8rem;" onclick="event.stopPropagation(); openEditGoalModal('${prof.id}', '${prof.name}', ${goal})">
-              🎯 ${goal > 0 ? 'Alterar Meta' : 'Definir Meta'}
-            </button>
           </div>
         </div>
 
-        <div class="prof-goal-stats">
+        <div class="prof-goal-stats" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px 14px; background: #f8fafc; padding: 12px 14px; border-radius: 12px; margin-bottom: 12px; border: 1px solid #f1f5f9;">
           <div class="prof-stat-item">
-            <label>Faturamento Bruto</label>
-            <span style="color: #16a34a;">R$ ${profGross.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+            <label style="font-size: 0.72rem; color: #64748b; font-weight: 600; text-transform: uppercase;">Faturamento Bruto</label>
+            <span style="font-size: 0.98rem; font-weight: 800; color: #16a34a; white-space: nowrap;">R$ ${profGross.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
           </div>
           <div class="prof-stat-item">
-            <label>Atendimentos</label>
-            <span>${profCount}</span>
+            <label style="font-size: 0.72rem; color: #64748b; font-weight: 600; text-transform: uppercase;">Atendimentos</label>
+            <span style="font-size: 0.98rem; font-weight: 800; color: #0f172a;">${profCount}</span>
           </div>
           <div class="prof-stat-item">
-            <label>Comissão a Receber</label>
-            <span style="color: #d97706;">R$ ${profComm.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+            <label style="font-size: 0.72rem; color: #64748b; font-weight: 600; text-transform: uppercase;">Comissão a Receber</label>
+            <span style="font-size: 0.98rem; font-weight: 800; color: #d97706; white-space: nowrap;">R$ ${profComm.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
           </div>
           <div class="prof-stat-item">
-            <label>Meta Mensal</label>
-            <span>R$ ${goal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+            <label style="font-size: 0.72rem; color: #64748b; font-weight: 600; text-transform: uppercase;">Meta Mensal</label>
+            <span style="font-size: 0.98rem; font-weight: 800; color: var(--orange, #ff6900); white-space: nowrap;">R$ ${goal.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}</span>
           </div>
         </div>
 
         <div class="goal-bar-wrapper">
-          <div class="goal-bar-header">
-            <span>Progresso da Meta Mensal</span>
-            <span style="color: ${pct >= 100 ? '#16a34a' : 'var(--orange, #ff6900)'};">${pct}% Atingido ${pct >= 100 ? '🎉 (Meta Batida!)' : ''}</span>
+          <div class="goal-bar-header" style="display: flex; align-items: center; justify-content: space-between; font-size: 0.8rem; font-weight: 600; color: #334155; margin-bottom: 6px;">
+            <span>Progresso da Meta</span>
+            <span style="color: ${pct >= 100 ? '#16a34a' : 'var(--orange, #ff6900)'}; font-weight: 700;">${pct}% Atingido ${pct >= 100 ? '🎉' : ''}</span>
           </div>
           <div class="goal-bar-track">
             <div class="goal-bar-fill" style="width: ${pct}%; background: ${pct >= 100 ? 'linear-gradient(90deg, #16a34a 0%, #22c55e 100%)' : 'linear-gradient(90deg, #ff6900 0%, #ff8c00 100%)'};"></div>
           </div>
         </div>
 
-        <div class="prof-goal-card-footer" style="margin-top: 14px; padding-top: 12px; border-top: 1px dashed #e2e8f0; display: flex; align-items: center; justify-content: space-between;">
-          <div style="display: flex; align-items: center; gap: 6px; font-size: 0.84rem; color: #475569;">
-            <span style="font-size: 1rem;">📋</span>
-            <span style="font-weight: 600;">${profCount} comanda${profCount !== 1 ? 's' : ''} no mês</span>
-          </div>
-          <div style="display: flex; align-items: center; gap: 4px; color: var(--orange, #ff6900); font-weight: 700; font-size: 0.82rem;">
-            <span>Ver Comandas</span>
+        <div class="prof-goal-card-footer" style="margin-top: 14px; padding-top: 12px; border-top: 1px solid #f1f5f9; display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+          <button type="button" class="btn-falcon btn-secondary" style="padding: 6px 12px; font-size: 0.78rem; font-weight: 700; border-radius: 8px; border: 1px solid #cbd5e1; display: inline-flex; align-items: center; gap: 5px;" onclick="event.stopPropagation(); openEditGoalModal('${prof.id}', '${prof.name}', ${goal})">
+            <span>🎯</span> <span>${goal > 0 ? 'Alterar Meta' : 'Definir Meta'}</span>
+          </button>
+          <div style="display: flex; align-items: center; gap: 6px; color: var(--orange, #ff6900); font-weight: 700; font-size: 0.82rem;">
+            <span>Ver Comandas (${profCount})</span>
             <span>→</span>
           </div>
         </div>
