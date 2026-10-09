@@ -5286,8 +5286,329 @@ window.switchBalancoTab = function(tab) {
   renderBalanco(container, actions);
 };
 
+// ============================================================================
+// COMANDAS DENTRO DOS CARDS DE DESEMPENHO E METAS INDIVIDUAIS
+// ============================================================================
+window.toggleProfCardComandas = function(profId) {
+  const container = document.getElementById(`prof-comandas-container-${profId}`);
+  const btn = document.getElementById(`btn-toggle-comandas-${profId}`);
+  if (!container || !btn) return;
+  if (container.style.display === 'none') {
+    container.style.display = 'block';
+    btn.innerText = 'Recolher ▲';
+  } else {
+    container.style.display = 'none';
+    btn.innerText = 'Ver Comandas ▼';
+  }
+};
+
+window.filterProfCardComandas = function(profId, query) {
+  const q = (query || '').toLowerCase().trim();
+  const rows = document.querySelectorAll(`.prof-comanda-row[data-prof="${profId}"]`);
+  rows.forEach(row => {
+    const text = row.getAttribute('data-text') || '';
+    if (!q || text.includes(q)) {
+      row.style.display = 'block';
+    } else {
+      row.style.display = 'none';
+    }
+  });
+};
+
+function renderProfGoalComandasHtml(profId, monthApps, monthSales, isManager) {
+  if (!profId) return '';
+
+  const profApps = (monthApps || []).filter(a => a.professionalId === profId);
+  const records = [];
+
+  profApps.forEach(a => {
+    const hasComanda = !!a.comanda;
+    const isClosed = (hasComanda && a.comanda.status === 'fechada') || a.status === 'concluido';
+    const services = [];
+    const products = [];
+    let discount = hasComanda ? (Number(a.comanda.discount) || 0) : 0;
+
+    if (hasComanda && Array.isArray(a.comanda.items) && a.comanda.items.length > 0) {
+      a.comanda.items.forEach(it => {
+        const q = Math.max(1, Number(it.qty) || 1);
+        const u = Number(it.unitPrice) || 0;
+        const t = Number.isFinite(Number(it.total)) ? Number(it.total) : (u * q);
+        if (it.type === 'produto') {
+          products.push({ id: it.refId, name: it.name || 'Produto', qty: q, unitPrice: u, total: t });
+        } else {
+          services.push({ id: it.refId, name: it.name || 'Serviço', qty: q, unitPrice: u, total: t });
+        }
+      });
+    } else {
+      if (Array.isArray(a.servicesList) && a.servicesList.length > 0) {
+        a.servicesList.forEach(s => {
+          const p = Number(s.price) || 0;
+          services.push({ id: s.id, name: s.name || 'Serviço', qty: 1, unitPrice: p, total: p });
+        });
+      } else {
+        const p = Number(a.price) || 0;
+        services.push({ id: a.serviceId, name: a.serviceName || 'Atendimento', qty: 1, unitPrice: p, total: p });
+      }
+      const linked = (monthSales || []).find(s => s.appointmentId === a.id);
+      if (linked && Array.isArray(linked.items)) {
+        linked.items.forEach(pi => {
+          const q = Math.max(1, Number(pi.quantity) || 1);
+          const u = Number(pi.unitPrice) || 0;
+          const t = Number.isFinite(Number(pi.total)) ? Number(pi.total) : (u * q);
+          products.push({ id: pi.productId, name: pi.productName || 'Produto', qty: q, unitPrice: u, total: t });
+        });
+        if (linked.discount) discount += Number(linked.discount) || 0;
+      }
+    }
+
+    const servicesTotal = services.reduce((acc, s) => acc + s.total, 0);
+    const productsTotal = products.reduce((acc, p) => acc + p.total, 0);
+    const subtotal = servicesTotal + productsTotal;
+    let netTotal = Math.max(0, subtotal - discount);
+    if (netTotal === 0 && Number(a.price) > 0) {
+      netTotal = Number(a.price);
+    }
+
+    let paymentMethod = a.comanda?.paymentMethod || a.paymentMethod || (isClosed ? 'Concluído' : 'A receber');
+    if (a.comanda?.paymentMethod2 && a.comanda?.paymentValue2 > 0) {
+      const v2 = Number(a.comanda.paymentValue2);
+      const v1 = Math.max(0, netTotal - v2);
+      paymentMethod = `${a.comanda.paymentMethod} (R$ ${v1.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}) + ${a.comanda.paymentMethod2} (R$ ${v2.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})`;
+    }
+
+    records.push({
+      type: 'appointment',
+      id: a.id,
+      date: a.date,
+      time: a.time || '00:00',
+      clientName: a.clientName || 'Cliente',
+      clientPhone: a.clientPhone || '',
+      isClosed,
+      rawStatus: a.status,
+      services,
+      products,
+      servicesTotal,
+      productsTotal,
+      discount,
+      subtotal,
+      netTotal,
+      paymentMethod
+    });
+  });
+
+  // Vendas avulsas de balcão vinculadas a este profissional
+  (monthSales || []).filter(s => s.professionalId === profId && !s.appointmentId && s.source !== 'comanda').forEach(s => {
+    const products = (s.items || []).map(pi => {
+      const q = Math.max(1, Number(pi.quantity) || 1);
+      const u = Number(pi.unitPrice) || 0;
+      const t = Number.isFinite(Number(pi.total)) ? Number(pi.total) : (u * q);
+      return { id: pi.productId, name: pi.productName || 'Produto', qty: q, unitPrice: u, total: t };
+    });
+    const productsTotal = products.reduce((acc, p) => acc + p.total, 0);
+    const discount = Number(s.discount) || 0;
+    const netTotal = Number(s.total) || Math.max(0, productsTotal - discount);
+
+    records.push({
+      type: 'standalone_sale',
+      id: s.id,
+      date: s.date || (s.createdAt ? s.createdAt.substring(0, 10) : ''),
+      time: s.createdAt ? s.createdAt.substring(11, 16) : '00:00',
+      clientName: s.clientName || 'Venda Avulsa de Balcão',
+      clientPhone: s.clientPhone || '',
+      isClosed: true,
+      rawStatus: 'concluido',
+      services: [],
+      products,
+      servicesTotal: 0,
+      productsTotal,
+      discount,
+      subtotal: productsTotal,
+      netTotal,
+      paymentMethod: s.paymentMethod || 'Balcão'
+    });
+  });
+
+  records.sort((a, b) => {
+    const dtA = `${a.date || ''} ${a.time || ''}`;
+    const dtB = `${b.date || ''} ${b.time || ''}`;
+    return dtB.localeCompare(dtA);
+  });
+
+  const closedCount = records.filter(r => r.isClosed).length;
+  const openCount = records.filter(r => !r.isClosed && r.rawStatus !== 'faltou').length;
+
+  if (records.length === 0) {
+    return `
+      <div class="prof-card-comandas-section">
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+          <div style="display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 0.9rem; color: #1e293b;">
+            <span>📋 Comandas & Atendimentos</span>
+            <span style="font-size: 0.75rem; background: #f1f5f9; color: #64748b; padding: 2px 8px; border-radius: 10px; font-weight: 600;">0</span>
+          </div>
+        </div>
+        <div style="text-align: center; padding: 18px 12px; margin-top: 10px; background: #f8fafc; border-radius: 10px; border: 1px dashed #e2e8f0; color: #64748b; font-size: 0.82rem;">
+          Nenhum atendimento ou comanda neste mês de referência.
+        </div>
+      </div>
+    `;
+  }
+
+  const itemsHtml = records.map(r => {
+    const cleanPhone = (r.clientPhone || '').replace(/\D/g, '');
+    const waLink = cleanPhone ? `https://wa.me/55${cleanPhone.replace(/^55/, '')}` : null;
+    const formattedDate = r.date ? r.date.split('-').reverse().join('/') : '';
+
+    let statusBadge = '';
+    if (r.isClosed) {
+      statusBadge = `<span style="background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; padding: 2px 8px; border-radius: 12px; font-weight: 600; font-size: 0.72rem; display: inline-flex; align-items: center; gap: 3px;">✓ Fechada</span>`;
+    } else if (r.rawStatus === 'faltou') {
+      statusBadge = `<span style="background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; padding: 2px 8px; border-radius: 12px; font-weight: 600; font-size: 0.72rem; display: inline-flex; align-items: center; gap: 3px;">❌ Faltou</span>`;
+    } else if (r.rawStatus === 'agendado') {
+      statusBadge = `<span style="background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; padding: 2px 8px; border-radius: 12px; font-weight: 600; font-size: 0.72rem; display: inline-flex; align-items: center; gap: 3px;">📅 Agendado</span>`;
+    } else {
+      statusBadge = `<span style="background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa; padding: 2px 8px; border-radius: 12px; font-weight: 600; font-size: 0.72rem; display: inline-flex; align-items: center; gap: 3px;">⚡ Comanda Aberta</span>`;
+    }
+
+    const servicesHtml = (r.services || []).map(s => `
+      <div style="display: flex; align-items: center; justify-content: space-between; gap: 6px; padding: 2px 0;">
+        <div style="display: flex; align-items: center; gap: 6px; min-width: 0;">
+          <span style="background: #e0e7ff; color: #4338ca; font-size: 0.7rem; font-weight: 700; padding: 1px 6px; border-radius: 4px; flex-shrink: 0;">Serviço</span>
+          <span style="color: #1e293b; font-weight: 500; font-size: 0.82rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(s.name)}</span>
+          ${s.qty > 1 ? `<span style="color: #64748b; font-size: 0.75rem;">(x${s.qty})</span>` : ''}
+        </div>
+        <span style="font-weight: 600; color: #0f172a; font-size: 0.82rem; flex-shrink: 0;">R$ ${s.total.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+      </div>
+    `).join('');
+
+    const productsHtml = (r.products || []).map(p => `
+      <div style="display: flex; align-items: center; justify-content: space-between; gap: 6px; padding: 2px 0;">
+        <div style="display: flex; align-items: center; gap: 6px; min-width: 0;">
+          <span style="background: #ecfdf5; color: #065f46; font-size: 0.7rem; font-weight: 700; padding: 1px 6px; border-radius: 4px; flex-shrink: 0;">Produto</span>
+          <span style="color: #1e293b; font-weight: 500; font-size: 0.82rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(p.name)}</span>
+          <span style="color: #047857; font-size: 0.75rem;">(${p.qty} un)</span>
+        </div>
+        <span style="font-weight: 600; color: #0f172a; font-size: 0.82rem; flex-shrink: 0;">R$ ${p.total.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+      </div>
+    `).join('');
+
+    const searchableText = `${r.clientName} ${r.clientPhone} ${(r.services || []).map(s=>s.name).join(' ')} ${(r.products || []).map(p=>p.name).join(' ')}`.toLowerCase();
+
+    return `
+      <div class="prof-comanda-row ${r.isClosed ? 'is-closed' : 'is-open'}" data-prof="${profId}" data-text="${escapeHtml(searchableText)}" style="background: #ffffff; border: 1px solid ${r.isClosed ? '#e2e8f0' : '#fed7aa'}; border-left: 4px solid ${r.isClosed ? '#16a34a' : '#ff6900'}; border-radius: 12px; padding: 12px 14px; margin-bottom: 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.02);">
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;">
+          <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+            <span style="font-size: 0.78rem; font-weight: 700; color: #0f172a; background: #f1f5f9; padding: 2px 7px; border-radius: 6px;">
+              ${r.type === 'appointment' ? `📋 #${r.id.slice(-6).toUpperCase()}` : '🛍️ BALCÃO'}
+            </span>
+            <span style="font-size: 0.78rem; color: #64748b; font-weight: 500;">
+              📅 ${formattedDate} às ${r.time}
+            </span>
+          </div>
+          <div>
+            ${statusBadge}
+          </div>
+        </div>
+
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 8px; flex-wrap: wrap;">
+          <div style="display: flex; align-items: center; gap: 6px; min-width: 0;">
+            <span style="font-size: 0.88rem; font-weight: 700; color: #0f172a; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+              👤 ${escapeHtml(r.clientName)}
+            </span>
+            ${waLink ? `
+              <a href="${waLink}" target="_blank" style="color: #16a34a; font-size: 0.76rem; font-weight: 600; text-decoration: none; display: inline-flex; align-items: center; gap: 2px;" title="Conversar no WhatsApp">
+                💬 ${escapeHtml(r.clientPhone)}
+              </a>
+            ` : (r.clientPhone ? `<span style="font-size: 0.76rem; color: #64748b;">📞 ${escapeHtml(r.clientPhone)}</span>` : '')}
+          </div>
+          <div style="text-align: right; flex-shrink: 0;">
+            <div style="font-size: 0.95rem; font-weight: 800; color: #16a34a;">
+              R$ ${r.netTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </div>
+            ${r.paymentMethod ? `<div style="font-size: 0.7rem; color: #64748b;">${escapeHtml(r.paymentMethod)}</div>` : ''}
+          </div>
+        </div>
+
+        <div style="margin-top: 8px; padding: 8px 10px; background: #f8fafc; border-radius: 8px; border: 1px solid #f1f5f9; display: flex; flex-direction: column; gap: 4px;">
+          ${servicesHtml || ''}
+          ${productsHtml || ''}
+          ${(!servicesHtml && !productsHtml) ? `<div style="font-size: 0.76rem; color: #94a3b8; font-style: italic;">Nenhum item discriminado.</div>` : ''}
+          ${r.discount > 0 ? `
+            <div style="display: flex; align-items: center; justify-content: space-between; border-top: 1px dashed #e2e8f0; padding-top: 4px; font-size: 0.76rem; color: #dc2626;">
+              <span>Desconto aplicado:</span>
+              <span style="font-weight: 600;">- R$ ${r.discount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+            </div>
+          ` : ''}
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 8px; margin-top: 10px; flex-wrap: wrap;">
+          ${r.type === 'appointment' ? `
+            <button class="btn-falcon btn-secondary" style="padding: 5px 11px; font-size: 0.78rem; display: inline-flex; align-items: center; gap: 5px;" onclick="openComandaModal('${r.id}')" title="Visualizar ou editar comanda">
+              <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+              <span>Ver Comanda</span>
+            </button>
+            <button class="btn-falcon btn-primary" style="padding: 5px 11px; font-size: 0.78rem; display: inline-flex; align-items: center; gap: 5px;" onclick="comandaEditAndReopen('${r.id}')" title="${r.isClosed ? 'Reabrir e editar comanda' : 'Editar comanda'}">
+              <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+              <span>Editar Comanda</span>
+            </button>
+            ${r.isClosed ? `
+              <button class="btn-falcon btn-secondary" style="padding: 5px 11px; font-size: 0.78rem; display: inline-flex; align-items: center; gap: 5px; color: #c2410c; border-color: #fed7aa;" onclick="comandaReturnToAgenda('${r.id}')" title="Reabre a comanda e devolve o agendamento para a agenda">
+                <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="9 14 4 9 9 4"></polyline><path d="M20 20v-7a4 4 0 0 0-4-4H4"></path></svg>
+                <span>Voltar p/ Agenda</span>
+              </button>
+            ` : ''}
+          ` : `
+            <span style="font-size: 0.76rem; color: #64748b; font-style: italic;">Venda de balcão direta</span>
+          `}
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  return `
+    <div class="prof-card-comandas-section">
+      <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 12px;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="font-size: 1.05rem;">📋</span>
+          <strong style="font-size: 0.92rem; color: #0f172a;">Comandas do Mês</strong>
+          <span style="font-size: 0.75rem; background: #e0e7ff; color: #3730a3; padding: 2px 8px; border-radius: 12px; font-weight: 700;">
+            ${records.length}
+          </span>
+          <span style="font-size: 0.76rem; color: #16a34a; font-weight: 600; margin-left: 4px;">
+            (${closedCount} fechadas${openCount > 0 ? `, <span style="color:#ea580c;">${openCount} abertas</span>` : ''})
+          </span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          ${records.length > 2 ? `
+            <input 
+              type="text" 
+              placeholder="Buscar comanda..." 
+              oninput="filterProfCardComandas('${profId}', this.value)"
+              style="font-size: 0.76rem; padding: 4px 8px; border: 1px solid #cbd5e1; border-radius: 8px; width: 140px; outline: none; background: #ffffff;"
+            />
+          ` : ''}
+          <button 
+            type="button" 
+            class="btn-falcon btn-secondary" 
+            style="padding: 4px 9px; font-size: 0.74rem; line-height: 1;" 
+            onclick="toggleProfCardComandas('${profId}')"
+            id="btn-toggle-comandas-${profId}"
+            title="Recolher ou expandir lista de comandas"
+          >
+            Recolher ▲
+          </button>
+        </div>
+      </div>
+
+      <div id="prof-comandas-container-${profId}" class="prof-comandas-scrollbox">
+        ${itemsHtml}
+      </div>
+    </div>
+  `;
+}
+
 // 8.5 Render Balanço Mensal & Metas
 let selectedBalancoMonth = null;
+
 
 function renderBalanco(container, actions) {
   const now = new Date();
@@ -5600,6 +5921,8 @@ function renderBalanco(container, actions) {
             <div class="goal-bar-fill" style="width: ${myPct}%; background: ${myPct >= 100 ? 'linear-gradient(90deg, #16a34a 0%, #22c55e 100%)' : 'linear-gradient(90deg, #ff6900 0%, #ff8c00 100%)'};"></div>
           </div>
         </div>
+
+        ${renderProfGoalComandasHtml(myProf.id, monthApps, monthSales, false)}
       </div>
     ` : `<div class="card-shell" style="text-align:center; color:var(--muted);">Perfil de profissional não associado.</div>`;
 
@@ -5731,6 +6054,8 @@ function renderBalanco(container, actions) {
             <div class="goal-bar-fill" style="width: ${pct}%; background: ${pct >= 100 ? 'linear-gradient(90deg, #16a34a 0%, #22c55e 100%)' : 'linear-gradient(90deg, #ff6900 0%, #ff8c00 100%)'};"></div>
           </div>
         </div>
+
+        ${renderProfGoalComandasHtml(prof.id, monthApps, monthSales, isManager)}
       </div>
     `;
   }).join('');

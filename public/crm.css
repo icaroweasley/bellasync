@@ -2952,6 +2952,46 @@ input[type="checkbox"] {
   transition: width 0.4s ease;
 }
 
+/* Comandas dentro do card de Desempenho e Metas Individuais */
+.prof-card-comandas-section {
+  margin-top: 18px;
+  border-top: 1px dashed #e2e8f0;
+  padding-top: 14px;
+}
+
+.prof-comandas-scrollbox {
+  max-height: 420px;
+  overflow-y: auto;
+  padding-right: 4px;
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 #f8fafc;
+}
+
+.prof-comandas-scrollbox::-webkit-scrollbar {
+  width: 6px;
+}
+
+.prof-comandas-scrollbox::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+.prof-comandas-scrollbox::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 4px;
+}
+
+.prof-comanda-row {
+  transition: all 0.18s ease;
+}
+
+.prof-comanda-row:hover {
+  border-color: #cbd5e1 !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05) !important;
+  transform: translateY(-1px);
+}
+
+
 /* Date Picker Header com Popover e Seta (Screenshots 1 & 2) */
 .agenda-header-datepicker {
   display: flex;

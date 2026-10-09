@@ -151,7 +151,7 @@ let selectedProfessionalId = null;
 let selectedDate = new Date().toISOString().split('T')[0];
 let activeProfessionalsTab = 'equipe'; // 'equipe' | 'cadeiras'
 let activeProductsTab = 'estoque'; // 'estoque' | 'vendas'
-let activeBalancoTab = 'salao'; // 'salao' | 'pessoal'
+let activeBalancoTab = 'salao'; // 'salao' | 'pessoal' | 'comandas'
 
 let state = {
   settings: {},
@@ -666,6 +666,15 @@ window.goToAppointmentInAgenda = function() {
   }
   if (typeof renderView === 'function') {
     renderView('agenda');
+  }
+};
+
+window.editCurrentViewingAppointment = function() {
+  if (!currentViewingAppointment) return;
+  const app = currentViewingAppointment;
+  closeAppointmentDetailsModal();
+  if (typeof openEditAppointmentModal === 'function') {
+    openEditAppointmentModal(app);
   }
 };
 
@@ -1825,10 +1834,10 @@ window.toggleMobileActionsDropdown = function(e) {
     </div>
 
     <div class="mobile-action-menu-item" onclick="openBlockTimeModal(); document.getElementById('mobileActionsDropdown')?.remove();">
-      <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg>
+      <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="10" y1="15" x2="10" y2="9"></line><line x1="14" y1="15" x2="14" y2="9"></line></svg>
       <div>
-        <div style="font-weight:700; color:#0f172a;">Bloquear Horários</div>
-        <div style="font-size:0.75rem; color:#64748b;">Fechar horários / folgas</div>
+        <div style="font-weight:700; color:#0f172a;">Pausa / Intervalo</div>
+        <div style="font-size:0.75rem; color:#64748b;">Almoço, folga ou pausa</div>
       </div>
     </div>
 
@@ -2611,9 +2620,9 @@ function renderAgenda(container, actions) {
           `}
         </button>
 
-        <button class="btn-falcon btn-secondary" onclick="openBlockTimeModal()" title="Bloquear horários ou fechar mais cedo">
-          <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg>
-          <span>Bloquear</span>
+        <button class="btn-falcon btn-secondary" onclick="openBlockTimeModal()" title="Pausar horários (almoço, folga ou intervalo)">
+          <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="10" y1="15" x2="10" y2="9"></line><line x1="14" y1="15" x2="14" y2="9"></line></svg>
+          <span>Pausa</span>
         </button>
 
         <button class="btn-falcon btn-secondary" onclick="openBookingRulesModal()" title="Configurar janela de dias futuros e regras de agendamento online">
@@ -2734,64 +2743,94 @@ function updateScheduleView() {
 
         if (app.status === 'indisponivel') {
           listHtml += `
-            <div class="agenda-list-item-card" style="background:#fef2f2; border-color:#fecaca;">
+            <div class="agenda-list-item-card" style="background:#fffbeb; border-color:#fde68a;">
               <div class="agenda-list-client-info">
-                <div class="agenda-list-client-avatar" style="background:#fee2e2; color:#b91c1c;">
-                  <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg>
+                <div class="agenda-list-client-avatar" style="background:#fef3c7; color:#b45309;">
+                  <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="10" y1="15" x2="10" y2="9"></line><line x1="14" y1="15" x2="14" y2="9"></line></svg>
                 </div>
                 <div style="flex: 1; min-width: 0;">
-                  <div class="agenda-list-client-name" style="color:#b91c1c;">Horário Bloqueado</div>
+                  <div class="agenda-list-client-name" style="color:#92400e;">Horário em Pausa</div>
                   <div class="agenda-list-service-sub">${app.notes || 'Sem observações'}${profSubText}</div>
                 </div>
               </div>
               <div class="agenda-list-badge-time">
-                <span class="status-badge-pill cancelado">Bloqueado</span>
+                <span class="status-badge-pill cancelado" style="background:#fef3c7; color:#92400e; border:1px solid #fde68a;">Pausa</span>
                 <span class="agenda-list-time-range">${app.startTime} - ${app.endTime}</span>
-                ${canManageThis ? `<button class="btn-delete-app" onclick="deleteAppointment('${app.id}', event)" style="margin-top:4px;">Desbloquear</button>` : ''}
+                ${canManageThis ? `<button class="btn-delete-app" onclick="deleteAppointment('${app.id}', event)" style="margin-top:4px;" title="Remover pausa e liberar horário">Remover Pausa</button>` : ''}
               </div>
             </div>
           `;
         } else {
           listHtml += `
             <div class="agenda-list-item-card" onclick="openAppointmentDetailsModal(state.appointments.find(a => a.id === '${app.id}'))" style="cursor: pointer;">
-              <div class="agenda-list-client-info">
-                <div class="agenda-list-client-avatar">
-                  <span style="font-weight:700; font-size:1.1rem; color:var(--orange);">${initial}</span>
+              <!-- 1. Topo: Cliente, Horário e Status -->
+              <div class="agenda-card-top">
+                <div class="agenda-card-client-wrap">
+                  <div class="agenda-list-client-avatar">
+                    <span style="font-weight:700; font-size:1.1rem; color:var(--orange);">${initial}</span>
+                  </div>
+                  <div class="agenda-card-client-meta">
+                    <div class="agenda-list-client-name">${app.clientName || 'Cliente sem nome'}</div>
+                    <span class="agenda-list-time-range">${app.startTime} - ${app.endTime}</span>
+                  </div>
                 </div>
-                <div style="flex: 1; min-width: 0;">
-                  <div class="agenda-list-client-name">${app.clientName || 'Cliente sem nome'}</div>
-                  <div class="agenda-list-service-sub">${app.serviceName || 'Serviço'}${profSubText} • R$ ${Number(app.price || 0).toFixed(2)}</div>
+                <div class="agenda-card-badge-wrap">
+                  <span class="status-badge-pill ${statusClass}">${statusLabel}</span>
                 </div>
               </div>
-              <div class="agenda-list-badge-time">
-                <span class="status-badge-pill ${statusClass}">${statusLabel}</span>
-                <span class="agenda-list-time-range">${app.startTime} - ${app.endTime}</span>
-                <div class="agenda-list-actions-vertical">
-                  <div class="agenda-list-actions-top-row">
-                    ${app.clientPhone ? `
-                    <button class="btn-remind-app" onclick="sendAppointmentReminder('${app.id}', event)" title="Lembrete WhatsApp (${app.clientPhone})">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91C2.13 13.66 2.59 15.36 3.45 16.86L2.05 22L7.3 20.62C8.75 21.41 10.38 21.83 12.04 21.83C17.5 21.83 21.95 17.38 21.95 11.92C21.95 9.27 20.92 6.78 19.05 4.91C17.18 3.03 14.69 2 12.04 2ZM12.05 20.16C10.57 20.16 9.12 19.76 7.85 19.01L7.55 18.83L4.43 19.65L5.26 16.61L5.06 16.29C4.24 14.99 3.81 13.47 3.81 11.91C3.81 7.37 7.5 3.68 12.05 3.68C14.25 3.68 16.31 4.54 17.87 6.1C19.42 7.66 20.28 9.72 20.27 11.92C20.28 16.46 16.59 20.16 12.05 20.16ZM16.56 14.46C16.31 14.33 15.09 13.73 14.86 13.65C14.63 13.56 14.47 13.52 14.3 13.77C14.14 14.02 13.66 14.58 13.52 14.75C13.37 14.92 13.23 14.94 12.98 14.81C12.73 14.69 11.93 14.42 10.98 13.58C10.24 12.92 9.74 12.11 9.6 11.86C9.45 11.61 9.58 11.48 9.71 11.35C9.82 11.24 9.96 11.06 10.08 10.91C10.21 10.77 10.25 10.66 10.33 10.5C10.41 10.33 10.37 10.19 10.31 10.06C10.25 9.94 9.76 8.73 9.55 8.24C9.35 7.75 9.15 7.82 8.99 7.81C8.85 7.8 8.68 7.8 8.52 7.8C8.35 7.8 8.08 7.86 7.85 8.11C7.62 8.36 6.98 8.96 6.98 10.18C6.98 11.4 7.87 12.58 7.99 12.74C8.11 12.91 9.74 15.42 12.23 16.5C12.82 16.76 13.28 16.91 13.64 17.03C14.23 17.22 14.77 17.19 15.2 17.13C15.68 17.06 16.67 16.53 16.88 15.95C17.08 15.37 17.08 14.88 17.02 14.77C16.96 14.67 16.81 14.59 16.56 14.46Z"/></svg>
+
+              <!-- 2. Meio: Serviço Completo + Preço (Largura total, zero aperto) -->
+              <div class="agenda-card-service-row">
+                <div class="agenda-card-service-text">
+                  <span class="agenda-card-service-title">${app.serviceName || 'Serviço'}</span>${profSubText}
+                </div>
+                <div class="agenda-card-price-tag">
+                  R$ ${Number(app.price || 0).toFixed(2)}
+                </div>
+              </div>
+
+              <!-- 3. Base: Ações em 2 Colunas Simétricas (50% cada) -->
+              <div class="agenda-list-actions-grid" onclick="event.stopPropagation()">
+                <!-- Coluna 1: Comanda em cima, WhatsApp embaixo -->
+                <div class="agenda-actions-col">
+                  ${canManageThis && !['cancelado','faltou','indisponivel'].includes(app.status) ? `
+                    <button class="btn-app-action btn-comanda-app" onclick="openComandaModal('${app.id}', event)" title="Abrir comanda do atendimento">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                      <span>${app.comanda && app.comanda.status === 'fechada' ? 'Comanda ✓' : 'Comanda'}</span>
+                    </button>
+                  ` : `<div style="height:29px;"></div>`}
+                  ${app.clientPhone ? `
+                    <button class="btn-app-action btn-whatsapp-app" onclick="sendAppointmentReminder('${app.id}', event)" title="Lembrete WhatsApp (${app.clientPhone})">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91C2.13 13.66 2.59 15.36 3.45 16.86L2.05 22L7.3 20.62C8.75 21.41 10.38 21.83 12.04 21.83C17.5 21.83 21.95 17.38 21.95 11.92C21.95 9.27 20.92 6.78 19.05 4.91C17.18 3.03 14.69 2 12.04 2ZM12.05 20.16C10.57 20.16 9.12 19.76 7.85 19.01L7.55 18.83L4.43 19.65L5.26 16.61L5.06 16.29C4.24 14.99 3.81 13.47 3.81 11.91C3.81 7.37 7.5 3.68 12.05 3.68C14.25 3.68 16.31 4.54 17.87 6.1C19.42 7.66 20.28 9.72 20.27 11.92C20.28 16.46 16.59 20.16 12.05 20.16ZM16.56 14.46C16.31 14.33 15.09 13.73 14.86 13.65C14.63 13.56 14.47 13.52 14.3 13.77C14.14 14.02 13.66 14.58 13.52 14.75C13.37 14.92 13.23 14.94 12.98 14.81C12.73 14.69 11.93 14.42 10.98 13.58C10.24 12.92 9.74 12.11 9.6 11.86C9.45 11.61 9.58 11.48 9.71 11.35C9.82 11.24 9.96 11.06 10.08 10.91C10.21 10.77 10.25 10.66 10.33 10.5C10.41 10.33 10.37 10.19 10.31 10.06C10.25 9.94 9.76 8.73 9.55 8.24C9.35 7.75 9.15 7.82 8.99 7.81C8.85 7.8 8.68 7.8 8.52 7.8C8.35 7.8 8.08 7.86 7.85 8.11C7.62 8.36 6.98 8.96 6.98 10.18C6.98 11.4 7.87 12.58 7.99 12.74C8.11 12.91 9.74 15.42 12.23 16.5C12.82 16.76 13.28 16.91 13.64 17.03C14.23 17.22 14.77 17.19 15.2 17.13C15.68 17.06 16.67 16.53 16.88 15.95C17.08 15.37 17.08 14.88 17.02 14.77C16.96 14.67 16.81 14.59 16.56 14.46Z"/></svg>
+                      <span>WhatsApp</span>
                     </button>
                   ` : `
-                    <button class="btn-remind-app disabled" title="Sem WhatsApp cadastrado">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91C2.13 13.66 2.59 15.36 3.45 16.86L2.05 22L7.3 20.62C8.75 21.41 10.38 21.83 12.04 21.83C17.5 21.83 21.95 17.38 21.95 11.92C21.95 9.27 20.92 6.78 19.05 4.91C17.18 3.03 14.69 2 12.04 2ZM12.05 20.16C10.57 20.16 9.12 19.76 7.85 19.01L7.55 18.83L4.43 19.65L5.26 16.61L5.06 16.29C4.24 14.99 3.81 13.47 3.81 11.91C3.81 7.37 7.5 3.68 12.05 3.68C14.25 3.68 16.31 4.54 17.87 6.1C19.42 7.66 20.28 9.72 20.27 11.92C20.28 16.46 16.59 20.16 12.05 20.16ZM16.56 14.46C16.31 14.33 15.09 13.73 14.86 13.65C14.63 13.56 14.47 13.52 14.3 13.77C14.14 14.02 13.66 14.58 13.52 14.75C13.37 14.92 13.23 14.94 12.98 14.81C12.73 14.69 11.93 14.42 10.98 13.58C10.24 12.92 9.74 12.11 9.6 11.86C9.45 11.61 9.58 11.48 9.71 11.35C9.82 11.24 9.96 11.06 10.08 10.91C10.21 10.77 10.25 10.66 10.33 10.5C10.41 10.33 10.37 10.19 10.31 10.06C10.25 9.94 9.76 8.73 9.55 8.24C9.35 7.75 9.15 7.82 8.99 7.81C8.85 7.8 8.68 7.8 8.52 7.8C8.35 7.8 8.08 7.86 7.85 8.11C7.62 8.36 6.98 8.96 6.98 10.18C6.98 11.4 7.87 12.58 7.99 12.74C8.11 12.91 9.74 15.42 12.23 16.5C12.82 16.76 13.28 16.91 13.64 17.03C14.23 17.22 14.77 17.19 15.2 17.13C15.68 17.06 16.67 16.53 16.88 15.95C17.08 15.37 17.08 14.88 17.02 14.77C16.96 14.67 16.81 14.59 16.56 14.46Z"/></svg>
+                    <button class="btn-app-action btn-whatsapp-app disabled" title="Sem WhatsApp cadastrado">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91C2.13 13.66 2.59 15.36 3.45 16.86L2.05 22L7.3 20.62C8.75 21.41 10.38 21.83 12.04 21.83C17.5 21.83 21.95 17.38 21.95 11.92C21.95 9.27 20.92 6.78 19.05 4.91C17.18 3.03 14.69 2 12.04 2ZM12.05 20.16C10.57 20.16 9.12 19.76 7.85 19.01L7.55 18.83L4.43 19.65L5.26 16.61L5.06 16.29C4.24 14.99 3.81 13.47 3.81 11.91C3.81 7.37 7.5 3.68 12.05 3.68C14.25 3.68 16.31 4.54 17.87 6.1C19.42 7.66 20.28 9.72 20.27 11.92C20.28 16.46 16.59 20.16 12.05 20.16ZM16.56 14.46C16.31 14.33 15.09 13.73 14.86 13.65C14.63 13.56 14.47 13.52 14.3 13.77C14.14 14.02 13.66 14.58 13.52 14.75C13.37 14.92 13.23 14.94 12.98 14.81C12.73 14.69 11.93 14.42 10.98 13.58C10.24 12.92 9.74 12.11 9.6 11.86C9.45 11.61 9.58 11.48 9.71 11.35C9.82 11.24 9.96 11.06 10.08 10.91C10.21 10.77 10.25 10.66 10.33 10.5C10.41 10.33 10.37 10.19 10.31 10.06C10.25 9.94 9.76 8.73 9.55 8.24C9.35 7.75 9.15 7.82 8.99 7.81C8.85 7.8 8.68 7.8 8.52 7.8C8.35 7.8 8.08 7.86 7.85 8.11C7.62 8.36 6.98 8.96 6.98 10.18C6.98 11.4 7.87 12.58 7.99 12.74C8.11 12.91 9.74 15.42 12.23 16.5C12.82 16.76 13.28 16.91 13.64 17.03C14.23 17.22 14.77 17.19 15.2 17.13C15.68 17.06 16.67 16.53 16.88 15.95C17.08 15.37 17.08 14.88 17.02 14.77C16.96 14.67 16.81 14.59 16.56 14.46Z"/></svg>
+                    <span>WhatsApp</span>
+                  </button>
+                `}
+                </div>
+
+                <!-- Coluna 2: Faltou em cima, Excluir embaixo -->
+                <div class="agenda-actions-col">
+                  ${canManageThis && app.status !== 'faltou' ? `
+                    <button class="btn-app-action btn-noshow-app" onclick="markAppointmentNoShow('${app.id}', event)" title="Registrar Falta">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>
+                      <span>Faltou</span>
                     </button>
-                  `}
-                    ${canManageThis && app.status !== 'faltou' ? `
-                      <button class="btn-delete-app btn-noshow-app" style="background:#fef2f2; color:#b91c1c; border-color:#fecaca; padding:4px 8px; font-size:0.75rem;" onclick="markAppointmentNoShow('${app.id}', event)" title="Registrar Falta">
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>
-                        <span>Faltou</span>
-                      </button>
-                    ` : ''}
-                  </div>
-                  <div class="agenda-list-actions-bottom-row">
-                    ${canManageThis ? `
-                      <button class="btn-delete-app" onclick="deleteAppointment('${app.id}', event)" title="Excluir" style="display:inline-flex; align-items:center; gap:4px; padding:3px 8px; font-size:0.75rem;">
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18m-2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-                        <span>Excluir</span>
-                      </button>
-                    ` : (app.status === 'faltou' ? `<span style="font-size:0.72rem; font-weight:bold; color:#b91c1c; background:#fee2e2; padding:3px 6px; border-radius:6px;">Faltou</span>` : '')}
-                  </div>
+                  ` : (app.status === 'faltou' ? `
+                    <span class="btn-app-action badge-faltou-grid" title="Cliente Faltou">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>
+                      <span>Faltou</span>
+                    </span>
+                  ` : `<div style="height:29px;"></div>`)}
+                  ${canManageThis ? `
+                    <button class="btn-app-action btn-delete-app" onclick="deleteAppointment('${app.id}', event)" title="Excluir Agendamento">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18m-2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                      <span>Excluir</span>
+                    </button>
+                  ` : `<div style="height:29px;"></div>`}
                 </div>
               </div>
             </div>
@@ -2848,14 +2887,14 @@ function updateScheduleView() {
           <td class="salon-block-indisponivel" rowspan="${rowSpan}">
             <div>
               <strong>${appStartingHere.startTime} às ${appStartingHere.endTime}</strong>
-              <div style="font-weight: 600; color: #555; margin-top: 4px;">Horário Bloqueado / Indisponível</div>
+              <div style="font-weight: 600; color: #555; margin-top: 4px;">Horário em Pausa / Intervalo</div>
               <span>${appStartingHere.notes || ''}</span>
             </div>
             ${canManageBlock ? `
               <div style="margin-top: 10px;">
-                <button class="btn-delete-app" onclick="deleteAppointment('${appStartingHere.id}', event)">
+                <button class="btn-delete-app" onclick="deleteAppointment('${appStartingHere.id}', event)" title="Remover pausa e liberar horário">
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18m-2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-                  Desbloquear Horário
+                  Remover Pausa
                 </button>
               </div>
             ` : ''}
@@ -2881,6 +2920,7 @@ function updateScheduleView() {
                 </div>
 
                 <div class="app-actions">
+                  ${canManageThisApp && !['cancelado','faltou','indisponivel'].includes(appStartingHere.status) ? `<button class="btn-remind-app btn-comanda-app" style="background:#fff7ed; color:#c2410c; border-color:#fed7aa;" onclick="openComandaModal('${appStartingHere.id}', event)" title="Abrir comanda do atendimento"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg><span>${appStartingHere.comanda && appStartingHere.comanda.status === 'fechada' ? 'Comanda ✓' : 'Comanda'}</span></button>` : ''}
                   ${appStartingHere.clientPhone ? `
                     <button class="btn-remind-app" onclick="sendAppointmentReminder('${appStartingHere.id}', event)" title="Enviar lembrete via WhatsApp (${appStartingHere.clientPhone})">
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91C2.13 13.66 2.59 15.36 3.45 16.86L2.05 22L7.3 20.62C8.75 21.41 10.38 21.83 12.04 21.83C17.5 21.83 21.95 17.38 21.95 11.92C21.95 9.27 20.92 6.78 19.05 4.91C17.18 3.03 14.69 2 12.04 2ZM12.05 20.16C10.57 20.16 9.12 19.76 7.85 19.01L7.55 18.83L4.43 19.65L5.26 16.61L5.06 16.29C4.24 14.99 3.81 13.47 3.81 11.91C3.81 7.37 7.5 3.68 12.05 3.68C14.25 3.68 16.31 4.54 17.87 6.1C19.42 7.66 20.28 9.72 20.27 11.92C20.28 16.46 16.59 20.16 12.05 20.16ZM16.56 14.46C16.31 14.33 15.09 13.73 14.86 13.65C14.63 13.56 14.47 13.52 14.3 13.77C14.14 14.02 13.66 14.58 13.52 14.75C13.37 14.92 13.23 14.94 12.98 14.81C12.73 14.69 11.93 14.42 10.98 13.58C10.24 12.92 9.74 12.11 9.6 11.86C9.45 11.61 9.58 11.48 9.71 11.35C9.82 11.24 9.96 11.06 10.08 10.91C10.21 10.77 10.25 10.66 10.33 10.5C10.41 10.33 10.37 10.19 10.31 10.06C10.25 9.94 9.76 8.73 9.55 8.24C9.35 7.75 9.15 7.82 8.99 7.81C8.85 7.8 8.68 7.8 8.52 7.8C8.35 7.8 8.08 7.86 7.85 8.11C7.62 8.36 6.98 8.96 6.98 10.18C6.98 11.4 7.87 12.58 7.99 12.74C8.11 12.91 9.74 15.42 12.23 16.5C12.82 16.76 13.28 16.91 13.64 17.03C14.23 17.22 14.77 17.19 15.2 17.13C15.68 17.06 16.67 16.53 16.88 15.95C17.08 15.37 17.08 14.88 17.02 14.77C16.96 14.67 16.81 14.59 16.56 14.46Z"/></svg>
@@ -5246,8 +5286,329 @@ window.switchBalancoTab = function(tab) {
   renderBalanco(container, actions);
 };
 
+// ============================================================================
+// COMANDAS DENTRO DOS CARDS DE DESEMPENHO E METAS INDIVIDUAIS
+// ============================================================================
+window.toggleProfCardComandas = function(profId) {
+  const container = document.getElementById(`prof-comandas-container-${profId}`);
+  const btn = document.getElementById(`btn-toggle-comandas-${profId}`);
+  if (!container || !btn) return;
+  if (container.style.display === 'none') {
+    container.style.display = 'block';
+    btn.innerText = 'Recolher ▲';
+  } else {
+    container.style.display = 'none';
+    btn.innerText = 'Ver Comandas ▼';
+  }
+};
+
+window.filterProfCardComandas = function(profId, query) {
+  const q = (query || '').toLowerCase().trim();
+  const rows = document.querySelectorAll(`.prof-comanda-row[data-prof="${profId}"]`);
+  rows.forEach(row => {
+    const text = row.getAttribute('data-text') || '';
+    if (!q || text.includes(q)) {
+      row.style.display = 'block';
+    } else {
+      row.style.display = 'none';
+    }
+  });
+};
+
+function renderProfGoalComandasHtml(profId, monthApps, monthSales, isManager) {
+  if (!profId) return '';
+
+  const profApps = (monthApps || []).filter(a => a.professionalId === profId);
+  const records = [];
+
+  profApps.forEach(a => {
+    const hasComanda = !!a.comanda;
+    const isClosed = (hasComanda && a.comanda.status === 'fechada') || a.status === 'concluido';
+    const services = [];
+    const products = [];
+    let discount = hasComanda ? (Number(a.comanda.discount) || 0) : 0;
+
+    if (hasComanda && Array.isArray(a.comanda.items) && a.comanda.items.length > 0) {
+      a.comanda.items.forEach(it => {
+        const q = Math.max(1, Number(it.qty) || 1);
+        const u = Number(it.unitPrice) || 0;
+        const t = Number.isFinite(Number(it.total)) ? Number(it.total) : (u * q);
+        if (it.type === 'produto') {
+          products.push({ id: it.refId, name: it.name || 'Produto', qty: q, unitPrice: u, total: t });
+        } else {
+          services.push({ id: it.refId, name: it.name || 'Serviço', qty: q, unitPrice: u, total: t });
+        }
+      });
+    } else {
+      if (Array.isArray(a.servicesList) && a.servicesList.length > 0) {
+        a.servicesList.forEach(s => {
+          const p = Number(s.price) || 0;
+          services.push({ id: s.id, name: s.name || 'Serviço', qty: 1, unitPrice: p, total: p });
+        });
+      } else {
+        const p = Number(a.price) || 0;
+        services.push({ id: a.serviceId, name: a.serviceName || 'Atendimento', qty: 1, unitPrice: p, total: p });
+      }
+      const linked = (monthSales || []).find(s => s.appointmentId === a.id);
+      if (linked && Array.isArray(linked.items)) {
+        linked.items.forEach(pi => {
+          const q = Math.max(1, Number(pi.quantity) || 1);
+          const u = Number(pi.unitPrice) || 0;
+          const t = Number.isFinite(Number(pi.total)) ? Number(pi.total) : (u * q);
+          products.push({ id: pi.productId, name: pi.productName || 'Produto', qty: q, unitPrice: u, total: t });
+        });
+        if (linked.discount) discount += Number(linked.discount) || 0;
+      }
+    }
+
+    const servicesTotal = services.reduce((acc, s) => acc + s.total, 0);
+    const productsTotal = products.reduce((acc, p) => acc + p.total, 0);
+    const subtotal = servicesTotal + productsTotal;
+    let netTotal = Math.max(0, subtotal - discount);
+    if (netTotal === 0 && Number(a.price) > 0) {
+      netTotal = Number(a.price);
+    }
+
+    let paymentMethod = a.comanda?.paymentMethod || a.paymentMethod || (isClosed ? 'Concluído' : 'A receber');
+    if (a.comanda?.paymentMethod2 && a.comanda?.paymentValue2 > 0) {
+      const v2 = Number(a.comanda.paymentValue2);
+      const v1 = Math.max(0, netTotal - v2);
+      paymentMethod = `${a.comanda.paymentMethod} (R$ ${v1.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}) + ${a.comanda.paymentMethod2} (R$ ${v2.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})`;
+    }
+
+    records.push({
+      type: 'appointment',
+      id: a.id,
+      date: a.date,
+      time: a.time || '00:00',
+      clientName: a.clientName || 'Cliente',
+      clientPhone: a.clientPhone || '',
+      isClosed,
+      rawStatus: a.status,
+      services,
+      products,
+      servicesTotal,
+      productsTotal,
+      discount,
+      subtotal,
+      netTotal,
+      paymentMethod
+    });
+  });
+
+  // Vendas avulsas de balcão vinculadas a este profissional
+  (monthSales || []).filter(s => s.professionalId === profId && !s.appointmentId && s.source !== 'comanda').forEach(s => {
+    const products = (s.items || []).map(pi => {
+      const q = Math.max(1, Number(pi.quantity) || 1);
+      const u = Number(pi.unitPrice) || 0;
+      const t = Number.isFinite(Number(pi.total)) ? Number(pi.total) : (u * q);
+      return { id: pi.productId, name: pi.productName || 'Produto', qty: q, unitPrice: u, total: t };
+    });
+    const productsTotal = products.reduce((acc, p) => acc + p.total, 0);
+    const discount = Number(s.discount) || 0;
+    const netTotal = Number(s.total) || Math.max(0, productsTotal - discount);
+
+    records.push({
+      type: 'standalone_sale',
+      id: s.id,
+      date: s.date || (s.createdAt ? s.createdAt.substring(0, 10) : ''),
+      time: s.createdAt ? s.createdAt.substring(11, 16) : '00:00',
+      clientName: s.clientName || 'Venda Avulsa de Balcão',
+      clientPhone: s.clientPhone || '',
+      isClosed: true,
+      rawStatus: 'concluido',
+      services: [],
+      products,
+      servicesTotal: 0,
+      productsTotal,
+      discount,
+      subtotal: productsTotal,
+      netTotal,
+      paymentMethod: s.paymentMethod || 'Balcão'
+    });
+  });
+
+  records.sort((a, b) => {
+    const dtA = `${a.date || ''} ${a.time || ''}`;
+    const dtB = `${b.date || ''} ${b.time || ''}`;
+    return dtB.localeCompare(dtA);
+  });
+
+  const closedCount = records.filter(r => r.isClosed).length;
+  const openCount = records.filter(r => !r.isClosed && r.rawStatus !== 'faltou').length;
+
+  if (records.length === 0) {
+    return `
+      <div class="prof-card-comandas-section">
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+          <div style="display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 0.9rem; color: #1e293b;">
+            <span>📋 Comandas & Atendimentos</span>
+            <span style="font-size: 0.75rem; background: #f1f5f9; color: #64748b; padding: 2px 8px; border-radius: 10px; font-weight: 600;">0</span>
+          </div>
+        </div>
+        <div style="text-align: center; padding: 18px 12px; margin-top: 10px; background: #f8fafc; border-radius: 10px; border: 1px dashed #e2e8f0; color: #64748b; font-size: 0.82rem;">
+          Nenhum atendimento ou comanda neste mês de referência.
+        </div>
+      </div>
+    `;
+  }
+
+  const itemsHtml = records.map(r => {
+    const cleanPhone = (r.clientPhone || '').replace(/\D/g, '');
+    const waLink = cleanPhone ? `https://wa.me/55${cleanPhone.replace(/^55/, '')}` : null;
+    const formattedDate = r.date ? r.date.split('-').reverse().join('/') : '';
+
+    let statusBadge = '';
+    if (r.isClosed) {
+      statusBadge = `<span style="background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; padding: 2px 8px; border-radius: 12px; font-weight: 600; font-size: 0.72rem; display: inline-flex; align-items: center; gap: 3px;">✓ Fechada</span>`;
+    } else if (r.rawStatus === 'faltou') {
+      statusBadge = `<span style="background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; padding: 2px 8px; border-radius: 12px; font-weight: 600; font-size: 0.72rem; display: inline-flex; align-items: center; gap: 3px;">❌ Faltou</span>`;
+    } else if (r.rawStatus === 'agendado') {
+      statusBadge = `<span style="background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; padding: 2px 8px; border-radius: 12px; font-weight: 600; font-size: 0.72rem; display: inline-flex; align-items: center; gap: 3px;">📅 Agendado</span>`;
+    } else {
+      statusBadge = `<span style="background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa; padding: 2px 8px; border-radius: 12px; font-weight: 600; font-size: 0.72rem; display: inline-flex; align-items: center; gap: 3px;">⚡ Comanda Aberta</span>`;
+    }
+
+    const servicesHtml = (r.services || []).map(s => `
+      <div style="display: flex; align-items: center; justify-content: space-between; gap: 6px; padding: 2px 0;">
+        <div style="display: flex; align-items: center; gap: 6px; min-width: 0;">
+          <span style="background: #e0e7ff; color: #4338ca; font-size: 0.7rem; font-weight: 700; padding: 1px 6px; border-radius: 4px; flex-shrink: 0;">Serviço</span>
+          <span style="color: #1e293b; font-weight: 500; font-size: 0.82rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(s.name)}</span>
+          ${s.qty > 1 ? `<span style="color: #64748b; font-size: 0.75rem;">(x${s.qty})</span>` : ''}
+        </div>
+        <span style="font-weight: 600; color: #0f172a; font-size: 0.82rem; flex-shrink: 0;">R$ ${s.total.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+      </div>
+    `).join('');
+
+    const productsHtml = (r.products || []).map(p => `
+      <div style="display: flex; align-items: center; justify-content: space-between; gap: 6px; padding: 2px 0;">
+        <div style="display: flex; align-items: center; gap: 6px; min-width: 0;">
+          <span style="background: #ecfdf5; color: #065f46; font-size: 0.7rem; font-weight: 700; padding: 1px 6px; border-radius: 4px; flex-shrink: 0;">Produto</span>
+          <span style="color: #1e293b; font-weight: 500; font-size: 0.82rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(p.name)}</span>
+          <span style="color: #047857; font-size: 0.75rem;">(${p.qty} un)</span>
+        </div>
+        <span style="font-weight: 600; color: #0f172a; font-size: 0.82rem; flex-shrink: 0;">R$ ${p.total.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+      </div>
+    `).join('');
+
+    const searchableText = `${r.clientName} ${r.clientPhone} ${(r.services || []).map(s=>s.name).join(' ')} ${(r.products || []).map(p=>p.name).join(' ')}`.toLowerCase();
+
+    return `
+      <div class="prof-comanda-row ${r.isClosed ? 'is-closed' : 'is-open'}" data-prof="${profId}" data-text="${escapeHtml(searchableText)}" style="background: #ffffff; border: 1px solid ${r.isClosed ? '#e2e8f0' : '#fed7aa'}; border-left: 4px solid ${r.isClosed ? '#16a34a' : '#ff6900'}; border-radius: 12px; padding: 12px 14px; margin-bottom: 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.02);">
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;">
+          <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+            <span style="font-size: 0.78rem; font-weight: 700; color: #0f172a; background: #f1f5f9; padding: 2px 7px; border-radius: 6px;">
+              ${r.type === 'appointment' ? `📋 #${r.id.slice(-6).toUpperCase()}` : '🛍️ BALCÃO'}
+            </span>
+            <span style="font-size: 0.78rem; color: #64748b; font-weight: 500;">
+              📅 ${formattedDate} às ${r.time}
+            </span>
+          </div>
+          <div>
+            ${statusBadge}
+          </div>
+        </div>
+
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 8px; flex-wrap: wrap;">
+          <div style="display: flex; align-items: center; gap: 6px; min-width: 0;">
+            <span style="font-size: 0.88rem; font-weight: 700; color: #0f172a; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+              👤 ${escapeHtml(r.clientName)}
+            </span>
+            ${waLink ? `
+              <a href="${waLink}" target="_blank" style="color: #16a34a; font-size: 0.76rem; font-weight: 600; text-decoration: none; display: inline-flex; align-items: center; gap: 2px;" title="Conversar no WhatsApp">
+                💬 ${escapeHtml(r.clientPhone)}
+              </a>
+            ` : (r.clientPhone ? `<span style="font-size: 0.76rem; color: #64748b;">📞 ${escapeHtml(r.clientPhone)}</span>` : '')}
+          </div>
+          <div style="text-align: right; flex-shrink: 0;">
+            <div style="font-size: 0.95rem; font-weight: 800; color: #16a34a;">
+              R$ ${r.netTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </div>
+            ${r.paymentMethod ? `<div style="font-size: 0.7rem; color: #64748b;">${escapeHtml(r.paymentMethod)}</div>` : ''}
+          </div>
+        </div>
+
+        <div style="margin-top: 8px; padding: 8px 10px; background: #f8fafc; border-radius: 8px; border: 1px solid #f1f5f9; display: flex; flex-direction: column; gap: 4px;">
+          ${servicesHtml || ''}
+          ${productsHtml || ''}
+          ${(!servicesHtml && !productsHtml) ? `<div style="font-size: 0.76rem; color: #94a3b8; font-style: italic;">Nenhum item discriminado.</div>` : ''}
+          ${r.discount > 0 ? `
+            <div style="display: flex; align-items: center; justify-content: space-between; border-top: 1px dashed #e2e8f0; padding-top: 4px; font-size: 0.76rem; color: #dc2626;">
+              <span>Desconto aplicado:</span>
+              <span style="font-weight: 600;">- R$ ${r.discount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+            </div>
+          ` : ''}
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 8px; margin-top: 10px; flex-wrap: wrap;">
+          ${r.type === 'appointment' ? `
+            <button class="btn-falcon btn-secondary" style="padding: 5px 11px; font-size: 0.78rem; display: inline-flex; align-items: center; gap: 5px;" onclick="openComandaModal('${r.id}')" title="Visualizar ou editar comanda">
+              <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+              <span>Ver Comanda</span>
+            </button>
+            <button class="btn-falcon btn-primary" style="padding: 5px 11px; font-size: 0.78rem; display: inline-flex; align-items: center; gap: 5px;" onclick="comandaEditAndReopen('${r.id}')" title="${r.isClosed ? 'Reabrir e editar comanda' : 'Editar comanda'}">
+              <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+              <span>Editar Comanda</span>
+            </button>
+            ${r.isClosed ? `
+              <button class="btn-falcon btn-secondary" style="padding: 5px 11px; font-size: 0.78rem; display: inline-flex; align-items: center; gap: 5px; color: #c2410c; border-color: #fed7aa;" onclick="comandaReturnToAgenda('${r.id}')" title="Reabre a comanda e devolve o agendamento para a agenda">
+                <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="9 14 4 9 9 4"></polyline><path d="M20 20v-7a4 4 0 0 0-4-4H4"></path></svg>
+                <span>Voltar p/ Agenda</span>
+              </button>
+            ` : ''}
+          ` : `
+            <span style="font-size: 0.76rem; color: #64748b; font-style: italic;">Venda de balcão direta</span>
+          `}
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  return `
+    <div class="prof-card-comandas-section">
+      <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 12px;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="font-size: 1.05rem;">📋</span>
+          <strong style="font-size: 0.92rem; color: #0f172a;">Comandas do Mês</strong>
+          <span style="font-size: 0.75rem; background: #e0e7ff; color: #3730a3; padding: 2px 8px; border-radius: 12px; font-weight: 700;">
+            ${records.length}
+          </span>
+          <span style="font-size: 0.76rem; color: #16a34a; font-weight: 600; margin-left: 4px;">
+            (${closedCount} fechadas${openCount > 0 ? `, <span style="color:#ea580c;">${openCount} abertas</span>` : ''})
+          </span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          ${records.length > 2 ? `
+            <input 
+              type="text" 
+              placeholder="Buscar comanda..." 
+              oninput="filterProfCardComandas('${profId}', this.value)"
+              style="font-size: 0.76rem; padding: 4px 8px; border: 1px solid #cbd5e1; border-radius: 8px; width: 140px; outline: none; background: #ffffff;"
+            />
+          ` : ''}
+          <button 
+            type="button" 
+            class="btn-falcon btn-secondary" 
+            style="padding: 4px 9px; font-size: 0.74rem; line-height: 1;" 
+            onclick="toggleProfCardComandas('${profId}')"
+            id="btn-toggle-comandas-${profId}"
+            title="Recolher ou expandir lista de comandas"
+          >
+            Recolher ▲
+          </button>
+        </div>
+      </div>
+
+      <div id="prof-comandas-container-${profId}" class="prof-comandas-scrollbox">
+        ${itemsHtml}
+      </div>
+    </div>
+  `;
+}
+
 // 8.5 Render Balanço Mensal & Metas
 let selectedBalancoMonth = null;
+
 
 function renderBalanco(container, actions) {
   const now = new Date();
@@ -5299,6 +5660,9 @@ function renderBalanco(container, actions) {
       <button class="subnav-tab-btn ${activeBalancoTab === 'salao' ? 'active' : ''}" onclick="switchBalancoTab('salao')">
         🏢 <span class="subnav-label-desktop">Gestão do Salão</span><span class="subnav-label-mobile">Salão</span>
       </button>
+      <button class="subnav-tab-btn ${activeBalancoTab === 'comandas' ? 'active' : ''}" onclick="switchBalancoTab('comandas')">
+        📋 <span class="subnav-label-desktop">Comandas & Vendas</span><span class="subnav-label-mobile">Comandas</span>
+      </button>
       <button class="subnav-tab-btn ${activeBalancoTab === 'pessoal' ? 'active' : ''}" onclick="switchBalancoTab('pessoal')">
         👤 <span class="subnav-label-desktop">Gestão Pessoal</span><span class="subnav-label-mobile">Pessoal</span>
       </button>
@@ -5321,6 +5685,11 @@ function renderBalanco(container, actions) {
       </select>
     </div>
   `;
+
+  if (activeBalancoTab === 'comandas') {
+    renderBalancoComandasTab(container, actions, monthApps, monthSales, subnavTabsHtml, monthSelectorCardHtml);
+    return;
+  }
 
   const myProf = (state.professionals || []).find(p => 
     (currentUser?.professionalId && p.id === currentUser.professionalId) ||
@@ -5552,6 +5921,8 @@ function renderBalanco(container, actions) {
             <div class="goal-bar-fill" style="width: ${myPct}%; background: ${myPct >= 100 ? 'linear-gradient(90deg, #16a34a 0%, #22c55e 100%)' : 'linear-gradient(90deg, #ff6900 0%, #ff8c00 100%)'};"></div>
           </div>
         </div>
+
+        ${renderProfGoalComandasHtml(myProf.id, monthApps, monthSales, false)}
       </div>
     ` : `<div class="card-shell" style="text-align:center; color:var(--muted);">Perfil de profissional não associado.</div>`;
 
@@ -5683,9 +6054,30 @@ function renderBalanco(container, actions) {
             <div class="goal-bar-fill" style="width: ${pct}%; background: ${pct >= 100 ? 'linear-gradient(90deg, #16a34a 0%, #22c55e 100%)' : 'linear-gradient(90deg, #ff6900 0%, #ff8c00 100%)'};"></div>
           </div>
         </div>
+
+        ${renderProfGoalComandasHtml(prof.id, monthApps, monthSales, isManager)}
       </div>
     `;
   }).join('');
+
+  const comandasBannerHtml = `
+    <div class="balanco-comandas-banner" onclick="switchBalancoTab('comandas')" style="margin: 18px 0; background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%); border: 1px solid #fed7aa; border-radius: 16px; padding: 14px 18px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; transition: all 0.2s ease; box-shadow: 0 2px 8px rgba(255, 105, 0, 0.06);">
+      <div style="display: flex; align-items: center; gap: 12px; min-width: 0;">
+        <div style="width: 42px; height: 42px; border-radius: 12px; background: #ff6900; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 1.25rem; flex-shrink: 0; box-shadow: 0 2px 6px rgba(255, 105, 0, 0.3);">
+          📋
+        </div>
+        <div style="min-width: 0;">
+          <div style="font-weight: 700; color: #9a3412; font-size: 0.95rem;">Extrato Detalhado de Comandas & Vendas</div>
+          <div style="font-size: 0.8rem; color: #c2410c; margin-top: 2px;">Consulte todos os serviços e produtos vendidos por mês e por dia, edite comandas fechadas ou retorne-as para a agenda.</div>
+        </div>
+      </div>
+      <div style="flex-shrink: 0; margin-left: 12px;">
+        <button class="btn-falcon btn-primary" style="padding: 7px 14px; font-size: 0.82rem; white-space: nowrap; pointer-events: none;">
+          Ver Comandas →
+        </button>
+      </div>
+    </div>
+  `;
 
   if (!profCardsHtml) {
     profCardsHtml = `<div class="card-shell" style="text-align:center; color:var(--muted);">Nenhum profissional cadastrado.</div>`;
@@ -5695,11 +6087,603 @@ function renderBalanco(container, actions) {
     ${subnavTabsHtml}
     ${monthSelectorCardHtml}
     ${overallSummaryHtml}
+    ${comandasBannerHtml}
     ${chartsGridHtml}
     <div style="margin-top: 24px;">
       <h3 style="margin-bottom: 16px; font-size: 1.1rem; font-weight: 700; color: var(--ink);">🎯 Desempenho e Metas Individuais</h3>
       ${profCardsHtml}
     </div>
+  `;
+}
+
+// ============================================================================
+// ABA DE COMANDAS & VENDAS EM BALANÇOS & METAS
+// ============================================================================
+let selectedBalancoComandaDay = ''; // '' = Todos os dias do mês selecionado
+let balancoComandaSearchTerm = '';
+let balancoComandaTypeFilter = 'todos'; // 'todos' | 'servicos' | 'produtos' | 'fechadas' | 'abertas'
+let balancoComandaViewSubTab = 'comandas'; // 'comandas' | 'resumo_itens'
+let comandaSearchDebounceTimeout = null;
+
+window.setBalancoComandaDay = function(day) {
+  selectedBalancoComandaDay = day;
+  const container = document.getElementById('viewContainer');
+  const actions = document.getElementById('topBarActions');
+  renderBalanco(container, actions);
+};
+
+window.setBalancoComandaType = function(type) {
+  balancoComandaTypeFilter = type;
+  const container = document.getElementById('viewContainer');
+  const actions = document.getElementById('topBarActions');
+  renderBalanco(container, actions);
+};
+
+window.setBalancoComandaSubTab = function(subTab) {
+  balancoComandaViewSubTab = subTab;
+  const container = document.getElementById('viewContainer');
+  const actions = document.getElementById('topBarActions');
+  renderBalanco(container, actions);
+};
+
+window.handleBalancoComandaSearch = function(val) {
+  clearTimeout(comandaSearchDebounceTimeout);
+  comandaSearchDebounceTimeout = setTimeout(() => {
+    balancoComandaSearchTerm = (val || '').trim();
+    const container = document.getElementById('viewContainer');
+    const actions = document.getElementById('topBarActions');
+    renderBalanco(container, actions);
+    const inp = document.getElementById('balancoComandaSearchInput');
+    if (inp) {
+      inp.focus();
+      inp.selectionStart = inp.selectionEnd = inp.value.length;
+    }
+  }, 250);
+};
+
+window.comandaEditAndReopen = async function(appId) {
+  const app = (state.appointments || []).find(a => a.id === appId);
+  if (!app) {
+    if (typeof asyncAlert === 'function') await asyncAlert('Agendamento não encontrado.');
+    return;
+  }
+  const isClosed = (app.comanda && app.comanda.status === 'fechada') || app.status === 'concluido';
+  if (isClosed) {
+    const ok = await asyncConfirm(
+      'Esta comanda está fechada. Para editá-la, ela será reaberta temporariamente (o estoque de eventuais produtos será estornado até você concluir o fechamento novamente).\n\nDeseja reabrir e editar agora?',
+      'Editar Comanda'
+    );
+    if (!ok) return;
+    const data = await comandaRequest(`/api/appointments/${appId}/comanda/reopen`, 'POST');
+    if (!data) return;
+    comandaSyncAppointment(data);
+    await loadInitialData();
+  }
+  openComandaModal(appId);
+};
+
+window.comandaReturnToAgenda = async function(appId) {
+  const app = (state.appointments || []).find(a => a.id === appId);
+  if (!app) {
+    if (typeof asyncAlert === 'function') await asyncAlert('Agendamento não encontrado.');
+    return;
+  }
+  const ok = await asyncConfirm(
+    `Deseja voltar o atendimento de "${app.clientName || 'Cliente'}" para a Agenda?\n\nA comanda será reaberta, o estoque de produtos estornado e o status voltará para "Agendado" na agenda do salão.`,
+    'Voltar para a Agenda'
+  );
+  if (!ok) return;
+  const data = await comandaRequest(`/api/appointments/${appId}/comanda/reopen`, 'POST');
+  if (!data) return;
+  comandaSyncAppointment(data);
+  await loadInitialData();
+  if (typeof asyncAlert === 'function') {
+    await asyncAlert('Atendimento retornado para a Agenda com sucesso!\nO agendamento agora está ativo como "Agendado".');
+  }
+  const container = document.getElementById('viewContainer');
+  const actions = document.getElementById('topBarActions');
+  renderBalanco(container, actions);
+};
+
+function renderBalancoConsolidatedItems(sortedServices, sortedProducts, totalServicesRev, totalProductsRev) {
+  const maxServRev = sortedServices.length > 0 ? sortedServices[0].total : 1;
+  const maxProdRev = sortedProducts.length > 0 ? sortedProducts[0].total : 1;
+
+  const servicesHtml = sortedServices.length > 0 ? sortedServices.map((s, idx) => {
+    const pct = Math.round((s.total / maxServRev) * 100);
+    return `
+      <div style="padding: 12px 14px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; margin-bottom: 8px;">
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 6px;">
+          <div style="display: flex; align-items: center; gap: 8px; min-width: 0;">
+            <span style="width: 22px; height: 22px; border-radius: 6px; background: #e0e7ff; color: #4338ca; font-size: 0.75rem; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">#${idx + 1}</span>
+            <span style="font-weight: 700; color: #0f172a; font-size: 0.9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(s.name)}</span>
+          </div>
+          <span style="font-weight: 700; color: #16a34a; font-size: 0.95rem; flex-shrink: 0;">R$ ${s.total.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+        </div>
+        <div style="display: flex; align-items: center; justify-content: space-between; font-size: 0.78rem; color: #64748b; margin-bottom: 6px;">
+          <span>${s.qty} ${s.qty === 1 ? 'atendimento' : 'atendimentos'}</span>
+          <span>Méd: R$ ${(s.total / s.qty).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+        </div>
+        <div style="width: 100%; height: 6px; background: #e2e8f0; border-radius: 99px; overflow: hidden;">
+          <div style="width: ${pct}%; height: 100%; background: linear-gradient(90deg, #3b82f6 0%, #6366f1 100%); border-radius: 99px;"></div>
+        </div>
+      </div>
+    `;
+  }).join('') : `
+    <div style="text-align: center; padding: 28px; color: #94a3b8; font-size: 0.88rem;">
+      Nenhum serviço realizado no período selecionado.
+    </div>
+  `;
+
+  const productsHtml = sortedProducts.length > 0 ? sortedProducts.map((p, idx) => {
+    const pct = Math.round((p.total / maxProdRev) * 100);
+    return `
+      <div style="padding: 12px 14px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; margin-bottom: 8px;">
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 6px;">
+          <div style="display: flex; align-items: center; gap: 8px; min-width: 0;">
+            <span style="width: 22px; height: 22px; border-radius: 6px; background: #dcfce7; color: #15803d; font-size: 0.75rem; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">#${idx + 1}</span>
+            <span style="font-weight: 700; color: #0f172a; font-size: 0.9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(p.name)}</span>
+          </div>
+          <span style="font-weight: 700; color: #16a34a; font-size: 0.95rem; flex-shrink: 0;">R$ ${p.total.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+        </div>
+        <div style="display: flex; align-items: center; justify-content: space-between; font-size: 0.78rem; color: #64748b; margin-bottom: 6px;">
+          <span>${p.qty} ${p.qty === 1 ? 'unidade vendida' : 'unidades vendidas'}</span>
+          <span>Méd: R$ ${(p.total / p.qty).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+        </div>
+        <div style="width: 100%; height: 6px; background: #e2e8f0; border-radius: 99px; overflow: hidden;">
+          <div style="width: ${pct}%; height: 100%; background: linear-gradient(90deg, #10b981 0%, #059669 100%); border-radius: 99px;"></div>
+        </div>
+      </div>
+    `;
+  }).join('') : `
+    <div style="text-align: center; padding: 28px; color: #94a3b8; font-size: 0.88rem;">
+      Nenhum produto vendido no período selecionado.
+    </div>
+  `;
+
+  return `
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; margin-top: 16px;">
+      <div class="card-shell" style="padding: 20px; background: #fff; border-radius: 16px; border: 1px solid #e2e8f0;">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
+          <div>
+            <h4 style="margin: 0; font-size: 1.05rem; font-weight: 700; color: #0f172a; display: flex; align-items: center; gap: 8px;">
+              <span>💇‍♀️</span> <span>Serviços Mais Vendidos</span>
+            </h4>
+            <div style="font-size: 0.78rem; color: #64748b; margin-top: 2px;">Faturamento em serviços: <strong>R$ ${totalServicesRev.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></div>
+          </div>
+          <span class="badge" style="background: #eff6ff; color: #1d4ed8; padding: 4px 10px; border-radius: 12px; font-weight: 700; font-size: 0.8rem;">${sortedServices.length} tipos</span>
+        </div>
+        <div>${servicesHtml}</div>
+      </div>
+
+      <div class="card-shell" style="padding: 20px; background: #fff; border-radius: 16px; border: 1px solid #e2e8f0;">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
+          <div>
+            <h4 style="margin: 0; font-size: 1.05rem; font-weight: 700; color: #0f172a; display: flex; align-items: center; gap: 8px;">
+              <span>🛍️</span> <span>Produtos Mais Vendidos</span>
+            </h4>
+            <div style="font-size: 0.78rem; color: #64748b; margin-top: 2px;">Faturamento em produtos: <strong>R$ ${totalProductsRev.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></div>
+          </div>
+          <span class="badge" style="background: #ecfdf5; color: #047857; padding: 4px 10px; border-radius: 12px; font-weight: 700; font-size: 0.8rem;">${sortedProducts.length} itens</span>
+        </div>
+        <div>${productsHtml}</div>
+      </div>
+    </div>
+  `;
+}
+
+function renderBalancoComandasTab(container, actions, monthApps, monthSales, subnavTabsHtml, monthSelectorCardHtml) {
+  const comandaRecords = [];
+
+  (monthApps || []).forEach(a => {
+    if (!a.comanda && a.status !== 'concluido') return;
+
+    const hasComanda = !!a.comanda;
+    const isClosed = (hasComanda && a.comanda.status === 'fechada') || a.status === 'concluido';
+    const services = [];
+    const products = [];
+    let discount = hasComanda ? (Number(a.comanda.discount) || 0) : 0;
+
+    if (hasComanda && Array.isArray(a.comanda.items) && a.comanda.items.length > 0) {
+      a.comanda.items.forEach(it => {
+        const q = Math.max(1, Number(it.qty) || 1);
+        const u = Number(it.unitPrice) || 0;
+        const t = Number.isFinite(Number(it.total)) ? Number(it.total) : (u * q);
+        if (it.type === 'produto') {
+          products.push({ id: it.refId, name: it.name || 'Produto', qty: q, unitPrice: u, total: t });
+        } else {
+          services.push({ id: it.refId, name: it.name || 'Serviço', qty: q, unitPrice: u, total: t });
+        }
+      });
+    } else {
+      if (Array.isArray(a.servicesList) && a.servicesList.length > 0) {
+        a.servicesList.forEach(s => {
+          const p = Number(s.price) || 0;
+          services.push({ id: s.id, name: s.name || 'Serviço', qty: 1, unitPrice: p, total: p });
+        });
+      } else {
+        const p = Number(a.price) || 0;
+        services.push({ id: a.serviceId, name: a.serviceName || 'Atendimento', qty: 1, unitPrice: p, total: p });
+      }
+      const linked = (monthSales || []).find(s => s.appointmentId === a.id);
+      if (linked && Array.isArray(linked.items)) {
+        linked.items.forEach(pi => {
+          const q = Math.max(1, Number(pi.quantity) || 1);
+          const u = Number(pi.unitPrice) || 0;
+          const t = Number.isFinite(Number(pi.total)) ? Number(pi.total) : (u * q);
+          products.push({ id: pi.productId, name: pi.productName || 'Produto', qty: q, unitPrice: u, total: t });
+        });
+        if (linked.discount) discount += Number(linked.discount) || 0;
+      }
+    }
+
+    const servicesTotal = services.reduce((acc, s) => acc + s.total, 0);
+    const productsTotal = products.reduce((acc, p) => acc + p.total, 0);
+    const subtotal = servicesTotal + productsTotal;
+    const netTotal = Math.max(0, subtotal - discount);
+
+    let paymentMethod = a.comanda?.paymentMethod || a.paymentMethod || (isClosed ? 'Concluído' : 'A receber');
+    if (a.comanda?.paymentMethod2 && a.comanda?.paymentValue2 > 0) {
+      const v2 = Number(a.comanda.paymentValue2);
+      const v1 = Math.max(0, netTotal - v2);
+      paymentMethod = `${a.comanda.paymentMethod} (R$ ${v1.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}) + ${a.comanda.paymentMethod2} (R$ ${v2.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})`;
+    }
+
+    const prof = (state.professionals || []).find(p => p.id === a.professionalId);
+
+    comandaRecords.push({
+      type: 'appointment',
+      appointmentId: a.id,
+      date: a.date,
+      time: a.time || '00:00',
+      clientName: a.clientName || 'Cliente',
+      clientPhone: a.clientPhone || '',
+      professionalId: a.professionalId,
+      professionalName: prof ? prof.name : (a.professionalName || 'Profissional'),
+      isClosed,
+      status: isClosed ? 'fechada' : 'aberta',
+      services,
+      products,
+      servicesTotal,
+      productsTotal,
+      discount,
+      subtotal,
+      netTotal,
+      paymentMethod
+    });
+  });
+
+  // Vendas avulsas de balcão (produtos vendidos diretamente)
+  (monthSales || []).forEach(s => {
+    if (s.appointmentId || s.source === 'comanda') return;
+    const products = (s.items || []).map(pi => {
+      const q = Math.max(1, Number(pi.quantity) || 1);
+      const u = Number(pi.unitPrice) || 0;
+      const t = Number.isFinite(Number(pi.total)) ? Number(pi.total) : (u * q);
+      return { id: pi.productId, name: pi.productName || 'Produto', qty: q, unitPrice: u, total: t };
+    });
+    const productsTotal = products.reduce((acc, p) => acc + p.total, 0);
+    const discount = Number(s.discount) || 0;
+    const netTotal = Number(s.total) || Math.max(0, productsTotal - discount);
+    const prof = (state.professionals || []).find(p => p.id === s.professionalId);
+
+    comandaRecords.push({
+      type: 'standalone_sale',
+      saleId: s.id,
+      date: s.date || (s.createdAt ? s.createdAt.substring(0, 10) : ''),
+      time: s.createdAt ? s.createdAt.substring(11, 16) : '00:00',
+      clientName: s.clientName || 'Venda Avulsa de Balcão',
+      clientPhone: s.clientPhone || '',
+      professionalId: s.professionalId,
+      professionalName: prof ? prof.name : (s.professionalName || 'Balcão'),
+      isClosed: true,
+      status: 'fechada',
+      services: [],
+      products,
+      servicesTotal: 0,
+      productsTotal,
+      discount,
+      subtotal: productsTotal,
+      netTotal,
+      paymentMethod: s.paymentMethod || 'Balcão'
+    });
+  });
+
+  comandaRecords.sort((a, b) => {
+    const dtA = `${a.date || ''} ${a.time || ''}`;
+    const dtB = `${b.date || ''} ${b.time || ''}`;
+    return dtB.localeCompare(dtA);
+  });
+
+  const daysMap = {};
+  comandaRecords.forEach(r => {
+    if (!r.date) return;
+    if (!daysMap[r.date]) daysMap[r.date] = { count: 0, total: 0 };
+    daysMap[r.date].count++;
+    daysMap[r.date].total += r.netTotal;
+  });
+  const availableDays = Object.keys(daysMap).sort().reverse();
+
+  let filtered = comandaRecords;
+  if (selectedBalancoComandaDay) {
+    filtered = filtered.filter(r => r.date === selectedBalancoComandaDay);
+  }
+  if (balancoComandaTypeFilter === 'servicos') {
+    filtered = filtered.filter(r => r.services && r.services.length > 0);
+  } else if (balancoComandaTypeFilter === 'produtos') {
+    filtered = filtered.filter(r => r.products && r.products.length > 0);
+  } else if (balancoComandaTypeFilter === 'fechadas') {
+    filtered = filtered.filter(r => r.isClosed);
+  } else if (balancoComandaTypeFilter === 'abertas') {
+    filtered = filtered.filter(r => !r.isClosed);
+  }
+  if (balancoComandaSearchTerm) {
+    const term = balancoComandaSearchTerm.toLowerCase();
+    filtered = filtered.filter(r => {
+      const cName = (r.clientName || '').toLowerCase();
+      const cPhone = (r.clientPhone || '').toLowerCase();
+      const pName = (r.professionalName || '').toLowerCase();
+      const svcNames = (r.services || []).map(s => s.name.toLowerCase()).join(' ');
+      const prodNames = (r.products || []).map(p => p.name.toLowerCase()).join(' ');
+      return cName.includes(term) || cPhone.includes(term) || pName.includes(term) || svcNames.includes(term) || prodNames.includes(term);
+    });
+  }
+
+  const totalNet = filtered.reduce((acc, r) => acc + r.netTotal, 0);
+  const totalServicesRev = filtered.reduce((acc, r) => acc + r.servicesTotal, 0);
+  const totalProductsRev = filtered.reduce((acc, r) => acc + r.productsTotal, 0);
+  const totalServicesCount = filtered.reduce((acc, r) => acc + r.services.reduce((sAcc, s) => sAcc + s.qty, 0), 0);
+  const totalProductsCount = filtered.reduce((acc, r) => acc + r.products.reduce((pAcc, p) => pAcc + p.qty, 0), 0);
+  const closedCount = filtered.filter(r => r.isClosed).length;
+  const openCount = filtered.filter(r => !r.isClosed).length;
+
+  const serviceStats = {};
+  filtered.forEach(r => {
+    r.services.forEach(s => {
+      const key = s.name;
+      if (!serviceStats[key]) serviceStats[key] = { name: s.name, qty: 0, total: 0 };
+      serviceStats[key].qty += s.qty;
+      serviceStats[key].total += s.total;
+    });
+  });
+  const sortedServices = Object.values(serviceStats).sort((a, b) => b.total - a.total);
+
+  const productStats = {};
+  filtered.forEach(r => {
+    r.products.forEach(p => {
+      const key = p.name;
+      if (!productStats[key]) productStats[key] = { name: p.name, qty: 0, total: 0 };
+      productStats[key].qty += p.qty;
+      productStats[key].total += p.total;
+    });
+  });
+  const sortedProducts = Object.values(productStats).sort((a, b) => b.total - a.total);
+
+  const metricsHtml = `
+    <div class="balanco-summary-cards">
+      <div class="balanco-card">
+        <div class="balanco-card-title">💰 Total Comandas & Vendas</div>
+        <div class="balanco-card-value" style="color: #16a34a;">R$ ${totalNet.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+        <div class="balanco-card-sub">${closedCount} fechadas ${openCount > 0 ? `• <span style="color:#c2410c; font-weight:600;">${openCount} em aberto</span>` : ''}</div>
+      </div>
+      <div class="balanco-card">
+        <div class="balanco-card-title">💇‍♀️ Serviços Realizados</div>
+        <div class="balanco-card-value" style="color: #2563eb;">R$ ${totalServicesRev.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+        <div class="balanco-card-sub">${totalServicesCount} atendimentos executados</div>
+      </div>
+      <div class="balanco-card">
+        <div class="balanco-card-title">🛍️ Produtos Vendidos</div>
+        <div class="balanco-card-value" style="color: #059669;">R$ ${totalProductsRev.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+        <div class="balanco-card-sub">${totalProductsCount} unidades comercializadas</div>
+      </div>
+      <div class="balanco-card">
+        <div class="balanco-card-title">🎯 Ticket Médio</div>
+        <div class="balanco-card-value" style="color: var(--orange, #ff6900);">R$ ${(closedCount > 0 ? (totalNet / closedCount) : 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+        <div class="balanco-card-sub">Por comanda fechada</div>
+      </div>
+    </div>
+  `;
+
+  const filtersHtml = `
+    <div class="balanco-comanda-filters-card">
+      <div style="display: flex; gap: 12px; flex-wrap: wrap; align-items: center; justify-content: space-between;">
+        <div style="flex: 1; min-width: 220px;">
+          <label style="display: block; font-size: 0.76rem; font-weight: 700; color: #64748b; text-transform: uppercase; margin-bottom: 4px;">📅 Dia Específico</label>
+          <select class="form-control" style="font-size: 0.88rem; border-radius: 10px;" onchange="setBalancoComandaDay(this.value)">
+            <option value="" ${!selectedBalancoComandaDay ? 'selected' : ''}>Todos os dias do mês (${comandaRecords.length} lançamentos)</option>
+            ${availableDays.map(d => {
+              const [y, m, dayNum] = d.split('-');
+              const info = daysMap[d];
+              return `<option value="${d}" ${selectedBalancoComandaDay === d ? 'selected' : ''}>Dia ${dayNum}/${m}/${y} (${info.count} comandas · R$ ${info.total.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})</option>`;
+            }).join('')}
+          </select>
+        </div>
+
+        <div style="flex: 1; min-width: 180px;">
+          <label style="display: block; font-size: 0.76rem; font-weight: 700; color: #64748b; text-transform: uppercase; margin-bottom: 4px;">🏷️ Tipo / Status</label>
+          <select class="form-control" style="font-size: 0.88rem; border-radius: 10px;" onchange="setBalancoComandaType(this.value)">
+            <option value="todos" ${balancoComandaTypeFilter === 'todos' ? 'selected' : ''}>Todos os Registros</option>
+            <option value="servicos" ${balancoComandaTypeFilter === 'servicos' ? 'selected' : ''}>💇‍♀️ Com Serviços</option>
+            <option value="produtos" ${balancoComandaTypeFilter === 'produtos' ? 'selected' : ''}>🛍️ Com Produtos</option>
+            <option value="fechadas" ${balancoComandaTypeFilter === 'fechadas' ? 'selected' : ''}>✓ Apenas Fechadas</option>
+            <option value="abertas" ${balancoComandaTypeFilter === 'abertas' ? 'selected' : ''}>⏳ Apenas em Aberto</option>
+          </select>
+        </div>
+
+        <div style="flex: 2; min-width: 240px;">
+          <label style="display: block; font-size: 0.76rem; font-weight: 700; color: #64748b; text-transform: uppercase; margin-bottom: 4px;">🔍 Busca Rápida</label>
+          <input type="text" class="form-control" id="balancoComandaSearchInput" placeholder="Buscar cliente, profissional, serviço ou produto..." value="${escapeHtml(balancoComandaSearchTerm)}" oninput="handleBalancoComandaSearch(this.value)" style="font-size: 0.88rem; border-radius: 10px;">
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 8px; margin-top: 14px; border-top: 1px solid #f1f5f9; padding-top: 12px; flex-wrap: wrap;">
+        <button class="btn-falcon ${balancoComandaViewSubTab === 'comandas' ? 'btn-primary' : 'btn-secondary'}" style="padding: 7px 16px; font-size: 0.84rem; display: inline-flex; align-items: center; gap: 6px; border-radius: 10px;" onclick="setBalancoComandaSubTab('comandas')">
+          <span>📋</span>
+          <span>Lista Detalhada de Comandas (${filtered.length})</span>
+        </button>
+        <button class="btn-falcon ${balancoComandaViewSubTab === 'resumo_itens' ? 'btn-primary' : 'btn-secondary'}" style="padding: 7px 16px; font-size: 0.84rem; display: inline-flex; align-items: center; gap: 6px; border-radius: 10px;" onclick="setBalancoComandaSubTab('resumo_itens')">
+          <span>📊</span>
+          <span>Resumo de Serviços & Produtos Vendidos (${sortedServices.length + sortedProducts.length})</span>
+        </button>
+      </div>
+    </div>
+  `;
+
+  let mainContentHtml = '';
+
+  if (balancoComandaViewSubTab === 'resumo_itens') {
+    mainContentHtml = renderBalancoConsolidatedItems(sortedServices, sortedProducts, totalServicesRev, totalProductsRev);
+  } else {
+    if (filtered.length === 0) {
+      mainContentHtml = `
+        <div class="card-shell" style="text-align: center; padding: 48px 20px; color: var(--muted); background: #fff; border-radius: 16px; border: 1px dashed #cbd5e1;">
+          <div style="font-size: 2.4rem; margin-bottom: 10px;">📋</div>
+          <div style="font-weight: 700; font-size: 1.05rem; color: var(--ink);">Nenhuma comanda ou venda encontrada</div>
+          <div style="font-size: 0.84rem; margin-top: 4px;">Tente alterar os filtros de data, tipo ou termo de busca acima.</div>
+          ${(selectedBalancoComandaDay || balancoComandaSearchTerm || balancoComandaTypeFilter !== 'todos') ? `
+            <button class="btn-falcon btn-secondary" style="margin-top: 16px; padding: 8px 16px;" onclick="
+              selectedBalancoComandaDay = '';
+              balancoComandaSearchTerm = '';
+              balancoComandaTypeFilter = 'todos';
+              renderBalanco(document.getElementById('viewContainer'), document.getElementById('topBarActions'));
+            ">
+              Limpar Todos os Filtros
+            </button>
+          ` : ''}
+        </div>
+      `;
+    } else {
+      const cardsHtml = filtered.map(r => {
+        const cleanPhone = (r.clientPhone || '').replace(/\D/g, '');
+        const waLink = cleanPhone ? `https://wa.me/55${cleanPhone.replace(/^55/, '')}` : null;
+
+        const itemsRowsHtml = [
+          ...r.services.map(s => `
+            <div class="comanda-item-row">
+              <div style="display:flex; align-items:center; gap:6px; min-width:0;">
+                <span class="comanda-item-badge-svc">Serviço</span>
+                <span style="color:#1e293b; font-weight:500; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHtml(s.name)}</span>
+                ${s.qty > 1 ? `<span style="color:#64748b; font-size:0.8rem;">(x${s.qty})</span>` : ''}
+              </div>
+              <span style="font-weight:600; color:#0f172a; flex-shrink:0;">R$ ${s.total.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+            </div>
+          `),
+          ...r.products.map(p => `
+            <div class="comanda-item-row">
+              <div style="display:flex; align-items:center; gap:6px; min-width:0;">
+                <span class="comanda-item-badge-prod">Produto</span>
+                <span style="color:#1e293b; font-weight:500; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHtml(p.name)}</span>
+                <span style="color:#047857; font-size:0.78rem; font-weight:600;">(${p.qty} un · R$ ${p.unitPrice.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})</span>
+              </div>
+              <span style="font-weight:600; color:#0f172a; flex-shrink:0;">R$ ${p.total.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+            </div>
+          `)
+        ].join('') || `<div style="font-size:0.82rem; color:#94a3b8; font-style:italic;">Nenhum item discriminado.</div>`;
+
+        let actionsHtml = '';
+        if (r.type === 'appointment') {
+          actionsHtml = `
+            <button class="btn-falcon btn-secondary btn-comanda-action" onclick="openComandaModal('${r.appointmentId}')" title="Visualizar ou editar comanda">
+              <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+              <span>Ver Comanda</span>
+            </button>
+            <button class="btn-falcon btn-primary btn-comanda-action" onclick="comandaEditAndReopen('${r.appointmentId}')" title="${r.isClosed ? 'Reabrir e editar comanda' : 'Editar comanda'}">
+              <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+              <span>Editar Comanda</span>
+            </button>
+            <button class="btn-falcon btn-secondary btn-comanda-action btn-return-agenda" onclick="comandaReturnToAgenda('${r.appointmentId}')" title="Reabre a comanda e devolve o agendamento para a agenda">
+              <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="9 14 4 9 9 4"></polyline><path d="M20 20v-7a4 4 0 0 0-4-4H4"></path></svg>
+              <span>Voltar para Agenda</span>
+            </button>
+          `;
+        } else {
+          actionsHtml = `
+            <div style="font-size: 0.8rem; color: #64748b; font-style: italic;">
+              Venda avulsa lançada diretamente no caixa
+            </div>
+          `;
+        }
+
+        return `
+          <div class="comanda-balanco-card ${r.isClosed ? 'is-closed' : 'is-open'}">
+            <div class="comanda-card-topbar">
+              <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                <span class="comanda-card-id">${r.type === 'appointment' ? `📋 #${r.appointmentId.slice(-6).toUpperCase()}` : '🛍️ VENDA DE BALCÃO'}</span>
+                <span class="comanda-card-datetime">
+                  📅 ${r.date ? r.date.split('-').reverse().join('/') : ''} às ${r.time}
+                </span>
+              </div>
+              <div>
+                ${r.isClosed 
+                  ? `<span class="badge-comanda-closed">✓ Comanda Fechada</span>`
+                  : `<span class="badge-comanda-open">⏳ Em Aberto</span>`
+                }
+              </div>
+            </div>
+
+            <div class="comanda-card-parties">
+              <div class="party-box">
+                <span class="party-label">Cliente</span>
+                <div class="party-name">
+                  <strong>${escapeHtml(r.clientName)}</strong>
+                  ${waLink ? `<a href="${waLink}" target="_blank" class="party-phone" title="Abrir WhatsApp">💬 ${escapeHtml(r.clientPhone)}</a>` : (r.clientPhone ? `<span class="party-phone">📞 ${escapeHtml(r.clientPhone)}</span>` : '')}
+                </div>
+              </div>
+              <div class="party-box">
+                <span class="party-label">Profissional</span>
+                <div class="party-name">
+                  <strong>✂️ ${escapeHtml(r.professionalName)}</strong>
+                </div>
+              </div>
+            </div>
+
+            <div class="comanda-card-items-box">
+              <div style="font-size: 0.74rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px;">
+                Itens (${r.services.length} serviços · ${r.products.length} produtos)
+              </div>
+              ${itemsRowsHtml}
+              ${r.discount > 0 ? `
+                <div class="comanda-item-row" style="color: #dc2626; border-top: 1px dashed #e2e8f0; padding-top: 6px; margin-top: 4px;">
+                  <span>Desconto Concedido</span>
+                  <span>- R$ ${r.discount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                </div>
+              ` : ''}
+              <div class="comanda-item-row" style="font-weight: 700; font-size: 0.98rem; color: #0f172a; border-top: 1px solid #cbd5e1; padding-top: 6px; margin-top: 4px;">
+                <span>Total Recebido</span>
+                <span style="color: var(--orange, #ff6900);">R$ ${r.netTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+              </div>
+            </div>
+
+            <div class="comanda-card-footer">
+              <div class="comanda-payment-info">
+                <div style="font-size: 0.72rem; color: #64748b; font-weight: 700; text-transform: uppercase;">FORMA DE PAGAMENTO</div>
+                <div style="font-size: 0.88rem; font-weight: 600; color: #0f172a; display: flex; align-items: center; gap: 6px; margin-top: 2px;">
+                  <span>💳</span>
+                  <span>${escapeHtml(r.paymentMethod)}</span>
+                </div>
+              </div>
+              <div class="comanda-card-actions">
+                ${actionsHtml}
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      mainContentHtml = `
+        <div class="comandas-balanco-grid">
+          ${cardsHtml}
+        </div>
+      `;
+    }
+  }
+
+  container.innerHTML = `
+    ${subnavTabsHtml}
+    ${monthSelectorCardHtml}
+    ${metricsHtml}
+    ${filtersHtml}
+    ${mainContentHtml}
   `;
 }
 
@@ -7060,7 +8044,6 @@ window.saveSettings = async function() {
 };
 
 
-// Modais Genéricos de Cadastro
 function openModal(title, bodyHtml, onConfirm, confirmText = 'Salvar', hideCancel = false) {
   const titleEl = document.getElementById('modalTitle');
   if (titleEl) titleEl.innerText = title;
@@ -7075,7 +8058,11 @@ function openModal(title, bodyHtml, onConfirm, confirmText = 'Salvar', hideCance
 
   if (cancelBtn) {
     cancelBtn.style.display = hideCancel ? 'none' : 'inline-block';
-    cancelBtn.innerText = onConfirm ? 'Cancelar' : 'Fechar';
+    if (typeof window.__apptShortcutReturn === 'function') {
+      cancelBtn.innerText = '← Voltar ao Agendamento';
+    } else {
+      cancelBtn.innerText = onConfirm ? 'Cancelar' : 'Fechar';
+    }
   }
 
   if (confirmBtn) {
@@ -7101,6 +8088,12 @@ window.openModal = openModal;
 
 function closeModal() {
   document.getElementById('universalDatePickerPopover')?.remove();
+  if (typeof window.__apptShortcutReturn === 'function') {
+    const returnFn = window.__apptShortcutReturn;
+    window.__apptShortcutReturn = null;
+    returnFn();
+    return;
+  }
   const modal = document.getElementById('genericModal');
   if (modal) {
     modal.classList.remove('open');
@@ -7119,48 +8112,176 @@ function closeModal() {
   updateBodyScrollLock();
 }
 window.closeModal = closeModal;
+window.forceCloseModal = function() {
+  window.__apptShortcutReturn = null;
+  closeModal();
+};
 
-window.openNewAppointmentModal = function(defaultTime = "10:00") {
+// Guarda o que já foi preenchido no "Novo Agendamento" ou "Editar Agendamento" para reabrir depois de cadastrar/editar serviço/cliente
+window.captureApptDraft = function() {
+  const g = id => document.getElementById(id);
+  const svcEl = g('modalAppService');
+  const selOpt = svcEl?.options?.[svcEl.selectedIndex];
+  return {
+    appointmentId: g('modalAppEditId')?.value || '',
+    isEditing: !!(g('modalAppEditId')?.value),
+    profId: g('modalAppProf')?.value || '',
+    name: g('modalAppName')?.value || '',
+    clientId: g('modalAppName')?.dataset.selectedClientId || '',
+    phone: g('modalAppPhone')?.value || '',
+    serviceId: svcEl?.value || '',
+    servicePrice: g('modalAppPrice')?.value || (selOpt ? selOpt.dataset.price : ''),
+    date: g('modalAppDate')?.value || '',
+    start: g('modalAppStart')?.value || '',
+    end: g('modalAppEnd')?.value || '',
+    deposit: !!g('modalAppHasDeposit')?.checked,
+    birthday: g('modalAppBirthday')?.value || '',
+    notes: g('modalAppNotes')?.value || ''
+  };
+};
+
+window.restoreApptModalFromDraft = function(draft) {
+  if (draft && draft.isEditing && draft.appointmentId) {
+    const existing = (state.appointments || []).find(a => a.id === draft.appointmentId);
+    openEditAppointmentModal(existing || draft, draft);
+  } else {
+    openNewAppointmentModal(draft ? draft.start || '10:00' : '10:00', draft);
+  }
+};
+
+window.apptQuickAddService = function() {
+  if (!isManager) { asyncAlert('Apenas gestores podem cadastrar serviços.'); return; }
+  const draft = captureApptDraft();
+  window.__apptShortcutReturn = () => window.restoreApptModalFromDraft(draft);
+
+  openNewServiceModal((created) => {
+    window.__apptShortcutReturn = null;
+    if (created && created.id) {
+      draft.serviceId = created.id;
+      draft.servicePrice = created.price;
+    }
+    delete draft.end;
+    window.restoreApptModalFromDraft(draft);
+  });
+};
+
+window.apptQuickEditService = function() {
+  if (!isManager) { asyncAlert('Apenas gestores podem editar serviços.'); return; }
+  const draft = captureApptDraft();
+  if (!draft.serviceId) {
+    asyncAlert('Selecione um serviço primeiro para editar.');
+    return;
+  }
+  window.__apptShortcutReturn = () => window.restoreApptModalFromDraft(draft);
+
+  openEditServiceModal(draft.serviceId, (updated) => {
+    window.__apptShortcutReturn = null;
+    if (updated && updated.id) {
+      draft.serviceId = updated.id;
+      const s = (state.services || []).find(x => x.id === updated.id);
+      if (s) draft.servicePrice = s.price;
+    }
+    delete draft.end;
+    window.restoreApptModalFromDraft(draft);
+  });
+};
+
+window.apptQuickAddClient = function() {
+  const draft = captureApptDraft();
+  window.__apptShortcutReturn = () => window.restoreApptModalFromDraft(draft);
+
+  openNewClientModal((created) => {
+    window.__apptShortcutReturn = null;
+    if (created && created.id) {
+      draft.clientId = created.id; draft.name = created.name || draft.name; draft.phone = created.phone || draft.phone;
+    }
+    window.restoreApptModalFromDraft(draft);
+  }, { name: draft.name, phone: draft.phone });
+};
+
+// Mostra aniversário/observações só quando o cliente digitado ainda não está cadastrado
+window.apptToggleNewClientFields = function() {
+  const nameInput = document.getElementById('modalAppName');
+  const box = document.getElementById('modalAppNewClientBox');
+  if (!nameInput || !box) return;
+  const isNew = nameInput.value.trim().length > 0 && !nameInput.dataset.selectedClientId;
+  box.style.display = isNew ? 'block' : 'none';
+};
+
+window.openNewAppointmentModal = function(defaultTime = "10:00", draft = null) {
+  if (typeof defaultTime !== 'string') defaultTime = "10:00";
   if (!state.professionals || state.professionals.length === 0) {
     asyncAlert('Cadastre ao menos um profissional antes de realizar agendamentos.', 'Aviso', 'warning');
     return;
   }
   if (!state.services || state.services.length === 0) {
-    asyncAlert('Cadastre ao menos um serviço antes de realizar agendamentos.', 'Aviso', 'warning');
+    if (isManager) {
+      asyncAlert('Cadastre ao menos um serviço antes de realizar agendamentos.', 'Aviso', 'warning');
+    } else {
+      asyncAlert('Peça ao gestor para cadastrar ao menos um serviço antes de agendar.', 'Aviso', 'warning');
+    }
     return;
   }
 
-  let profOptions;
-  if (!isManager && currentUser && currentUser.professionalId) {
-    const myP = state.professionals.find(p => p.id === currentUser.professionalId);
-    if (myP) {
-      profOptions = `<option value="${myP.id}" selected>${myP.name} (${myP.role || 'Profissional'})</option>`;
-    } else {
-      profOptions = state.professionals.map(p => `<option value="${p.id}" ${p.id === selectedProfessionalId ? 'selected' : ''}>${p.name} (${p.role || 'Profissional'})</option>`).join('');
-    }
-  } else {
-    profOptions = state.professionals.map(p => `<option value="${p.id}" ${p.id === selectedProfessionalId ? 'selected' : ''}>${p.name} (${p.role || 'Profissional'})</option>`).join('');
-  }
+  // Qualquer profissional pode agendar para outra: a lista é completa; o padrão é a própria agenda
+  const defaultProfId = (draft && draft.profId)
+    || (!isManager && currentUser && currentUser.professionalId && state.professionals.some(p => p.id === currentUser.professionalId) ? currentUser.professionalId : '')
+    || selectedProfessionalId;
+  const profOptions = state.professionals.map(p => `<option value="${p.id}" ${p.id === defaultProfId ? 'selected' : ''}>${p.name} (${p.role || 'Profissional'})</option>`).join('');
 
-  const servOptions = state.services.map(s => `<option value="${s.id}" data-price="${s.price}" data-duration="${s.durationMinutes}">${s.name} (${formatDurationHours(s.durationMinutes)}) - R$ ${s.price.toFixed(2)}</option>`).join('');
+  const targetServiceId = (draft && draft.serviceId) || (state.services[0] ? state.services[0].id : '');
+  const servOptions = state.services.map(s => `<option value="${s.id}" data-price="${s.price}" data-duration="${s.durationMinutes}" ${s.id === targetServiceId ? 'selected' : ''}>${s.name} (${formatDurationHours(s.durationMinutes)}) - R$ ${Number(s.price).toFixed(2)}</option>`).join('');
+  const smallBtn = 'background:none; border:none; color:var(--orange); font-size:0.8rem; font-weight:600; cursor:pointer; padding:0; display:inline-flex; align-items:center; gap:4px;';
+  const initialDate = (draft && draft.date) || selectedDate;
+  const selectedServ = state.services.find(s => s.id === targetServiceId) || state.services[0];
+  const initialPrice = draft && draft.servicePrice !== undefined ? draft.servicePrice : (selectedServ ? Number(selectedServ.price).toFixed(2) : '50.00');
 
   const html = `
+    <input type="hidden" id="modalAppEditId" value="">
+    <div class="form-group">
+      <label>Data do Agendamento</label>
+      <input type="date" class="form-control" id="modalAppDate" value="${initialDate}">
+    </div>
     <div class="form-group">
       <label>Profissional</label>
-      <select class="form-control" id="modalAppProf" onchange="filterModalServicesByProf()" ${(!isManager && currentUser?.professionalId) ? 'disabled style="background:#f1f5f9; cursor:not-allowed;"' : ''}>${profOptions}</select>
+      <select class="form-control" id="modalAppProf" onchange="filterModalServicesByProf()">${profOptions}</select>
     </div>
     <div class="form-group client-autocomplete-wrapper">
-      <label>Nome do Cliente</label>
-      <input type="text" class="form-control" id="modalAppName" placeholder="Comece a digitar o nome do cliente..." autocomplete="off">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+        <label style="margin:0;">Nome do Cliente</label>
+        <button type="button" style="${smallBtn}" onclick="apptQuickAddClient()">+ Cadastrar cliente completo</button>
+      </div>
+      <input type="text" class="form-control" id="modalAppName" placeholder="Comece a digitar o nome do cliente..." autocomplete="off" oninput="apptToggleNewClientFields()">
       <div id="modalAppClientSuggestions" class="client-autocomplete-dropdown"></div>
     </div>
     <div class="form-group">
       <label>WhatsApp do Cliente</label>
       <input type="text" class="form-control" id="modalAppPhone" placeholder="(67) 99999-9999">
     </div>
+    <div id="modalAppNewClientBox" style="display:none; border:1px dashed #fed7aa; border-radius:12px; padding:12px; margin-bottom:10px;">
+      <div style="font-size:0.78rem; color:var(--muted); margin-bottom:8px;">Cliente novo: preencha para já cadastrar completo (opcional)</div>
+      <div class="form-group">
+        <label>Data de Nascimento</label>
+        <input type="date" class="form-control" id="modalAppBirthday">
+      </div>
+      <div class="form-group" style="margin-bottom:0;">
+        <label>Observações do cliente</label>
+        <textarea class="form-control" id="modalAppNotes" rows="2" placeholder="Ex: alergias, fórmula, preferências"></textarea>
+      </div>
+    </div>
     <div class="form-group">
-      <label>Serviço</label>
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+        <label style="margin:0;">Serviço</label>
+        ${isManager ? `<span style="display:inline-flex; gap:14px;">
+          <button type="button" style="${smallBtn}" onclick="apptQuickEditService()">Editar</button>
+          <button type="button" style="${smallBtn}" onclick="apptQuickAddService()">+ Novo serviço</button>
+        </span>` : ''}
+      </div>
       <select class="form-control" id="modalAppService" onchange="updateModalEndTime()">${servOptions}</select>
+    </div>
+    <div class="form-group">
+      <label>Valor do Serviço (R$)</label>
+      <input type="number" step="0.5" class="form-control" id="modalAppPrice" value="${initialPrice}" placeholder="0.00">
     </div>
     <div class="form-group" style="display:flex; gap:10px;">
       <div style="flex:1;">
@@ -7189,11 +8310,15 @@ window.openNewAppointmentModal = function(defaultTime = "10:00") {
     const serviceSelect = document.getElementById('modalAppService');
     const serviceId = serviceSelect.value;
     const selectedOption = serviceSelect.options[serviceSelect.selectedIndex];
-    const serviceName = selectedOption.text.split(' (')[0];
-    const price = Number(selectedOption.dataset.price) || 50;
+    const serviceName = selectedOption ? selectedOption.text.split(' (')[0] : 'Serviço';
+    const customPrice = Number(document.getElementById('modalAppPrice')?.value);
+    const price = Number.isFinite(customPrice) && customPrice >= 0 ? customPrice : (Number(selectedOption?.dataset?.price) || 50);
     const startTime = document.getElementById('modalAppStart').value;
     const endTime = document.getElementById('modalAppEnd').value;
+    const apptDate = document.getElementById('modalAppDate')?.value || selectedDate;
     const hasDeposit = document.getElementById('modalAppHasDeposit')?.checked || false;
+    const clientBirthday = !clientId ? (document.getElementById('modalAppBirthday')?.value || '') : '';
+    const clientNotes = !clientId ? (document.getElementById('modalAppNotes')?.value || '').trim() : '';
     const prof = (state.professionals || []).find(p => p.id === profId);
     let profDepositPct = 30;
     let depositAmt = 0;
@@ -7211,6 +8336,10 @@ window.openNewAppointmentModal = function(defaultTime = "10:00") {
       asyncAlert('Por favor informe o nome do cliente');
       return;
     }
+    if (!apptDate) {
+      asyncAlert('Por favor informe a data do agendamento');
+      return;
+    }
 
     const res = await tenantFetch('/api/appointments', {
       method: 'POST',
@@ -7220,13 +8349,15 @@ window.openNewAppointmentModal = function(defaultTime = "10:00") {
         clientId,
         clientName,
         clientPhone,
+        clientBirthday,
+        clientNotes,
         serviceId,
         serviceName,
         price,
         hasDeposit,
         depositPercent: hasDeposit ? profDepositPct : 0,
         depositAmount: hasDeposit ? depositAmt : 0,
-        date: selectedDate,
+        date: apptDate,
         startTime,
         endTime,
         status: 'agendado'
@@ -7240,32 +8371,525 @@ window.openNewAppointmentModal = function(defaultTime = "10:00") {
     }
 
     closeModal();
+    if (apptDate !== selectedDate) selectedDate = apptDate;
     await loadInitialData();
     renderView('agenda');
   });
 
   setTimeout(() => {
-    filterModalServicesByProf();
+    filterModalServicesByProf(draft?.serviceId);
     updateModalEndTime();
     initClientAppointmentAutocomplete();
-  }, 50);
+    if (draft) {
+      const g = id => document.getElementById(id);
+      if (draft.serviceId && g('modalAppService')) g('modalAppService').value = draft.serviceId;
+      if (draft.servicePrice !== undefined && g('modalAppPrice')) g('modalAppPrice').value = draft.servicePrice;
+      if (g('modalAppName')) { g('modalAppName').value = draft.name || ''; if (draft.clientId) g('modalAppName').dataset.selectedClientId = draft.clientId; }
+      if (g('modalAppPhone')) g('modalAppPhone').value = draft.phone || '';
+      if (g('modalAppStart') && draft.start) g('modalAppStart').value = draft.start;
+      if (g('modalAppHasDeposit')) g('modalAppHasDeposit').checked = !!draft.deposit;
+      if (g('modalAppBirthday')) g('modalAppBirthday').value = draft.birthday || '';
+      if (g('modalAppNotes')) g('modalAppNotes').value = draft.notes || '';
+      updateModalEndTime();
+      if (draft.end && g('modalAppEnd')) g('modalAppEnd').value = draft.end;
+    }
+    apptToggleNewClientFields();
+  }, 80);
 };
 
-window.filterModalServicesByProf = function() {
+window.openEditAppointmentModal = function(app, draft = null) {
+  if (!app) return;
+  if (!isManager && currentUser && currentUser.professionalId && app.professionalId !== currentUser.professionalId) {
+    asyncAlert('Apenas o gestor e o profissional deste agendamento têm permissão para editá-lo.');
+    return;
+  }
+
+  const apptId = app.id;
+  const initialDate = (draft && draft.date) || app.date || selectedDate;
+  const defaultProfId = (draft && draft.profId) || app.professionalId || selectedProfessionalId;
+  const profOptions = (state.professionals || []).map(p => `<option value="${p.id}" ${p.id === defaultProfId ? 'selected' : ''}>${p.name} (${p.role || 'Profissional'})</option>`).join('');
+
+  const targetServiceId = (draft && draft.serviceId) || app.serviceId;
+  const servOptions = (state.services || []).map(s => `<option value="${s.id}" data-price="${s.price}" data-duration="${s.durationMinutes}" ${s.id === targetServiceId ? 'selected' : ''}>${s.name} (${formatDurationHours(s.durationMinutes)}) - R$ ${Number(s.price).toFixed(2)}</option>`).join('');
+  const smallBtn = 'background:none; border:none; color:var(--orange); font-size:0.8rem; font-weight:600; cursor:pointer; padding:0; display:inline-flex; align-items:center; gap:4px;';
+  const initialPrice = draft && draft.servicePrice !== undefined ? draft.servicePrice : Number(app.price || 0).toFixed(2);
+  const initialClientName = (draft && draft.name) || app.clientName || '';
+  const initialClientPhone = (draft && draft.phone) || app.clientPhone || '';
+  const initialStartTime = (draft && draft.start) || app.startTime || '10:00';
+  const initialEndTime = (draft && draft.end) || app.endTime || '10:30';
+  const initialNotes = (draft && draft.notes !== undefined) ? draft.notes : (app.notes || '');
+  const initialDeposit = (draft && draft.deposit !== undefined) ? !!draft.deposit : !!app.hasDeposit;
+
+  const html = `
+    <input type="hidden" id="modalAppEditId" value="${apptId}">
+    <div class="form-group">
+      <label>Data do Agendamento</label>
+      <input type="date" class="form-control" id="modalAppDate" value="${initialDate}">
+    </div>
+    <div class="form-group">
+      <label>Profissional</label>
+      <select class="form-control" id="modalAppProf" onchange="filterModalServicesByProf()">${profOptions}</select>
+    </div>
+    <div class="form-group client-autocomplete-wrapper">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+        <label style="margin:0;">Nome do Cliente</label>
+        <button type="button" style="${smallBtn}" onclick="apptQuickAddClient()">+ Cadastrar cliente completo</button>
+      </div>
+      <input type="text" class="form-control" id="modalAppName" value="${initialClientName}" placeholder="Nome do cliente..." autocomplete="off">
+      <div id="modalAppClientSuggestions" class="client-autocomplete-dropdown"></div>
+    </div>
+    <div class="form-group">
+      <label>WhatsApp do Cliente</label>
+      <input type="text" class="form-control" id="modalAppPhone" value="${initialClientPhone}" placeholder="(67) 99999-9999">
+    </div>
+    <div class="form-group">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+        <label style="margin:0;">Serviço</label>
+        ${isManager ? `<span style="display:inline-flex; gap:14px;">
+          <button type="button" style="${smallBtn}" onclick="apptQuickEditService()">Editar</button>
+          <button type="button" style="${smallBtn}" onclick="apptQuickAddService()">+ Novo serviço</button>
+        </span>` : ''}
+      </div>
+      <select class="form-control" id="modalAppService" onchange="updateModalEndTime()">${servOptions}</select>
+    </div>
+    <div class="form-group">
+      <label>Valor do Serviço (R$)</label>
+      <input type="number" step="0.5" class="form-control" id="modalAppPrice" value="${initialPrice}" placeholder="0.00">
+    </div>
+    <div class="form-group" style="display:flex; gap:10px;">
+      <div style="flex:1;">
+        <label>Horário Início</label>
+        <input type="time" class="form-control" id="modalAppStart" value="${initialStartTime}" onchange="updateModalEndTime()">
+      </div>
+      <div style="flex:1;">
+        <label>Horário Fim</label>
+        <input type="time" class="form-control" id="modalAppEnd" value="${initialEndTime}">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Observações do Agendamento</label>
+      <textarea class="form-control" id="modalAppNotes" rows="2" placeholder="Observações opcionais...">${initialNotes}</textarea>
+    </div>
+    <div class="form-group" style="margin-top: 10px; padding: 10px 14px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px;">
+      <label style="display:flex; align-items:center; gap:8px; margin:0; cursor:pointer; font-weight:600; font-size:0.86rem; color:#334155;">
+        <input type="checkbox" id="modalAppHasDeposit" ${initialDeposit ? 'checked' : ''} style="width:16px; height:16px; accent-color:var(--orange); cursor:pointer;">
+        <span id="modalAppDepositLabel">Cobrado Sinal Prévio de Garantia</span>
+      </label>
+    </div>
+  `;
+
+  openModal('Editar Agendamento', html, async () => {
+    const profId = document.getElementById('modalAppProf').value;
+    const nameInput = document.getElementById('modalAppName');
+    const clientName = nameInput.value.trim();
+    const clientId = nameInput.dataset.selectedClientId || app.clientId || null;
+    const clientPhone = document.getElementById('modalAppPhone').value.trim();
+    const serviceSelect = document.getElementById('modalAppService');
+    const serviceId = serviceSelect.value;
+    const selectedOption = serviceSelect.options[serviceSelect.selectedIndex];
+    const serviceName = selectedOption ? selectedOption.text.split(' (')[0] : (app.serviceName || 'Serviço');
+    const customPrice = Number(document.getElementById('modalAppPrice')?.value);
+    const price = Number.isFinite(customPrice) && customPrice >= 0 ? customPrice : (selectedOption ? Number(selectedOption.dataset.price) : app.price);
+    const startTime = document.getElementById('modalAppStart').value;
+    const endTime = document.getElementById('modalAppEnd').value;
+    const apptDate = document.getElementById('modalAppDate')?.value || app.date;
+    const notes = (document.getElementById('modalAppNotes')?.value || '').trim();
+    const hasDeposit = document.getElementById('modalAppHasDeposit')?.checked || false;
+
+    if (!clientName) {
+      asyncAlert('Por favor informe o nome do cliente.');
+      return;
+    }
+    if (!apptDate) {
+      asyncAlert('Por favor informe a data do agendamento.');
+      return;
+    }
+
+    const res = await tenantFetch(`/api/appointments/${apptId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        professionalId: profId,
+        clientId,
+        clientName,
+        clientPhone,
+        serviceId,
+        serviceName,
+        price,
+        hasDeposit,
+        date: apptDate,
+        startTime,
+        endTime,
+        notes
+      })
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      asyncAlert(err.error || 'Erro ao atualizar agendamento.');
+      return;
+    }
+
+    closeModal();
+    if (apptDate !== selectedDate) selectedDate = apptDate;
+    await loadInitialData();
+    renderView('agenda');
+  }, 'Salvar Alterações');
+
+  setTimeout(() => {
+    filterModalServicesByProf(targetServiceId);
+    initClientAppointmentAutocomplete();
+    if (draft && draft.servicePrice !== undefined) {
+      const pInp = document.getElementById('modalAppPrice');
+      if (pInp) pInp.value = draft.servicePrice;
+    }
+  }, 80);
+};
+
+// =============================================================
+// COMANDA DO ATENDIMENTO (interface)
+// =============================================================
+window.__comanda = null;
+const COMANDA_PAY = ['Pix', 'Dinheiro', 'Cartão de débito', 'Cartão de crédito', 'Outro'];
+const brl = n => 'R$ ' + (Number(n) || 0).toFixed(2).replace('.', ',');
+const escHtml = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+function comandaRowStyle() { return 'display:flex; align-items:center; gap:10px; padding:10px 12px; border:1px solid #e2e8f0; border-radius:12px; background:#fff;'; }
+
+function renderComandaBody(c) {
+  const open = c.status !== 'fechada';
+  const body = document.getElementById('modalBody');
+  if (!body) return;
+  const profs = state.professionals || [];
+  const prof = profs.find(p => p.id === c.professionalId);
+  const services = state.services || [];
+  const products = (state.products || []).filter(p => (Number(p.stock) || 0) > 0);
+
+  const headerHtml = `
+    <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:10px 14px; margin-bottom:12px; display:grid; grid-template-columns:1fr 1fr; gap:10px; align-items:center;">
+      <div>
+        <small style="color:var(--muted); font-size:0.72rem; text-transform:uppercase; font-weight:700;">Cliente</small>
+        <div style="font-weight:700; font-size:0.92rem; color:var(--ink);">${escHtml(c.clientName || 'Cliente')}</div>
+        ${c.clientPhone ? `<small style="color:var(--muted); font-size:0.75rem;">${escHtml(c.clientPhone)}</small>` : ''}
+      </div>
+      <div>
+        <small style="color:var(--muted); font-size:0.72rem; text-transform:uppercase; font-weight:700;">Profissional</small>
+        ${open ? `
+          <select class="form-control" style="padding:4px 8px; font-size:0.84rem; margin-top:2px;" onchange="comandaChangeProfessional(this.value)">
+            ${profs.map(p => `<option value="${p.id}" ${p.id === c.professionalId ? 'selected' : ''}>${escHtml(p.name)}</option>`).join('')}
+          </select>
+        ` : `<div style="font-weight:700; font-size:0.92rem; color:var(--ink);">${escHtml(prof ? prof.name : 'Salão')}</div>`}
+      </div>
+    </div>`;
+
+  const itemsHtml = c.items.map((it, idx) => {
+    const isSvc = it.type === 'servico';
+    const isAvulso = it.type === 'avulso';
+    const icon = isSvc ? '✂️' : (isAvulso ? '✨' : '🧴');
+    const typeLabel = isSvc ? 'Serviço' : (isAvulso ? 'Item Avulso' : 'Produto');
+
+    const renameBtn = open ? `<button type="button" onclick="comandaPromptRename(${idx})" title="Renomear item" style="background:none;border:none;color:#f97316;cursor:pointer;font-size:0.8rem;padding:0 4px;line-height:1;">✏️</button>` : '';
+
+    const qtyHtml = (!isSvc && !isAvulso) ? (open ? `
+        <span style="display:inline-flex; align-items:center; gap:6px;">
+          <button type="button" class="btn-falcon btn-secondary btn-sm" style="padding:0 9px;" onclick="comandaChangeQty(${idx}, -1)">−</button>
+          <b style="min-width:18px; text-align:center;">${it.qty}</b>
+          <button type="button" class="btn-falcon btn-secondary btn-sm" style="padding:0 9px;" onclick="comandaChangeQty(${idx}, 1)">+</button>
+        </span>` : `<b>${it.qty}x</b>`) : '';
+
+    let priceHtml = '';
+    if (open) {
+      if (isSvc || isAvulso) {
+        priceHtml = `
+          <div style="display:flex; align-items:center; gap:6px;">
+            <span style="font-size:0.75rem; color:var(--muted);">R$</span>
+            <input type="number" class="form-control" style="width:90px; padding:4px 6px; text-align:right; font-weight:700;" step="0.5" min="0" value="${Number(it.unitPrice).toFixed(2)}" onchange="comandaSetPrice(${idx}, this.value)">
+          </div>`;
+      } else {
+        // Produto com preço unitário editável
+        priceHtml = `
+          <div style="display:flex; align-items:center; gap:8px;">
+            <div style="display:flex; align-items:center; gap:4px;">
+              <span style="font-size:0.72rem; color:var(--muted);">Unit: R$</span>
+              <input type="number" class="form-control" style="width:78px; padding:3px 5px; text-align:right; font-size:0.82rem;" step="0.5" min="0" value="${Number(it.unitPrice).toFixed(2)}" onchange="comandaSetPrice(${idx}, this.value)">
+            </div>
+            <b>${brl(it.total)}</b>
+          </div>`;
+      }
+    } else {
+      priceHtml = `<b>${brl(it.total)}</b>`;
+    }
+
+    const removable = open && c.items.length > 1;
+    return `<div style="${comandaRowStyle()} flex-direction:column; align-items:stretch; gap:8px;">
+      <div style="display:flex; align-items:flex-start; gap:8px;">
+        <span style="font-size:1.1rem;">${icon}</span>
+        <div style="flex:1; min-width:0;">
+          <div style="font-weight:600; line-height:1.25; display:flex; align-items:center; gap:4px;">
+            <span>${escHtml(it.name)}</span>${renameBtn}
+          </div>
+          <small style="color:var(--muted);">${typeLabel} · ${brl(it.unitPrice)}${!isSvc && !isAvulso ? ' un.' : ''}</small>
+        </div>
+        ${removable ? `<button type="button" title="Remover item" style="background:none;border:none;color:#b91c1c;font-size:1.2rem;cursor:pointer;line-height:1;padding:0 4px;" onclick="comandaRemove(${idx})">✕</button>` : ''}
+      </div>
+      <div style="display:flex; align-items:center; justify-content:${(isSvc || isAvulso) ? 'flex-end' : 'space-between'}; gap:10px;">${qtyHtml}${priceHtml}</div>
+    </div>`;
+  }).join('');
+
+  const addHtml = open ? `
+    <div class="form-group" style="margin-top:10px;">
+      <label style="font-weight:700;">✂️ Adicionar Serviço do Catálogo</label>
+      <div style="display:flex; gap:8px;">
+        <select class="form-control" id="comandaAddSvc">${services.map(s => `<option value="${s.id}">${escHtml(s.name)} — ${brl(s.price)}</option>`).join('')}</select>
+        <button type="button" class="btn-falcon btn-primary" onclick="comandaAddService()">Adicionar</button>
+      </div>
+    </div>
+    <div class="form-group">
+      <label style="font-weight:700;">🧴 Adicionar Produto do Estoque</label>
+      ${products.length ? `<div style="display:flex; gap:8px;">
+        <select class="form-control" id="comandaAddProd">${products.map(p => `<option value="${p.id}">${escHtml(p.name)} — ${brl(p.price)} (estoque ${p.stock})</option>`).join('')}</select>
+        <button type="button" class="btn-falcon btn-primary" onclick="comandaAddProduct()">Adicionar</button>
+      </div>` : `<small style="color:var(--muted);">Nenhum produto com estoque disponível.</small>`}
+    </div>
+    <div style="border: 1px dashed #cbd5e1; border-radius: 12px; padding: 10px 12px; margin-bottom: 12px; background: #f8fafc;">
+      <label style="margin:0 0 6px 0; font-size:0.82rem; font-weight:700; color:var(--ink); display:block;">✨ Adicionar Item ou Cobrança Avulsa</label>
+      <div style="display:grid; grid-template-columns: 2fr 1fr auto; gap: 8px;">
+        <input type="text" class="form-control" id="comandaAvulsoName" placeholder="Ex: Mechas extras, Taxa...">
+        <input type="number" class="form-control" id="comandaAvulsoPrice" placeholder="0,00" step="0.5" min="0">
+        <button type="button" class="btn-falcon btn-brand-soft" onclick="comandaAddAvulso()">+ Avulso</button>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Desconto (R$)</label>
+      <input type="number" class="form-control" id="comandaDiscount" min="0" step="0.5" value="${Number(c.discount || 0).toFixed(2)}" onchange="comandaSetDiscount(this.value)">
+    </div>` : '';
+
+  const totalsHtml = `
+    <div style="border:1px solid #fed7aa; background:#fffaf5; border-radius:14px; padding:12px 14px; display:flex; flex-direction:column; gap:6px; font-size:0.9rem;">
+      <div style="display:flex; justify-content:space-between;"><span>Serviços / Avulsos</span><b>${brl(c.servicesTotal)}</b></div>
+      <div style="display:flex; justify-content:space-between;"><span>Produtos</span><b>${brl(c.productsTotal)}</b></div>
+      ${c.discount > 0 ? `<div style="display:flex; justify-content:space-between; color:#b91c1c;"><span>Desconto</span><b>− ${brl(c.discount)}</b></div>` : ''}
+      <div style="display:flex; justify-content:space-between; font-size:1.05rem; border-top:1px dashed #fed7aa; padding-top:6px;"><span><b>Total</b></span><b style="color:var(--orange);">${brl(c.total)}</b></div>
+      <div style="display:flex; justify-content:space-between; align-items:center; color:#166534; font-size:0.88rem;">
+        <span>Sinal / Adiantamento</span>
+        ${open ? `
+          <div style="display:flex; align-items:center; gap:4px;">
+            <span style="font-size:0.75rem;">− R$</span>
+            <input type="number" class="form-control" style="width:80px; padding:2px 6px; text-align:right; font-size:0.84rem;" step="0.5" min="0" value="${Number(c.deposit || 0).toFixed(2)}" onchange="comandaSetDeposit(this.value)">
+          </div>
+        ` : `<b>− ${brl(c.deposit)}</b>`}
+      </div>
+      <div style="display:flex; justify-content:space-between; font-size:1.05rem; border-top:1px dashed #fed7aa; padding-top:6px;">
+        <span><b>A receber agora</b></span><b style="color:#15803d;">${brl(c.balanceDue)}</b>
+      </div>
+    </div>`;
+
+  const payHtml = open ? `
+    <div class="form-group" style="margin-top:12px;">
+      <label>Forma de pagamento (ao fechar)</label>
+      <select class="form-control" id="comandaPay">${COMANDA_PAY.map(m => `<option value="${m}" ${c.paymentMethod === m ? 'selected' : ''}>${m}</option>`).join('')}</select>
+    </div>
+    <div class="form-group" style="flex-direction:row; align-items:center; gap:8px; margin-top:-4px;">
+      <input type="checkbox" id="comandaSplit" style="width:16px;height:16px;accent-color:#ff6900;cursor:pointer;" onchange="
+        const wrap = document.getElementById('comandaSplitWrap');
+        wrap.style.display = this.checked ? 'flex' : 'none';
+      ">
+      <label for="comandaSplit" style="font-size:0.82rem; color:#64748b; font-weight:500; cursor:pointer; margin:0;">Dividir pagamento em 2 formas</label>
+    </div>
+    <div id="comandaSplitWrap" style="display:none; gap:8px; align-items:center; flex-wrap:wrap;">
+      <div style="flex:1; min-width:120px;">
+        <label style="font-size:0.78rem; color:#64748b; font-weight:600;">2ª forma</label>
+        <select class="form-control" id="comandaPay2" style="margin-top:4px;">${COMANDA_PAY.map(m => `<option value="${m}">${m}</option>`).join('')}</select>
+      </div>
+      <div style="flex:1; min-width:100px;">
+        <label style="font-size:0.78rem; color:#64748b; font-weight:600;">Valor na 2ª forma (R$)</label>
+        <input type="number" class="form-control" id="comandaPay2Val" min="0" step="0.01" placeholder="0,00" style="margin-top:4px;">
+      </div>
+    </div>` : `
+    <div style="padding:10px 12px; border-radius:12px; background:#ecfdf5; border:1px solid #a7f3d0; color:#065f46; font-weight:600; margin-top:12px;">
+      ✓ Comanda fechada · pagamento: ${escHtml(c.paymentMethod || '—')}${c.paymentMethod2 ? ` + ${escHtml(c.paymentMethod2)}` : ''}
+    </div>
+    ${isManager ? `<button type="button" class="btn-falcon btn-secondary" style="margin-top:6px; width:100%;" onclick="comandaReopen()">Reabrir comanda para edição</button>` : ''}`;
+
+  body.innerHTML = `
+    ${headerHtml}
+    <div style="display:flex; flex-direction:column; gap:8px;">${itemsHtml}</div>
+    ${addHtml}${totalsHtml}${payHtml}`;
+}
+
+async function comandaRequest(url, method, payload) {
+  const res = await tenantFetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: payload ? JSON.stringify(payload) : undefined });
+  let data = null; try { data = await res.json(); } catch (e) {}
+  if (!res.ok) { await asyncAlert((data && data.error) || 'Não foi possível atualizar a comanda.'); return null; }
+  return data;
+}
+
+function comandaSyncAppointment(c) {
+  const a = (state.appointments || []).find(x => x.id === c.appointmentId);
+  if (!a) return;
+  a.comanda = { status: c.status, items: c.items, discount: c.discount, paymentMethod: c.paymentMethod };
+  a.price = c.servicesTotal - Math.min(c.discount, c.servicesTotal);
+  if (c.professionalId) a.professionalId = c.professionalId;
+  if (c.clientName) a.clientName = c.clientName;
+  const svc = c.items.filter(i => i.type === 'servico' || i.type === 'avulso');
+  if (svc.length) { a.serviceName = svc.map(i => i.name).join(' + '); a.serviceId = svc[0].refId; }
+  if (c.status === 'fechada') a.status = 'concluido'; else if (a.status === 'concluido') a.status = 'agendado';
+  window.__comandaDirty = true;
+}
+
+async function comandaPush() {
+  const cur = window.__comanda; if (!cur) return;
+  const data = await comandaRequest(`/api/appointments/${cur.appointmentId}/comanda`, 'PUT', {
+    items: cur.items.map(i => ({ type: i.type, refId: i.refId, name: i.name, qty: i.qty, unitPrice: i.unitPrice })),
+    discount: cur.discount,
+    professionalId: cur.professionalId,
+    clientName: cur.clientName,
+    clientPhone: cur.clientPhone,
+    deposit: cur.deposit
+  });
+  if (data) { window.__comanda = data; comandaSyncAppointment(data); }
+  renderComandaBody(window.__comanda);
+}
+
+window.comandaAddService = async function() {
+  const id = document.getElementById('comandaAddSvc')?.value; const s = (state.services || []).find(x => x.id === id); if (!s) return;
+  window.__comanda.items.push({ type: 'servico', refId: s.id, name: s.name, qty: 1, unitPrice: s.price, total: s.price });
+  await comandaPush();
+};
+
+window.comandaAddProduct = async function() {
+  const id = document.getElementById('comandaAddProd')?.value; const p = (state.products || []).find(x => x.id === id); if (!p) return;
+  const ex = window.__comanda.items.find(i => i.type === 'produto' && i.refId === p.id);
+  if (ex) { if (ex.qty + 1 > (Number(p.stock) || 0)) { asyncAlert(`Estoque insuficiente: só há ${p.stock} un. de "${p.name}".`); return; } ex.qty += 1; }
+  else window.__comanda.items.push({ type: 'produto', refId: p.id, name: p.name, qty: 1, unitPrice: p.price, total: p.price });
+  await comandaPush();
+};
+
+window.comandaAddAvulso = async function() {
+  const name = (document.getElementById('comandaAvulsoName')?.value || '').trim();
+  const price = Number(String(document.getElementById('comandaAvulsoPrice')?.value || 0).replace(',', '.'));
+  if (!name) { asyncAlert('Informe o nome ou descrição do item avulso.'); return; }
+  if (isNaN(price) || price < 0) { asyncAlert('Informe um valor válido.'); return; }
+  window.__comanda.items.push({ type: 'avulso', refId: null, name, qty: 1, unitPrice: price, total: price });
+  await comandaPush();
+};
+
+window.comandaChangeQty = async function(idx, delta) {
+  const it = window.__comanda.items[idx]; if (!it) return;
+  const p = (state.products || []).find(x => x.id === it.refId);
+  const next = it.qty + delta;
+  if (next < 1) return;
+  if (p && next > (Number(p.stock) || 0)) { asyncAlert(`Estoque insuficiente: só há ${p.stock} un. de "${p.name}".`); return; }
+  it.qty = next;
+  it.total = round2(it.unitPrice * next);
+  await comandaPush();
+};
+
+window.comandaSetPrice = async function(idx, v) {
+  const it = window.__comanda.items[idx]; const n = Number(String(v).replace(',', '.')); if (!it || !Number.isFinite(n) || n < 0) { renderComandaBody(window.__comanda); return; }
+  it.unitPrice = n;
+  it.total = round2(n * (it.qty || 1));
+  await comandaPush();
+};
+
+window.comandaSetDeposit = async function(v) {
+  const n = Number(String(v).replace(',', '.'));
+  if (Number.isFinite(n) && n >= 0) {
+    window.__comanda.deposit = n;
+    await comandaPush();
+  }
+};
+
+window.comandaPromptRename = async function(idx) {
+  const it = window.__comanda.items[idx];
+  if (!it) return;
+  const newName = prompt('Editar nome do item:', it.name);
+  if (newName && newName.trim()) {
+    it.name = newName.trim();
+    await comandaPush();
+  }
+};
+
+window.comandaChangeProfessional = async function(newProfId) {
+  if (!newProfId || !window.__comanda) return;
+  window.__comanda.professionalId = newProfId;
+  await comandaPush();
+};
+
+window.comandaSetDiscount = async function(v) {
+  const n = Number(String(v).replace(',', '.')); window.__comanda.discount = Number.isFinite(n) && n > 0 ? n : 0; await comandaPush();
+};
+
+window.comandaRemove = async function(idx) {
+  const items = window.__comanda.items; items.splice(idx, 1); await comandaPush();
+};
+
+window.comandaReopen = async function() {
+  const cur = window.__comanda; if (!cur) return;
+  const ok = await asyncConfirm('Reabrir a comanda? A venda dos produtos será estornada e o estoque devolvido.', 'Reabrir comanda');
+  if (!ok) return;
+  const data = await comandaRequest(`/api/appointments/${cur.appointmentId}/comanda/reopen`, 'POST');
+  if (data) { window.__comanda = data; comandaSyncAppointment(data); await loadInitialData(); openComandaModal(cur.appointmentId); }
+};
+
+window.openComandaModal = async function(appId, ev) {
+  if (ev && ev.stopPropagation) ev.stopPropagation();
+  const data = await comandaRequest(`/api/appointments/${appId}/comanda`, 'GET');
+  if (!data) return;
+  window.__comanda = data; window.__comandaDirty = false;
+  const open = data.status !== 'fechada';
+  openModal(`Comanda · ${data.clientName || 'Cliente'}`, '<div id="comandaLoading">Carregando...</div>', open ? async () => {
+    const cur = window.__comanda;
+    const method = document.getElementById('comandaPay')?.value;
+    const isSplit = document.getElementById('comandaSplit')?.checked;
+    const method2 = isSplit ? document.getElementById('comandaPay2')?.value : null;
+    const val2 = isSplit ? Number(document.getElementById('comandaPay2Val')?.value || 0) : 0;
+    // garante que o que está na tela já foi salvo
+    await comandaPush();
+    const total = window.__comanda.total;
+    let payDesc = method;
+    if (isSplit && method2 && val2 > 0) {
+      const val1 = Math.max(0, total - val2);
+      payDesc = `${method} ${brl(val1)} + ${method2} ${brl(val2)}`;
+    }
+    const ok = await asyncConfirm(`Fechar a comanda de ${cur.clientName} no valor de ${brl(total)} (${payDesc})?\n\nIsso conclui o atendimento, lança a receita no caixa e baixa o estoque dos produtos.`, 'Fechar comanda');
+    if (!ok) return;
+    const payload = { paymentMethod: method };
+    if (isSplit && method2 && val2 > 0) { payload.paymentMethod2 = method2; payload.paymentValue2 = val2; }
+    const res = await comandaRequest(`/api/appointments/${cur.appointmentId}/comanda/close`, 'POST', payload);
+    if (!res) return;
+    closeModal(); window.__comandaDirty = false;
+    await loadInitialData(); renderView(currentView === 'balanco' ? 'balanco' : 'agenda');
+  } : null, 'Fechar comanda e receber');
+  renderComandaBody(data);
+  const cancelBtn = document.getElementById('modalCancelBtn');
+  if (cancelBtn && open) cancelBtn.innerText = 'Voltar';
+  if (cancelBtn) cancelBtn.addEventListener('click', () => {
+    if (window.__comandaDirty) { window.__comandaDirty = false; loadInitialData().then(() => renderView(currentView === 'balanco' ? 'balanco' : 'agenda')); }
+  }, { once: true });
+};
+
+window.filterModalServicesByProf = function(preferredServiceId) {
   const profId = document.getElementById('modalAppProf')?.value;
   const servSelect = document.getElementById('modalAppService');
   if (!servSelect || !profId) return;
 
-  const prof = state.professionals.find(p => p.id === profId);
-  const eligibleServices = (prof && Array.isArray(prof.serviceIds) && prof.serviceIds.length > 0)
+  const prof = (state.professionals || []).find(p => p.id === profId);
+  let eligibleServices = (prof && Array.isArray(prof.serviceIds) && prof.serviceIds.length > 0)
     ? state.services.filter(s => prof.serviceIds.includes(s.id))
-    : state.services;
+    : [...(state.services || [])];
 
-  const prevVal = servSelect.value;
+  const targetId = preferredServiceId || servSelect.value;
+  // Se o serviço selecionado/editado não estiver no filtro do profissional, mantém visível
+  if (targetId && !eligibleServices.some(s => s.id === targetId)) {
+    const targetObj = (state.services || []).find(x => x.id === targetId);
+    if (targetObj) eligibleServices.push(targetObj);
+  }
+
   servSelect.innerHTML = eligibleServices.map(s => `<option value="${s.id}" data-price="${s.price}" data-duration="${s.durationMinutes}">${s.name} (${formatDurationHours(s.durationMinutes)}) - R$ ${Number(s.price).toFixed(2)}</option>`).join('');
 
-  if (eligibleServices.some(s => s.id === prevVal)) {
-    servSelect.value = prevVal;
+  if (targetId && eligibleServices.some(s => s.id === targetId)) {
+    servSelect.value = targetId;
   }
   updateModalEndTime();
 
@@ -7306,6 +8930,7 @@ function initClientAppointmentAutocomplete() {
       phoneInput.value = client.phone;
     }
     closeDropdown();
+    if (window.apptToggleNewClientFields) apptToggleNewClientFields();
   }
 
   function renderSuggestions(matches) {
@@ -7422,7 +9047,7 @@ window.openBlockTimeModal = function(defaultStart = "12:00") {
         <select class="form-control" id="mBlockProf" onchange="renderBlockModalTimeline()">${profOptions}</select>
       </div>
       <div class="form-group" style="flex: 1;">
-        <label>Data do Bloqueio</label>
+        <label>Data da Pausa</label>
         <input type="date" class="form-control" id="mBlockDate" value="${initialDate}" onchange="renderBlockModalTimeline()">
       </div>
     </div>
@@ -7430,19 +9055,19 @@ window.openBlockTimeModal = function(defaultStart = "12:00") {
     <div class="form-group" style="margin-bottom: 12px;">
       <label>O que você deseja fazer?</label>
       <select class="form-control" id="mBlockType" onchange="handleBlockTypeChange(this.value)">
-        <option value="intervalo">Bloquear Intervalo de Horário (Almoço, Pausa, Compromisso)</option>
-        <option value="fechar_cedo">Fechar Mais Cedo (Bloquear até o encerramento do dia - 19:00)</option>
-        <option value="dia_todo">Folga / Dia Inteiro Indisponível (08:00 às 19:00)</option>
+        <option value="intervalo">Pausa no Horário (Almoço, Café, Compromisso)</option>
+        <option value="fechar_cedo">Fechar Mais Cedo (Pausa até o encerramento do dia - 19:00)</option>
+        <option value="dia_todo">Folga / Dia Inteiro em Pausa (08:00 às 19:00)</option>
       </select>
     </div>
 
     <div style="display:flex; gap:10px; margin-bottom:12px;" id="mBlockTimesWrapper">
       <div class="form-group" style="flex:1;">
-        <label id="mBlockStartLabel">Começo do Intervalo (Início)</label>
+        <label id="mBlockStartLabel">Começo da Pausa (Início)</label>
         <input type="time" class="form-control" id="mBlockStart" value="${defaultStart}" onchange="renderBlockModalTimeline()">
       </div>
       <div class="form-group" style="flex:1;">
-        <label id="mBlockEndLabel">Fim do Intervalo (Término)</label>
+        <label id="mBlockEndLabel">Fim da Pausa (Término)</label>
         <input type="time" class="form-control" id="mBlockEnd" value="13:00" onchange="renderBlockModalTimeline()">
       </div>
     </div>
@@ -7461,20 +9086,20 @@ window.openBlockTimeModal = function(defaultStart = "12:00") {
 
     <div class="form-group" style="margin-bottom:12px;">
       <label>Motivo / Observação (Opcional)</label>
-      <input type="text" class="form-control" id="mBlockNotes" placeholder="Ex: Almoço, Consulta médica, Saída mais cedo">
+      <input type="text" class="form-control" id="mBlockNotes" placeholder="Ex: Almoço, Café, Consulta médica, Saída mais cedo">
     </div>
   `;
 
-  openModal('Bloquear Horário / Fechar Mais Cedo', html, async () => {
+  openModal('Adicionar Pausa / Fechar Mais Cedo', html, async () => {
     const profId = document.getElementById('mBlockProf').value;
     const targetDate = document.getElementById('mBlockDate').value;
     const blockType = document.getElementById('mBlockType').value;
     let startTime = document.getElementById('mBlockStart').value;
     let endTime = document.getElementById('mBlockEnd').value;
-    const notes = document.getElementById('mBlockNotes').value.trim() || (blockType === 'fechar_cedo' ? 'Fechado mais cedo' : (blockType === 'dia_todo' ? 'Folga / Dia Indisponível' : 'Pausa / Indisponível'));
+    const notes = document.getElementById('mBlockNotes').value.trim() || (blockType === 'fechar_cedo' ? 'Fechado mais cedo' : (blockType === 'dia_todo' ? 'Folga / Dia Inteiro' : 'Pausa / Intervalo'));
 
     if (!targetDate) {
-      asyncAlert('Por favor informe a data do bloqueio.');
+      asyncAlert('Por favor informe a data da pausa.');
       return;
     }
 
@@ -7500,7 +9125,7 @@ window.openBlockTimeModal = function(defaultStart = "12:00") {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         professionalId: profId,
-        clientName: 'INDISPONÍVEL',
+        clientName: 'PAUSA',
         clientPhone: '',
         serviceId: 'indisponivel',
         serviceName: notes,
@@ -7515,16 +9140,16 @@ window.openBlockTimeModal = function(defaultStart = "12:00") {
 
     if (!res.ok) {
       const err = await res.json();
-      asyncAlert(err.error || 'Erro ao bloquear horário.');
+      asyncAlert(err.error || 'Erro ao salvar pausa de horário.');
       return;
     }
 
     closeModal();
-    // Atualiza a data da agenda para a data bloqueada para o usuário ver de imediato
+    // Atualiza a data da agenda para a data da pausa para o usuário ver de imediato
     selectedDate = targetDate;
     await loadInitialData();
     renderView('agenda');
-  });
+  }, 'Confirmar Pausa');
 
   setTimeout(() => {
     handleBlockTypeChange(document.getElementById('mBlockType').value);
@@ -7627,7 +9252,7 @@ window.renderBlockModalTimeline = function() {
       if (isStart) classes.push('block-start');
       if (isEnd) classes.push('block-end');
       if (t > currentStart && t < currentEnd) classes.push('block-middle');
-      tooltip = `Pausa / Bloqueio (${currentStart} até ${currentEnd})`;
+      tooltip = `Pausa no Horário (${currentStart} até ${currentEnd})`;
     }
 
     chipsHtml += `<div class="${classes.join(' ')}" title="${tooltip}" onclick="quickSelectBlockSlot('${t}')">${t}</div>`;
@@ -7799,14 +9424,22 @@ window.updateModalEndTime = function() {
   const endInput = document.getElementById('modalAppEnd');
   if (!serviceSelect || !startInput || !endInput) return;
 
-  const duration = Number(serviceSelect.options[serviceSelect.selectedIndex]?.dataset?.duration) || 30;
+  const selOpt = serviceSelect.options[serviceSelect.selectedIndex];
+  const duration = Number(selOpt?.dataset?.duration) || 30;
   const [h, m] = startInput.value.split(':').map(Number);
-  if (isNaN(h) || isNaN(m)) return;
+  if (!isNaN(h) && !isNaN(m)) {
+    const totalMin = h * 60 + m + duration;
+    const endH = Math.floor(totalMin / 60);
+    const endM = totalMin % 60;
+    endInput.value = `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
+  }
 
-  const totalMin = h * 60 + m + duration;
-  const endH = Math.floor(totalMin / 60);
-  const endM = totalMin % 60;
-  endInput.value = `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
+  // Sincroniza o campo de valor do serviço se existir
+  const priceInput = document.getElementById('modalAppPrice');
+  if (priceInput && selOpt && (!priceInput.value || priceInput.dataset.lastAutoSvcId !== serviceSelect.value)) {
+    priceInput.value = Number(selOpt.dataset.price || 0).toFixed(2);
+    priceInput.dataset.lastAutoSvcId = serviceSelect.value;
+  }
 };
 
 // ==========================================
@@ -8874,7 +10507,8 @@ window.deleteProductCategoryAction = async function(id, name, count) {
   }
 };
 
-window.openNewServiceModal = function() {
+window.openNewServiceModal = function(onDone) {
+  if (typeof onDone !== 'function') onDone = null;
   if (!isManager) {
     asyncAlert('Apenas gestores têm permissão para adicionar serviços.');
     return;
@@ -8974,14 +10608,18 @@ window.openNewServiceModal = function() {
       return;
     }
 
-    await tenantFetch('/api/services', {
+    const resNew = await tenantFetch('/api/services', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name, category, price, durationMinutes, commissionPercent, isPackage, sessionsCount, showPriceInBooking, showVariableNotice, variableNoticeText })
     });
+    let created = null;
+    try { created = resNew.ok ? await resNew.json() : null; } catch (e) {}
 
+    window.__apptShortcutReturn = null;
     closeModal();
     await loadInitialData();
+    if (onDone) { onDone(created); return; }
     renderView('servicos');
   });
 
@@ -8990,7 +10628,9 @@ window.openNewServiceModal = function() {
   }, 50);
 };
 
-window.openNewClientModal = function() {
+window.openNewClientModal = function(onDone, prefill) {
+  if (typeof onDone !== 'function') onDone = null;
+  prefill = (prefill && typeof prefill === 'object') ? prefill : {};
   const html = `
     <div class="form-group">
       <label>Nome Completo</label>
@@ -9021,16 +10661,26 @@ window.openNewClientModal = function() {
       return;
     }
 
-    await tenantFetch('/api/clients', {
+    const resCli = await tenantFetch('/api/clients', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name, phone, birthday, notes })
     });
+    let createdCli = null;
+    try { createdCli = resCli.ok ? await resCli.json() : null; } catch (e) {}
 
+    window.__apptShortcutReturn = null;
     closeModal();
     await loadInitialData();
+    if (onDone) { onDone(createdCli); return; }
     renderView('clientes');
   });
+
+  setTimeout(() => {
+    const n = document.getElementById('mCliName'), p = document.getElementById('mCliPhone');
+    if (n && prefill.name) n.value = prefill.name;
+    if (p && prefill.phone) p.value = prefill.phone;
+  }, 30);
 };
 
 window.openNewExpenseModal = function() {
@@ -9942,7 +11592,8 @@ window.deleteProfessional = async function(profId) {
 };
 
 // 2. Serviços: Editar e Excluir
-window.openEditServiceModal = function(serviceId) {
+window.openEditServiceModal = function(serviceId, onDone) {
+  if (typeof onDone !== 'function') onDone = null;
   if (!isManager) {
     asyncAlert('Apenas gestores têm permissão para editar serviços.');
     return;
@@ -10057,8 +11708,10 @@ window.openEditServiceModal = function(serviceId) {
       return;
     }
 
+    window.__apptShortcutReturn = null;
     closeModal();
     await loadInitialData();
+    if (onDone) { onDone({ id: serviceId }); return; }
     renderView('servicos');
   });
 
