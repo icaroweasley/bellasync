@@ -7120,46 +7120,124 @@ function closeModal() {
 }
 window.closeModal = closeModal;
 
-window.openNewAppointmentModal = function(defaultTime = "10:00") {
+// Guarda o que já foi preenchido no "Novo Agendamento" para reabrir depois de cadastrar serviço/cliente
+window.captureApptDraft = function() {
+  const g = id => document.getElementById(id);
+  return {
+    profId: g('modalAppProf')?.value || '',
+    name: g('modalAppName')?.value || '',
+    clientId: g('modalAppName')?.dataset.selectedClientId || '',
+    phone: g('modalAppPhone')?.value || '',
+    serviceId: g('modalAppService')?.value || '',
+    date: g('modalAppDate')?.value || '',
+    start: g('modalAppStart')?.value || '',
+    end: g('modalAppEnd')?.value || '',
+    deposit: !!g('modalAppHasDeposit')?.checked,
+    birthday: g('modalAppBirthday')?.value || '',
+    notes: g('modalAppNotes')?.value || ''
+  };
+};
+
+window.apptQuickAddService = function() {
+  if (!isManager) { asyncAlert('Apenas gestores podem cadastrar serviços.'); return; }
+  const draft = captureApptDraft();
+  openNewServiceModal((created) => {
+    if (created && created.id) draft.serviceId = created.id;
+    openNewAppointmentModal(draft.start || '10:00', draft);
+  });
+};
+
+window.apptQuickEditService = function() {
+  if (!isManager) { asyncAlert('Apenas gestores podem editar serviços.'); return; }
+  const draft = captureApptDraft();
+  if (!draft.serviceId) return;
+  openEditServiceModal(draft.serviceId, () => openNewAppointmentModal(draft.start || '10:00', draft));
+};
+
+window.apptQuickAddClient = function() {
+  const draft = captureApptDraft();
+  openNewClientModal((created) => {
+    if (created && created.id) {
+      draft.clientId = created.id; draft.name = created.name || draft.name; draft.phone = created.phone || draft.phone;
+    }
+    openNewAppointmentModal(draft.start || '10:00', draft);
+  }, { name: draft.name, phone: draft.phone });
+};
+
+// Mostra aniversário/observações só quando o cliente digitado ainda não está cadastrado
+window.apptToggleNewClientFields = function() {
+  const nameInput = document.getElementById('modalAppName');
+  const box = document.getElementById('modalAppNewClientBox');
+  if (!nameInput || !box) return;
+  const isNew = nameInput.value.trim().length > 0 && !nameInput.dataset.selectedClientId;
+  box.style.display = isNew ? 'block' : 'none';
+};
+
+window.openNewAppointmentModal = function(defaultTime = "10:00", draft = null) {
+  if (typeof defaultTime !== 'string') defaultTime = "10:00";
   if (!state.professionals || state.professionals.length === 0) {
     asyncAlert('Cadastre ao menos um profissional antes de realizar agendamentos.', 'Aviso', 'warning');
     return;
   }
   if (!state.services || state.services.length === 0) {
-    asyncAlert('Cadastre ao menos um serviço antes de realizar agendamentos.', 'Aviso', 'warning');
+    if (isManager) {
+      asyncAlert('Cadastre ao menos um serviço antes de realizar agendamentos.', 'Aviso', 'warning');
+    } else {
+      asyncAlert('Peça ao gestor para cadastrar ao menos um serviço antes de agendar.', 'Aviso', 'warning');
+    }
     return;
   }
 
-  let profOptions;
-  if (!isManager && currentUser && currentUser.professionalId) {
-    const myP = state.professionals.find(p => p.id === currentUser.professionalId);
-    if (myP) {
-      profOptions = `<option value="${myP.id}" selected>${myP.name} (${myP.role || 'Profissional'})</option>`;
-    } else {
-      profOptions = state.professionals.map(p => `<option value="${p.id}" ${p.id === selectedProfessionalId ? 'selected' : ''}>${p.name} (${p.role || 'Profissional'})</option>`).join('');
-    }
-  } else {
-    profOptions = state.professionals.map(p => `<option value="${p.id}" ${p.id === selectedProfessionalId ? 'selected' : ''}>${p.name} (${p.role || 'Profissional'})</option>`).join('');
-  }
+  // Qualquer profissional pode agendar para outra: a lista é completa; o padrão é a própria agenda
+  const defaultProfId = (draft && draft.profId)
+    || (!isManager && currentUser && currentUser.professionalId && state.professionals.some(p => p.id === currentUser.professionalId) ? currentUser.professionalId : '')
+    || selectedProfessionalId;
+  const profOptions = state.professionals.map(p => `<option value="${p.id}" ${p.id === defaultProfId ? 'selected' : ''}>${p.name} (${p.role || 'Profissional'})</option>`).join('');
 
   const servOptions = state.services.map(s => `<option value="${s.id}" data-price="${s.price}" data-duration="${s.durationMinutes}">${s.name} (${formatDurationHours(s.durationMinutes)}) - R$ ${s.price.toFixed(2)}</option>`).join('');
+  const smallBtn = 'background:none; border:none; color:var(--orange); font-size:0.8rem; font-weight:600; cursor:pointer; padding:0; display:inline-flex; align-items:center; gap:4px;';
+  const initialDate = (draft && draft.date) || selectedDate;
 
   const html = `
     <div class="form-group">
+      <label>Data do Agendamento</label>
+      <input type="date" class="form-control" id="modalAppDate" value="${initialDate}">
+    </div>
+    <div class="form-group">
       <label>Profissional</label>
-      <select class="form-control" id="modalAppProf" onchange="filterModalServicesByProf()" ${(!isManager && currentUser?.professionalId) ? 'disabled style="background:#f1f5f9; cursor:not-allowed;"' : ''}>${profOptions}</select>
+      <select class="form-control" id="modalAppProf" onchange="filterModalServicesByProf()">${profOptions}</select>
     </div>
     <div class="form-group client-autocomplete-wrapper">
-      <label>Nome do Cliente</label>
-      <input type="text" class="form-control" id="modalAppName" placeholder="Comece a digitar o nome do cliente..." autocomplete="off">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+        <label style="margin:0;">Nome do Cliente</label>
+        <button type="button" style="${smallBtn}" onclick="apptQuickAddClient()">+ Cadastrar cliente completo</button>
+      </div>
+      <input type="text" class="form-control" id="modalAppName" placeholder="Comece a digitar o nome do cliente..." autocomplete="off" oninput="apptToggleNewClientFields()">
       <div id="modalAppClientSuggestions" class="client-autocomplete-dropdown"></div>
     </div>
     <div class="form-group">
       <label>WhatsApp do Cliente</label>
       <input type="text" class="form-control" id="modalAppPhone" placeholder="(67) 99999-9999">
     </div>
+    <div id="modalAppNewClientBox" style="display:none; border:1px dashed #fed7aa; border-radius:12px; padding:12px; margin-bottom:10px;">
+      <div style="font-size:0.78rem; color:var(--muted); margin-bottom:8px;">Cliente novo: preencha para já cadastrar completo (opcional)</div>
+      <div class="form-group">
+        <label>Data de Nascimento</label>
+        <input type="date" class="form-control" id="modalAppBirthday">
+      </div>
+      <div class="form-group" style="margin-bottom:0;">
+        <label>Observações do cliente</label>
+        <textarea class="form-control" id="modalAppNotes" rows="2" placeholder="Ex: alergias, fórmula, preferências"></textarea>
+      </div>
+    </div>
     <div class="form-group">
-      <label>Serviço</label>
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+        <label style="margin:0;">Serviço</label>
+        ${isManager ? `<span style="display:inline-flex; gap:14px;">
+          <button type="button" style="${smallBtn}" onclick="apptQuickEditService()">Editar</button>
+          <button type="button" style="${smallBtn}" onclick="apptQuickAddService()">+ Novo serviço</button>
+        </span>` : ''}
+      </div>
       <select class="form-control" id="modalAppService" onchange="updateModalEndTime()">${servOptions}</select>
     </div>
     <div class="form-group" style="display:flex; gap:10px;">
@@ -7193,7 +7271,10 @@ window.openNewAppointmentModal = function(defaultTime = "10:00") {
     const price = Number(selectedOption.dataset.price) || 50;
     const startTime = document.getElementById('modalAppStart').value;
     const endTime = document.getElementById('modalAppEnd').value;
+    const apptDate = document.getElementById('modalAppDate')?.value || selectedDate;
     const hasDeposit = document.getElementById('modalAppHasDeposit')?.checked || false;
+    const clientBirthday = !clientId ? (document.getElementById('modalAppBirthday')?.value || '') : '';
+    const clientNotes = !clientId ? (document.getElementById('modalAppNotes')?.value || '').trim() : '';
     const prof = (state.professionals || []).find(p => p.id === profId);
     let profDepositPct = 30;
     let depositAmt = 0;
@@ -7211,6 +7292,10 @@ window.openNewAppointmentModal = function(defaultTime = "10:00") {
       asyncAlert('Por favor informe o nome do cliente');
       return;
     }
+    if (!apptDate) {
+      asyncAlert('Por favor informe a data do agendamento');
+      return;
+    }
 
     const res = await tenantFetch('/api/appointments', {
       method: 'POST',
@@ -7220,13 +7305,15 @@ window.openNewAppointmentModal = function(defaultTime = "10:00") {
         clientId,
         clientName,
         clientPhone,
+        clientBirthday,
+        clientNotes,
         serviceId,
         serviceName,
         price,
         hasDeposit,
         depositPercent: hasDeposit ? profDepositPct : 0,
         depositAmount: hasDeposit ? depositAmt : 0,
-        date: selectedDate,
+        date: apptDate,
         startTime,
         endTime,
         status: 'agendado'
@@ -7240,6 +7327,7 @@ window.openNewAppointmentModal = function(defaultTime = "10:00") {
     }
 
     closeModal();
+    if (apptDate !== selectedDate) selectedDate = apptDate;
     await loadInitialData();
     renderView('agenda');
   });
@@ -7248,7 +7336,20 @@ window.openNewAppointmentModal = function(defaultTime = "10:00") {
     filterModalServicesByProf();
     updateModalEndTime();
     initClientAppointmentAutocomplete();
-  }, 50);
+    if (draft) {
+      const g = id => document.getElementById(id);
+      if (draft.serviceId && g('modalAppService')) g('modalAppService').value = draft.serviceId;
+      if (g('modalAppName')) { g('modalAppName').value = draft.name || ''; if (draft.clientId) g('modalAppName').dataset.selectedClientId = draft.clientId; }
+      if (g('modalAppPhone')) g('modalAppPhone').value = draft.phone || '';
+      if (g('modalAppStart') && draft.start) g('modalAppStart').value = draft.start;
+      if (g('modalAppHasDeposit')) g('modalAppHasDeposit').checked = !!draft.deposit;
+      if (g('modalAppBirthday')) g('modalAppBirthday').value = draft.birthday || '';
+      if (g('modalAppNotes')) g('modalAppNotes').value = draft.notes || '';
+      updateModalEndTime();
+      if (draft.end && g('modalAppEnd')) g('modalAppEnd').value = draft.end;
+    }
+    apptToggleNewClientFields();
+  }, 80);
 };
 
 window.filterModalServicesByProf = function() {
@@ -7306,6 +7407,7 @@ function initClientAppointmentAutocomplete() {
       phoneInput.value = client.phone;
     }
     closeDropdown();
+    if (window.apptToggleNewClientFields) apptToggleNewClientFields();
   }
 
   function renderSuggestions(matches) {
@@ -8874,7 +8976,8 @@ window.deleteProductCategoryAction = async function(id, name, count) {
   }
 };
 
-window.openNewServiceModal = function() {
+window.openNewServiceModal = function(onDone) {
+  if (typeof onDone !== 'function') onDone = null;
   if (!isManager) {
     asyncAlert('Apenas gestores têm permissão para adicionar serviços.');
     return;
@@ -8974,14 +9077,17 @@ window.openNewServiceModal = function() {
       return;
     }
 
-    await tenantFetch('/api/services', {
+    const resNew = await tenantFetch('/api/services', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name, category, price, durationMinutes, commissionPercent, isPackage, sessionsCount, showPriceInBooking, showVariableNotice, variableNoticeText })
     });
+    let created = null;
+    try { created = resNew.ok ? await resNew.json() : null; } catch (e) {}
 
     closeModal();
     await loadInitialData();
+    if (onDone) { onDone(created); return; }
     renderView('servicos');
   });
 
@@ -8990,7 +9096,9 @@ window.openNewServiceModal = function() {
   }, 50);
 };
 
-window.openNewClientModal = function() {
+window.openNewClientModal = function(onDone, prefill) {
+  if (typeof onDone !== 'function') onDone = null;
+  prefill = (prefill && typeof prefill === 'object') ? prefill : {};
   const html = `
     <div class="form-group">
       <label>Nome Completo</label>
@@ -9021,16 +9129,25 @@ window.openNewClientModal = function() {
       return;
     }
 
-    await tenantFetch('/api/clients', {
+    const resCli = await tenantFetch('/api/clients', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name, phone, birthday, notes })
     });
+    let createdCli = null;
+    try { createdCli = resCli.ok ? await resCli.json() : null; } catch (e) {}
 
     closeModal();
     await loadInitialData();
+    if (onDone) { onDone(createdCli); return; }
     renderView('clientes');
   });
+
+  setTimeout(() => {
+    const n = document.getElementById('mCliName'), p = document.getElementById('mCliPhone');
+    if (n && prefill.name) n.value = prefill.name;
+    if (p && prefill.phone) p.value = prefill.phone;
+  }, 30);
 };
 
 window.openNewExpenseModal = function() {
@@ -9942,7 +10059,8 @@ window.deleteProfessional = async function(profId) {
 };
 
 // 2. Serviços: Editar e Excluir
-window.openEditServiceModal = function(serviceId) {
+window.openEditServiceModal = function(serviceId, onDone) {
+  if (typeof onDone !== 'function') onDone = null;
   if (!isManager) {
     asyncAlert('Apenas gestores têm permissão para editar serviços.');
     return;
@@ -10059,6 +10177,7 @@ window.openEditServiceModal = function(serviceId) {
 
     closeModal();
     await loadInitialData();
+    if (onDone) { onDone({ id: serviceId }); return; }
     renderView('servicos');
   });
 

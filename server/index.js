@@ -2313,9 +2313,13 @@ app.post('/api/appointments', (req, res) => {
     }
   }
 
-  if (resolvedPhone) {
-    const cleanDigits = resolvedPhone.replace(/\D/g, '');
-    if (!matchedClient) {
+  // Aniversário e observações opcionais enviados pelo agendamento interno (cadastro rápido do cliente)
+  const quickBirthday = typeof req.body.clientBirthday === 'string' ? req.body.clientBirthday.trim() : '';
+  const quickNotes = typeof req.body.clientNotes === 'string' ? req.body.clientNotes.trim() : '';
+
+  if (resolvedPhone || (!matchedClient && resolvedName && (quickBirthday || quickNotes))) {
+    const cleanDigits = (resolvedPhone || '').replace(/\D/g, '');
+    if (!matchedClient && cleanDigits) {
       matchedClient = (db.clients || []).find(
         c => c.tenantId === tenantId && c.phone && c.phone.replace(/\D/g, '') === cleanDigits
       );
@@ -2326,11 +2330,11 @@ app.post('/api/appointments', (req, res) => {
         id: 'cli_' + Date.now(),
         tenantId: tenantId,
         name: resolvedName || 'Cliente',
-        phone: resolvedPhone,
-        birthday: '',
+        phone: resolvedPhone || '',
+        birthday: quickBirthday,
         status: 'ativo',
         balance: 0,
-        notes: 'Cadastrado via Agendamento Online'
+        notes: quickNotes || 'Cadastrado via Agendamento Online'
       };
       db.clients.push(createdCli);
       matchedClient = createdCli;
