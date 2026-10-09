@@ -2590,6 +2590,74 @@ app.patch('/api/appointments/:id/status', (req, res) => {
   res.json({ message: 'Status atualizado com sucesso.', appointment: app });
 });
 
+// Atualizar dados de um agendamento existente (serviço, cliente, data, horário, profissional, valor, etc.)
+app.put('/api/appointments/:id', (req, res) => {
+  const db = getDb();
+  const tenantId = getTenantId(req);
+  const app = (db.appointments || []).find(a => a.id === req.params.id && a.tenantId === tenantId);
+  if (!app) {
+    return res.status(404).json({ error: 'Agendamento não encontrado.' });
+  }
+
+  if (!canUserManageAppointment(req, app, db)) {
+    return res.status(403).json({ error: 'Apenas o gestor e o profissional em que o agendamento foi feito têm permissão para editar este agendamento.' });
+  }
+
+  const {
+    professionalId,
+    clientId,
+    clientName,
+    clientPhone,
+    serviceId,
+    serviceName,
+    servicesList,
+    date,
+    startTime,
+    endTime,
+    durationMinutes,
+    price,
+    notes,
+    hasDeposit,
+    depositPercent,
+    depositAmount,
+    status
+  } = req.body;
+
+  if (professionalId !== undefined) app.professionalId = professionalId;
+  if (clientId !== undefined) app.clientId = clientId;
+  if (clientName !== undefined) app.clientName = clientName;
+  if (clientPhone !== undefined) app.clientPhone = clientPhone;
+  if (serviceId !== undefined) app.serviceId = serviceId;
+  if (serviceName !== undefined) app.serviceName = serviceName;
+  if (Array.isArray(servicesList)) app.servicesList = servicesList;
+  if (date !== undefined) app.date = date;
+  if (startTime !== undefined) app.startTime = startTime;
+  if (endTime !== undefined) app.endTime = endTime;
+  if (durationMinutes !== undefined) app.durationMinutes = Number(durationMinutes) || app.durationMinutes;
+  if (price !== undefined) app.price = Number(price) || 0;
+  if (notes !== undefined) app.notes = notes;
+  if (hasDeposit !== undefined) app.hasDeposit = Boolean(hasDeposit);
+  if (depositPercent !== undefined) app.depositPercent = Number(depositPercent) || null;
+  if (depositAmount !== undefined) app.depositAmount = Number(depositAmount) || null;
+  if (status !== undefined) app.status = status;
+
+  // Se houver comanda aberta para este agendamento, sincroniza os itens de serviço e o valor
+  if (app.comanda && app.comanda.status === 'aberta') {
+    const svcItems = (app.comanda.items || []).filter(i => i.type === 'servico');
+    if (svcItems.length === 1) {
+      if (serviceName) svcItems[0].name = app.serviceName;
+      if (serviceId) svcItems[0].refId = app.serviceId;
+      if (price !== undefined && !app.comanda.discount) {
+        svcItems[0].unitPrice = app.price;
+        svcItems[0].total = app.price;
+      }
+    }
+  }
+
+  saveDb(db);
+  res.json({ message: 'Agendamento atualizado com sucesso.', appointment: app });
+});
+
 // Excluir / Cancelar Agendamento
 app.delete('/api/appointments/:id', (req, res) => {
   const db = getDb();
@@ -2620,7 +2688,7 @@ const COMANDA_PAYMENT_METHODS = ['Pix', 'Dinheiro', 'Cartão de débito', 'Cart�
 const round2 = n => Math.round((Number(n) || 0) * 100) / 100;
 
 function comandaTotals(items, discount, app) {
-  const servicesTotal = round2(items.filter(i => i.type === 'servico').reduce((a, i) => a + i.total, 0));
+  const servicesTotal = round2(items.filter(i => i.type === 'servico' || i.type === 'avulso').reduce((a, i) => a + i.total, 0));
   const productsTotal = round2(items.filter(i => i.type === 'produto').reduce((a, i) => a + i.total, 0));
   const gross = round2(servicesTotal + productsTotal);
   const disc = Math.min(Math.max(round2(discount), 0), gross);
@@ -2647,7 +2715,16 @@ function defaultComandaItems(app, db, tenantId) {
 
 function getComandaView(app, db, tenantId) {
   const c = app.comanda || { status: 'aberta', items: defaultComandaItems(app, db, tenantId), discount: 0, paymentMethod: null, createdAt: null };
-  return { ...c, ...comandaTotals(c.items, c.discount, app), appointmentId: app.id, clientName: app.clientName, professionalId: app.professionalId, hasDeposit: !!app.hasDeposit };
+  return {
+    ...c,
+    ...comandaTotals(c.items, c.discount, app),
+    appointmentId: app.id,
+    clientName: app.clientName,
+    clientPhone: app.clientPhone,
+    professionalId: app.professionalId,
+    hasDeposit: !!app.hasDeposit,
+    depositAmount: app.depositAmount || 0
+  };
 }
 
 function loadComandaApp(req, res) {
@@ -2667,7 +2744,7 @@ app.get('/api/appointments/:id/comanda', (req, res) => {
   res.json(getComandaView(ctx.app, ctx.db, ctx.tenantId));
 });
 
-// Salva os itens (serviços/produtos) e o desconto da comanda aberta
+// Salva os itens (serviços/produtos/avulsos) e o desconto da comanda aberta
 app.put('/api/appointments/:id/comanda', (req, res) => {
   const ctx = loadComandaApp(req, res); if (!ctx) return;
   const { db, tenantId, app } = ctx;
@@ -2678,7 +2755,7 @@ app.put('/api/appointments/:id/comanda', (req, res) => {
     return res.status(409).json({ error: 'Não é possível abrir comanda para este agendamento.' });
   }
   const incoming = Array.isArray(req.body.items) ? req.body.items : [];
-  if (incoming.length === 0) return res.status(400).json({ error: 'A comanda precisa ter ao menos um serviço.' });
+  if (incoming.length === 0) return res.status(400).json({ error: 'A comanda precisa ter ao menos um item.' });
   if (incoming.length > 60) return res.status(400).json({ error: 'Itens demais na comanda.' });
 
   const items = [];
@@ -2686,33 +2763,62 @@ app.put('/api/appointments/:id/comanda', (req, res) => {
     const it = incoming[i] || {};
     if (it.type === 'servico') {
       const s = (db.services || []).find(x => x.id === it.refId && x.tenantId === tenantId);
-      if (!s) return res.status(404).json({ error: 'Serviço não encontrado na comanda.' });
-      const custom = Number(it.unitPrice);
-      const unit = Number.isFinite(custom) && custom >= 0 ? round2(custom) : round2(s.price);
-      items.push({ id: 'ci_' + i, type: 'servico', refId: s.id, name: s.name, qty: 1, unitPrice: unit, total: unit });
+      const customPrice = Number(it.unitPrice);
+      const unit = Number.isFinite(customPrice) && customPrice >= 0 ? round2(customPrice) : (s ? round2(s.price) : 0);
+      const name = (it.name || (s && s.name) || 'Serviço').trim();
+      items.push({ id: 'ci_' + i, type: 'servico', refId: (s && s.id) || it.refId || null, name, qty: 1, unitPrice: unit, total: unit });
     } else if (it.type === 'produto') {
       const p = (db.products || []).find(x => x.id === it.refId && x.tenantId === tenantId);
-      if (!p) return res.status(404).json({ error: 'Produto não encontrado na comanda.' });
       const qty = Math.min(999, Math.max(1, parseInt(it.qty, 10) || 1));
-      const unit = round2(p.price);
-      items.push({ id: 'ci_' + i, type: 'produto', refId: p.id, name: p.name, qty, unitPrice: unit, total: round2(unit * qty) });
+      const customPrice = Number(it.unitPrice);
+      const unit = Number.isFinite(customPrice) && customPrice >= 0 ? round2(customPrice) : (p ? round2(p.price) : 0);
+      const name = (it.name || (p && p.name) || 'Produto').trim();
+      items.push({ id: 'ci_' + i, type: 'produto', refId: (p && p.id) || it.refId || null, name, qty, unitPrice: unit, total: round2(unit * qty) });
+    } else if (it.type === 'avulso' || it.type === 'outro') {
+      const qty = Math.min(999, Math.max(1, parseInt(it.qty, 10) || 1));
+      const customPrice = Number(it.unitPrice);
+      const unit = Number.isFinite(customPrice) && customPrice >= 0 ? round2(customPrice) : 0;
+      const name = (it.name || 'Item Avulso').trim();
+      items.push({ id: 'ci_' + i, type: 'avulso', refId: null, name, qty, unitPrice: unit, total: round2(unit * qty) });
     } else {
-      return res.status(400).json({ error: 'Tipo de item inválido.' });
+      return res.status(400).json({ error: 'Tipo de item inválido na comanda.' });
     }
   }
-  if (!items.some(i => i.type === 'servico')) return res.status(400).json({ error: 'A comanda precisa ter ao menos um serviço.' });
+
+  // Atualizações opcionais de dados vinculados pelo modal da comanda
+  if (req.body.professionalId) {
+    const prof = (db.professionals || []).find(p => p.id === req.body.professionalId && p.tenantId === tenantId);
+    if (prof) app.professionalId = req.body.professionalId;
+  }
+  if (typeof req.body.clientName === 'string' && req.body.clientName.trim()) {
+    app.clientName = req.body.clientName.trim();
+  }
+  if (typeof req.body.clientPhone === 'string') {
+    app.clientPhone = req.body.clientPhone.trim();
+  }
+  if (req.body.deposit !== undefined) {
+    const depVal = Number(req.body.deposit);
+    if (Number.isFinite(depVal) && depVal >= 0) {
+      app.hasDeposit = depVal > 0;
+      app.depositAmount = round2(depVal);
+    }
+  }
 
   const t = comandaTotals(items, req.body.discount, app);
   app.comanda = {
     status: 'aberta', items, discount: t.discount, paymentMethod: null,
     createdAt: (app.comanda && app.comanda.createdAt) || new Date().toISOString(), updatedAt: new Date().toISOString()
   };
-  // Serviços alimentam a receita de serviços do balanço (desconto abate primeiro dos serviços)
+  // Serviços e itens avulsos alimentam a receita de serviços do balanço (desconto abate primeiro dos serviços)
   const svcDiscount = Math.min(t.discount, t.servicesTotal);
   app.price = round2(t.servicesTotal - svcDiscount);
-  const svc = items.filter(i => i.type === 'servico');
-  app.serviceId = svc[0].refId;
-  app.serviceName = svc.map(i => i.name).join(' + ');
+  const svc = items.filter(i => i.type === 'servico' || i.type === 'avulso');
+  if (svc.length > 0) {
+    app.serviceId = svc[0].refId || null;
+    app.serviceName = svc.map(i => i.name).join(' + ');
+  } else {
+    app.serviceName = 'Venda de Produtos (Balcão)';
+  }
   saveDb(db);
   res.json(getComandaView(app, db, tenantId));
 });
@@ -2731,7 +2837,7 @@ app.post('/api/appointments/:id/comanda/close', (req, res) => {
 
   const items = app.comanda.items;
   const t = comandaTotals(items, app.comanda.discount, app);
-  const productItems = items.filter(i => i.type === 'produto');
+  const productItems = items.filter(i => i.type === 'produto' && i.refId);
 
   // Confere estoque de tudo antes de baixar qualquer item
   const need = {};
@@ -2748,7 +2854,7 @@ app.post('/api/appointments/:id/comanda/close', (req, res) => {
   if (productItems.length > 0) {
     productItems.forEach(i => {
       const p = db.products.find(x => x.id === i.refId && x.tenantId === tenantId);
-      p.stock = (Number(p.stock) || 0) - i.qty;
+      if (p) p.stock = (Number(p.stock) || 0) - i.qty;
     });
     const prof = (db.professionals || []).find(p => p.id === app.professionalId && p.tenantId === tenantId);
     const today = getTodayDateStr();

@@ -669,6 +669,15 @@ window.goToAppointmentInAgenda = function() {
   }
 };
 
+window.editCurrentViewingAppointment = function() {
+  if (!currentViewingAppointment) return;
+  const app = currentViewingAppointment;
+  closeAppointmentDetailsModal();
+  if (typeof openEditAppointmentModal === 'function') {
+    openEditAppointmentModal(app);
+  }
+};
+
 window.handleNotificationBellClick = async function() {
   const dropdown = document.getElementById('notifDropdown');
   if (!dropdown) return;
@@ -7710,7 +7719,6 @@ window.saveSettings = async function() {
 };
 
 
-// Modais Genéricos de Cadastro
 function openModal(title, bodyHtml, onConfirm, confirmText = 'Salvar', hideCancel = false) {
   const titleEl = document.getElementById('modalTitle');
   if (titleEl) titleEl.innerText = title;
@@ -7725,7 +7733,11 @@ function openModal(title, bodyHtml, onConfirm, confirmText = 'Salvar', hideCance
 
   if (cancelBtn) {
     cancelBtn.style.display = hideCancel ? 'none' : 'inline-block';
-    cancelBtn.innerText = onConfirm ? 'Cancelar' : 'Fechar';
+    if (typeof window.__apptShortcutReturn === 'function') {
+      cancelBtn.innerText = '← Voltar ao Agendamento';
+    } else {
+      cancelBtn.innerText = onConfirm ? 'Cancelar' : 'Fechar';
+    }
   }
 
   if (confirmBtn) {
@@ -7751,6 +7763,12 @@ window.openModal = openModal;
 
 function closeModal() {
   document.getElementById('universalDatePickerPopover')?.remove();
+  if (typeof window.__apptShortcutReturn === 'function') {
+    const returnFn = window.__apptShortcutReturn;
+    window.__apptShortcutReturn = null;
+    returnFn();
+    return;
+  }
   const modal = document.getElementById('genericModal');
   if (modal) {
     modal.classList.remove('open');
@@ -7769,16 +7787,25 @@ function closeModal() {
   updateBodyScrollLock();
 }
 window.closeModal = closeModal;
+window.forceCloseModal = function() {
+  window.__apptShortcutReturn = null;
+  closeModal();
+};
 
-// Guarda o que já foi preenchido no "Novo Agendamento" para reabrir depois de cadastrar serviço/cliente
+// Guarda o que já foi preenchido no "Novo Agendamento" ou "Editar Agendamento" para reabrir depois de cadastrar/editar serviço/cliente
 window.captureApptDraft = function() {
   const g = id => document.getElementById(id);
+  const svcEl = g('modalAppService');
+  const selOpt = svcEl?.options?.[svcEl.selectedIndex];
   return {
+    appointmentId: g('modalAppEditId')?.value || '',
+    isEditing: !!(g('modalAppEditId')?.value),
     profId: g('modalAppProf')?.value || '',
     name: g('modalAppName')?.value || '',
     clientId: g('modalAppName')?.dataset.selectedClientId || '',
     phone: g('modalAppPhone')?.value || '',
-    serviceId: g('modalAppService')?.value || '',
+    serviceId: svcEl?.value || '',
+    servicePrice: g('modalAppPrice')?.value || (selOpt ? selOpt.dataset.price : ''),
     date: g('modalAppDate')?.value || '',
     start: g('modalAppStart')?.value || '',
     end: g('modalAppEnd')?.value || '',
@@ -7788,29 +7815,62 @@ window.captureApptDraft = function() {
   };
 };
 
+window.restoreApptModalFromDraft = function(draft) {
+  if (draft && draft.isEditing && draft.appointmentId) {
+    const existing = (state.appointments || []).find(a => a.id === draft.appointmentId);
+    openEditAppointmentModal(existing || draft, draft);
+  } else {
+    openNewAppointmentModal(draft ? draft.start || '10:00' : '10:00', draft);
+  }
+};
+
 window.apptQuickAddService = function() {
   if (!isManager) { asyncAlert('Apenas gestores podem cadastrar serviços.'); return; }
   const draft = captureApptDraft();
+  window.__apptShortcutReturn = () => window.restoreApptModalFromDraft(draft);
+
   openNewServiceModal((created) => {
-    if (created && created.id) draft.serviceId = created.id;
-    openNewAppointmentModal(draft.start || '10:00', draft);
+    window.__apptShortcutReturn = null;
+    if (created && created.id) {
+      draft.serviceId = created.id;
+      draft.servicePrice = created.price;
+    }
+    delete draft.end;
+    window.restoreApptModalFromDraft(draft);
   });
 };
 
 window.apptQuickEditService = function() {
   if (!isManager) { asyncAlert('Apenas gestores podem editar serviços.'); return; }
   const draft = captureApptDraft();
-  if (!draft.serviceId) return;
-  openEditServiceModal(draft.serviceId, () => openNewAppointmentModal(draft.start || '10:00', draft));
+  if (!draft.serviceId) {
+    asyncAlert('Selecione um serviço primeiro para editar.');
+    return;
+  }
+  window.__apptShortcutReturn = () => window.restoreApptModalFromDraft(draft);
+
+  openEditServiceModal(draft.serviceId, (updated) => {
+    window.__apptShortcutReturn = null;
+    if (updated && updated.id) {
+      draft.serviceId = updated.id;
+      const s = (state.services || []).find(x => x.id === updated.id);
+      if (s) draft.servicePrice = s.price;
+    }
+    delete draft.end;
+    window.restoreApptModalFromDraft(draft);
+  });
 };
 
 window.apptQuickAddClient = function() {
   const draft = captureApptDraft();
+  window.__apptShortcutReturn = () => window.restoreApptModalFromDraft(draft);
+
   openNewClientModal((created) => {
+    window.__apptShortcutReturn = null;
     if (created && created.id) {
       draft.clientId = created.id; draft.name = created.name || draft.name; draft.phone = created.phone || draft.phone;
     }
-    openNewAppointmentModal(draft.start || '10:00', draft);
+    window.restoreApptModalFromDraft(draft);
   }, { name: draft.name, phone: draft.phone });
 };
 
@@ -7844,11 +7904,15 @@ window.openNewAppointmentModal = function(defaultTime = "10:00", draft = null) {
     || selectedProfessionalId;
   const profOptions = state.professionals.map(p => `<option value="${p.id}" ${p.id === defaultProfId ? 'selected' : ''}>${p.name} (${p.role || 'Profissional'})</option>`).join('');
 
-  const servOptions = state.services.map(s => `<option value="${s.id}" data-price="${s.price}" data-duration="${s.durationMinutes}">${s.name} (${formatDurationHours(s.durationMinutes)}) - R$ ${s.price.toFixed(2)}</option>`).join('');
+  const targetServiceId = (draft && draft.serviceId) || (state.services[0] ? state.services[0].id : '');
+  const servOptions = state.services.map(s => `<option value="${s.id}" data-price="${s.price}" data-duration="${s.durationMinutes}" ${s.id === targetServiceId ? 'selected' : ''}>${s.name} (${formatDurationHours(s.durationMinutes)}) - R$ ${Number(s.price).toFixed(2)}</option>`).join('');
   const smallBtn = 'background:none; border:none; color:var(--orange); font-size:0.8rem; font-weight:600; cursor:pointer; padding:0; display:inline-flex; align-items:center; gap:4px;';
   const initialDate = (draft && draft.date) || selectedDate;
+  const selectedServ = state.services.find(s => s.id === targetServiceId) || state.services[0];
+  const initialPrice = draft && draft.servicePrice !== undefined ? draft.servicePrice : (selectedServ ? Number(selectedServ.price).toFixed(2) : '50.00');
 
   const html = `
+    <input type="hidden" id="modalAppEditId" value="">
     <div class="form-group">
       <label>Data do Agendamento</label>
       <input type="date" class="form-control" id="modalAppDate" value="${initialDate}">
@@ -7890,6 +7954,10 @@ window.openNewAppointmentModal = function(defaultTime = "10:00", draft = null) {
       </div>
       <select class="form-control" id="modalAppService" onchange="updateModalEndTime()">${servOptions}</select>
     </div>
+    <div class="form-group">
+      <label>Valor do Serviço (R$)</label>
+      <input type="number" step="0.5" class="form-control" id="modalAppPrice" value="${initialPrice}" placeholder="0.00">
+    </div>
     <div class="form-group" style="display:flex; gap:10px;">
       <div style="flex:1;">
         <label>Horário Início</label>
@@ -7917,8 +7985,9 @@ window.openNewAppointmentModal = function(defaultTime = "10:00", draft = null) {
     const serviceSelect = document.getElementById('modalAppService');
     const serviceId = serviceSelect.value;
     const selectedOption = serviceSelect.options[serviceSelect.selectedIndex];
-    const serviceName = selectedOption.text.split(' (')[0];
-    const price = Number(selectedOption.dataset.price) || 50;
+    const serviceName = selectedOption ? selectedOption.text.split(' (')[0] : 'Serviço';
+    const customPrice = Number(document.getElementById('modalAppPrice')?.value);
+    const price = Number.isFinite(customPrice) && customPrice >= 0 ? customPrice : (Number(selectedOption?.dataset?.price) || 50);
     const startTime = document.getElementById('modalAppStart').value;
     const endTime = document.getElementById('modalAppEnd').value;
     const apptDate = document.getElementById('modalAppDate')?.value || selectedDate;
@@ -7983,12 +8052,13 @@ window.openNewAppointmentModal = function(defaultTime = "10:00", draft = null) {
   });
 
   setTimeout(() => {
-    filterModalServicesByProf();
+    filterModalServicesByProf(draft?.serviceId);
     updateModalEndTime();
     initClientAppointmentAutocomplete();
     if (draft) {
       const g = id => document.getElementById(id);
       if (draft.serviceId && g('modalAppService')) g('modalAppService').value = draft.serviceId;
+      if (draft.servicePrice !== undefined && g('modalAppPrice')) g('modalAppPrice').value = draft.servicePrice;
       if (g('modalAppName')) { g('modalAppName').value = draft.name || ''; if (draft.clientId) g('modalAppName').dataset.selectedClientId = draft.clientId; }
       if (g('modalAppPhone')) g('modalAppPhone').value = draft.phone || '';
       if (g('modalAppStart') && draft.start) g('modalAppStart').value = draft.start;
@@ -7999,6 +8069,155 @@ window.openNewAppointmentModal = function(defaultTime = "10:00", draft = null) {
       if (draft.end && g('modalAppEnd')) g('modalAppEnd').value = draft.end;
     }
     apptToggleNewClientFields();
+  }, 80);
+};
+
+window.openEditAppointmentModal = function(app, draft = null) {
+  if (!app) return;
+  if (!isManager && currentUser && currentUser.professionalId && app.professionalId !== currentUser.professionalId) {
+    asyncAlert('Apenas o gestor e o profissional deste agendamento têm permissão para editá-lo.');
+    return;
+  }
+
+  const apptId = app.id;
+  const initialDate = (draft && draft.date) || app.date || selectedDate;
+  const defaultProfId = (draft && draft.profId) || app.professionalId || selectedProfessionalId;
+  const profOptions = (state.professionals || []).map(p => `<option value="${p.id}" ${p.id === defaultProfId ? 'selected' : ''}>${p.name} (${p.role || 'Profissional'})</option>`).join('');
+
+  const targetServiceId = (draft && draft.serviceId) || app.serviceId;
+  const servOptions = (state.services || []).map(s => `<option value="${s.id}" data-price="${s.price}" data-duration="${s.durationMinutes}" ${s.id === targetServiceId ? 'selected' : ''}>${s.name} (${formatDurationHours(s.durationMinutes)}) - R$ ${Number(s.price).toFixed(2)}</option>`).join('');
+  const smallBtn = 'background:none; border:none; color:var(--orange); font-size:0.8rem; font-weight:600; cursor:pointer; padding:0; display:inline-flex; align-items:center; gap:4px;';
+  const initialPrice = draft && draft.servicePrice !== undefined ? draft.servicePrice : Number(app.price || 0).toFixed(2);
+  const initialClientName = (draft && draft.name) || app.clientName || '';
+  const initialClientPhone = (draft && draft.phone) || app.clientPhone || '';
+  const initialStartTime = (draft && draft.start) || app.startTime || '10:00';
+  const initialEndTime = (draft && draft.end) || app.endTime || '10:30';
+  const initialNotes = (draft && draft.notes !== undefined) ? draft.notes : (app.notes || '');
+  const initialDeposit = (draft && draft.deposit !== undefined) ? !!draft.deposit : !!app.hasDeposit;
+
+  const html = `
+    <input type="hidden" id="modalAppEditId" value="${apptId}">
+    <div class="form-group">
+      <label>Data do Agendamento</label>
+      <input type="date" class="form-control" id="modalAppDate" value="${initialDate}">
+    </div>
+    <div class="form-group">
+      <label>Profissional</label>
+      <select class="form-control" id="modalAppProf" onchange="filterModalServicesByProf()">${profOptions}</select>
+    </div>
+    <div class="form-group client-autocomplete-wrapper">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+        <label style="margin:0;">Nome do Cliente</label>
+        <button type="button" style="${smallBtn}" onclick="apptQuickAddClient()">+ Cadastrar cliente completo</button>
+      </div>
+      <input type="text" class="form-control" id="modalAppName" value="${initialClientName}" placeholder="Nome do cliente..." autocomplete="off">
+      <div id="modalAppClientSuggestions" class="client-autocomplete-dropdown"></div>
+    </div>
+    <div class="form-group">
+      <label>WhatsApp do Cliente</label>
+      <input type="text" class="form-control" id="modalAppPhone" value="${initialClientPhone}" placeholder="(67) 99999-9999">
+    </div>
+    <div class="form-group">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+        <label style="margin:0;">Serviço</label>
+        ${isManager ? `<span style="display:inline-flex; gap:14px;">
+          <button type="button" style="${smallBtn}" onclick="apptQuickEditService()">Editar</button>
+          <button type="button" style="${smallBtn}" onclick="apptQuickAddService()">+ Novo serviço</button>
+        </span>` : ''}
+      </div>
+      <select class="form-control" id="modalAppService" onchange="updateModalEndTime()">${servOptions}</select>
+    </div>
+    <div class="form-group">
+      <label>Valor do Serviço (R$)</label>
+      <input type="number" step="0.5" class="form-control" id="modalAppPrice" value="${initialPrice}" placeholder="0.00">
+    </div>
+    <div class="form-group" style="display:flex; gap:10px;">
+      <div style="flex:1;">
+        <label>Horário Início</label>
+        <input type="time" class="form-control" id="modalAppStart" value="${initialStartTime}" onchange="updateModalEndTime()">
+      </div>
+      <div style="flex:1;">
+        <label>Horário Fim</label>
+        <input type="time" class="form-control" id="modalAppEnd" value="${initialEndTime}">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Observações do Agendamento</label>
+      <textarea class="form-control" id="modalAppNotes" rows="2" placeholder="Observações opcionais...">${initialNotes}</textarea>
+    </div>
+    <div class="form-group" style="margin-top: 10px; padding: 10px 14px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px;">
+      <label style="display:flex; align-items:center; gap:8px; margin:0; cursor:pointer; font-weight:600; font-size:0.86rem; color:#334155;">
+        <input type="checkbox" id="modalAppHasDeposit" ${initialDeposit ? 'checked' : ''} style="width:16px; height:16px; accent-color:var(--orange); cursor:pointer;">
+        <span id="modalAppDepositLabel">Cobrado Sinal Prévio de Garantia</span>
+      </label>
+    </div>
+  `;
+
+  openModal('Editar Agendamento', html, async () => {
+    const profId = document.getElementById('modalAppProf').value;
+    const nameInput = document.getElementById('modalAppName');
+    const clientName = nameInput.value.trim();
+    const clientId = nameInput.dataset.selectedClientId || app.clientId || null;
+    const clientPhone = document.getElementById('modalAppPhone').value.trim();
+    const serviceSelect = document.getElementById('modalAppService');
+    const serviceId = serviceSelect.value;
+    const selectedOption = serviceSelect.options[serviceSelect.selectedIndex];
+    const serviceName = selectedOption ? selectedOption.text.split(' (')[0] : (app.serviceName || 'Serviço');
+    const customPrice = Number(document.getElementById('modalAppPrice')?.value);
+    const price = Number.isFinite(customPrice) && customPrice >= 0 ? customPrice : (selectedOption ? Number(selectedOption.dataset.price) : app.price);
+    const startTime = document.getElementById('modalAppStart').value;
+    const endTime = document.getElementById('modalAppEnd').value;
+    const apptDate = document.getElementById('modalAppDate')?.value || app.date;
+    const notes = (document.getElementById('modalAppNotes')?.value || '').trim();
+    const hasDeposit = document.getElementById('modalAppHasDeposit')?.checked || false;
+
+    if (!clientName) {
+      asyncAlert('Por favor informe o nome do cliente.');
+      return;
+    }
+    if (!apptDate) {
+      asyncAlert('Por favor informe a data do agendamento.');
+      return;
+    }
+
+    const res = await tenantFetch(`/api/appointments/${apptId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        professionalId: profId,
+        clientId,
+        clientName,
+        clientPhone,
+        serviceId,
+        serviceName,
+        price,
+        hasDeposit,
+        date: apptDate,
+        startTime,
+        endTime,
+        notes
+      })
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      asyncAlert(err.error || 'Erro ao atualizar agendamento.');
+      return;
+    }
+
+    closeModal();
+    if (apptDate !== selectedDate) selectedDate = apptDate;
+    await loadInitialData();
+    renderView('agenda');
+  }, 'Salvar Alterações');
+
+  setTimeout(() => {
+    filterModalServicesByProf(targetServiceId);
+    initClientAppointmentAutocomplete();
+    if (draft && draft.servicePrice !== undefined) {
+      const pInp = document.getElementById('modalAppPrice');
+      if (pInp) pInp.value = draft.servicePrice;
+    }
   }, 80);
 };
 
@@ -8021,42 +8240,99 @@ function renderComandaBody(c) {
   const services = state.services || [];
   const products = (state.products || []).filter(p => (Number(p.stock) || 0) > 0);
 
+  const headerHtml = `
+    <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:10px 14px; margin-bottom:12px; display:grid; grid-template-columns:1fr 1fr; gap:10px; align-items:center;">
+      <div>
+        <small style="color:var(--muted); font-size:0.72rem; text-transform:uppercase; font-weight:700;">Cliente</small>
+        <div style="font-weight:700; font-size:0.92rem; color:var(--ink);">${escHtml(c.clientName || 'Cliente')}</div>
+        ${c.clientPhone ? `<small style="color:var(--muted); font-size:0.75rem;">${escHtml(c.clientPhone)}</small>` : ''}
+      </div>
+      <div>
+        <small style="color:var(--muted); font-size:0.72rem; text-transform:uppercase; font-weight:700;">Profissional</small>
+        ${open ? `
+          <select class="form-control" style="padding:4px 8px; font-size:0.84rem; margin-top:2px;" onchange="comandaChangeProfessional(this.value)">
+            ${profs.map(p => `<option value="${p.id}" ${p.id === c.professionalId ? 'selected' : ''}>${escHtml(p.name)}</option>`).join('')}
+          </select>
+        ` : `<div style="font-weight:700; font-size:0.92rem; color:var(--ink);">${escHtml(prof ? prof.name : 'Salão')}</div>`}
+      </div>
+    </div>`;
+
   const itemsHtml = c.items.map((it, idx) => {
     const isSvc = it.type === 'servico';
-    const qtyHtml = !isSvc ? (open ? `
+    const isAvulso = it.type === 'avulso';
+    const icon = isSvc ? '✂️' : (isAvulso ? '✨' : '🧴');
+    const typeLabel = isSvc ? 'Serviço' : (isAvulso ? 'Item Avulso' : 'Produto');
+
+    const renameBtn = open ? `<button type="button" onclick="comandaPromptRename(${idx})" title="Renomear item" style="background:none;border:none;color:#f97316;cursor:pointer;font-size:0.8rem;padding:0 4px;line-height:1;">✏️</button>` : '';
+
+    const qtyHtml = (!isSvc && !isAvulso) ? (open ? `
         <span style="display:inline-flex; align-items:center; gap:6px;">
           <button type="button" class="btn-falcon btn-secondary btn-sm" style="padding:0 9px;" onclick="comandaChangeQty(${idx}, -1)">−</button>
           <b style="min-width:18px; text-align:center;">${it.qty}</b>
           <button type="button" class="btn-falcon btn-secondary btn-sm" style="padding:0 9px;" onclick="comandaChangeQty(${idx}, 1)">+</button>
         </span>` : `<b>${it.qty}x</b>`) : '';
-    const priceHtml = isSvc && open
-      ? `<input type="number" class="form-control" style="width:96px; padding:6px 8px; text-align:right;" step="0.5" min="0" value="${Number(it.unitPrice).toFixed(2)}" onchange="comandaSetPrice(${idx}, this.value)">`
-      : `<b>${brl(it.total)}</b>`;
-    const removable = open && (!isSvc || c.items.filter(x => x.type === 'servico').length > 1);
+
+    let priceHtml = '';
+    if (open) {
+      if (isSvc || isAvulso) {
+        priceHtml = `
+          <div style="display:flex; align-items:center; gap:6px;">
+            <span style="font-size:0.75rem; color:var(--muted);">R$</span>
+            <input type="number" class="form-control" style="width:90px; padding:4px 6px; text-align:right; font-weight:700;" step="0.5" min="0" value="${Number(it.unitPrice).toFixed(2)}" onchange="comandaSetPrice(${idx}, this.value)">
+          </div>`;
+      } else {
+        // Produto com preço unitário editável
+        priceHtml = `
+          <div style="display:flex; align-items:center; gap:8px;">
+            <div style="display:flex; align-items:center; gap:4px;">
+              <span style="font-size:0.72rem; color:var(--muted);">Unit: R$</span>
+              <input type="number" class="form-control" style="width:78px; padding:3px 5px; text-align:right; font-size:0.82rem;" step="0.5" min="0" value="${Number(it.unitPrice).toFixed(2)}" onchange="comandaSetPrice(${idx}, this.value)">
+            </div>
+            <b>${brl(it.total)}</b>
+          </div>`;
+      }
+    } else {
+      priceHtml = `<b>${brl(it.total)}</b>`;
+    }
+
+    const removable = open && c.items.length > 1;
     return `<div style="${comandaRowStyle()} flex-direction:column; align-items:stretch; gap:8px;">
       <div style="display:flex; align-items:flex-start; gap:8px;">
-        <span style="font-size:1.1rem;">${isSvc ? '✂️' : '🧴'}</span>
-        <div style="flex:1; min-width:0;"><div style="font-weight:600; line-height:1.25;">${escHtml(it.name)}</div><small style="color:var(--muted);">${isSvc ? 'Serviço' : 'Produto · ' + brl(it.unitPrice) + ' cada'}</small></div>
-        ${removable ? `<button type="button" title="Remover" style="background:none;border:none;color:#b91c1c;font-size:1.2rem;cursor:pointer;line-height:1;" onclick="comandaRemove(${idx})">✕</button>` : ''}
+        <span style="font-size:1.1rem;">${icon}</span>
+        <div style="flex:1; min-width:0;">
+          <div style="font-weight:600; line-height:1.25; display:flex; align-items:center; gap:4px;">
+            <span>${escHtml(it.name)}</span>${renameBtn}
+          </div>
+          <small style="color:var(--muted);">${typeLabel} · ${brl(it.unitPrice)}${!isSvc && !isAvulso ? ' un.' : ''}</small>
+        </div>
+        ${removable ? `<button type="button" title="Remover item" style="background:none;border:none;color:#b91c1c;font-size:1.2rem;cursor:pointer;line-height:1;padding:0 4px;" onclick="comandaRemove(${idx})">✕</button>` : ''}
       </div>
-      <div style="display:flex; align-items:center; justify-content:${isSvc ? 'flex-end' : 'space-between'}; gap:10px;">${qtyHtml}${priceHtml}</div>
+      <div style="display:flex; align-items:center; justify-content:${(isSvc || isAvulso) ? 'flex-end' : 'space-between'}; gap:10px;">${qtyHtml}${priceHtml}</div>
     </div>`;
   }).join('');
 
   const addHtml = open ? `
-    <div class="form-group" style="margin-top:6px;">
-      <label>Adicionar serviço</label>
+    <div class="form-group" style="margin-top:10px;">
+      <label style="font-weight:700;">✂️ Adicionar Serviço do Catálogo</label>
       <div style="display:flex; gap:8px;">
         <select class="form-control" id="comandaAddSvc">${services.map(s => `<option value="${s.id}">${escHtml(s.name)} — ${brl(s.price)}</option>`).join('')}</select>
         <button type="button" class="btn-falcon btn-primary" onclick="comandaAddService()">Adicionar</button>
       </div>
     </div>
     <div class="form-group">
-      <label>Adicionar produto</label>
+      <label style="font-weight:700;">🧴 Adicionar Produto do Estoque</label>
       ${products.length ? `<div style="display:flex; gap:8px;">
         <select class="form-control" id="comandaAddProd">${products.map(p => `<option value="${p.id}">${escHtml(p.name)} — ${brl(p.price)} (estoque ${p.stock})</option>`).join('')}</select>
         <button type="button" class="btn-falcon btn-primary" onclick="comandaAddProduct()">Adicionar</button>
       </div>` : `<small style="color:var(--muted);">Nenhum produto com estoque disponível.</small>`}
+    </div>
+    <div style="border: 1px dashed #cbd5e1; border-radius: 12px; padding: 10px 12px; margin-bottom: 12px; background: #f8fafc;">
+      <label style="margin:0 0 6px 0; font-size:0.82rem; font-weight:700; color:var(--ink); display:block;">✨ Adicionar Item ou Cobrança Avulsa</label>
+      <div style="display:grid; grid-template-columns: 2fr 1fr auto; gap: 8px;">
+        <input type="text" class="form-control" id="comandaAvulsoName" placeholder="Ex: Mechas extras, Taxa...">
+        <input type="number" class="form-control" id="comandaAvulsoPrice" placeholder="0,00" step="0.5" min="0">
+        <button type="button" class="btn-falcon btn-brand-soft" onclick="comandaAddAvulso()">+ Avulso</button>
+      </div>
     </div>
     <div class="form-group">
       <label>Desconto (R$)</label>
@@ -8065,16 +8341,26 @@ function renderComandaBody(c) {
 
   const totalsHtml = `
     <div style="border:1px solid #fed7aa; background:#fffaf5; border-radius:14px; padding:12px 14px; display:flex; flex-direction:column; gap:6px; font-size:0.9rem;">
-      <div style="display:flex; justify-content:space-between;"><span>Serviços</span><b>${brl(c.servicesTotal)}</b></div>
+      <div style="display:flex; justify-content:space-between;"><span>Serviços / Avulsos</span><b>${brl(c.servicesTotal)}</b></div>
       <div style="display:flex; justify-content:space-between;"><span>Produtos</span><b>${brl(c.productsTotal)}</b></div>
       ${c.discount > 0 ? `<div style="display:flex; justify-content:space-between; color:#b91c1c;"><span>Desconto</span><b>− ${brl(c.discount)}</b></div>` : ''}
       <div style="display:flex; justify-content:space-between; font-size:1.05rem; border-top:1px dashed #fed7aa; padding-top:6px;"><span><b>Total</b></span><b style="color:var(--orange);">${brl(c.total)}</b></div>
-      ${c.deposit > 0 ? `<div style="display:flex; justify-content:space-between; color:#166534;"><span>Sinal já pago</span><b>− ${brl(c.deposit)}</b></div>
-      <div style="display:flex; justify-content:space-between; font-size:1.05rem;"><span><b>A receber agora</b></span><b>${brl(c.balanceDue)}</b></div>` : ''}
+      <div style="display:flex; justify-content:space-between; align-items:center; color:#166534; font-size:0.88rem;">
+        <span>Sinal / Adiantamento</span>
+        ${open ? `
+          <div style="display:flex; align-items:center; gap:4px;">
+            <span style="font-size:0.75rem;">− R$</span>
+            <input type="number" class="form-control" style="width:80px; padding:2px 6px; text-align:right; font-size:0.84rem;" step="0.5" min="0" value="${Number(c.deposit || 0).toFixed(2)}" onchange="comandaSetDeposit(this.value)">
+          </div>
+        ` : `<b>− ${brl(c.deposit)}</b>`}
+      </div>
+      <div style="display:flex; justify-content:space-between; font-size:1.05rem; border-top:1px dashed #fed7aa; padding-top:6px;">
+        <span><b>A receber agora</b></span><b style="color:#15803d;">${brl(c.balanceDue)}</b>
+      </div>
     </div>`;
 
   const payHtml = open ? `
-    <div class="form-group">
+    <div class="form-group" style="margin-top:12px;">
       <label>Forma de pagamento (ao fechar)</label>
       <select class="form-control" id="comandaPay">${COMANDA_PAY.map(m => `<option value="${m}" ${c.paymentMethod === m ? 'selected' : ''}>${m}</option>`).join('')}</select>
     </div>
@@ -8095,13 +8381,13 @@ function renderComandaBody(c) {
         <input type="number" class="form-control" id="comandaPay2Val" min="0" step="0.01" placeholder="0,00" style="margin-top:4px;">
       </div>
     </div>` : `
-    <div style="padding:10px 12px; border-radius:12px; background:#ecfdf5; border:1px solid #a7f3d0; color:#065f46; font-weight:600;">
+    <div style="padding:10px 12px; border-radius:12px; background:#ecfdf5; border:1px solid #a7f3d0; color:#065f46; font-weight:600; margin-top:12px;">
       ✓ Comanda fechada · pagamento: ${escHtml(c.paymentMethod || '—')}${c.paymentMethod2 ? ` + ${escHtml(c.paymentMethod2)}` : ''}
     </div>
-    ${isManager ? `<button type="button" class="btn-falcon btn-secondary" style="margin-top:6px;" onclick="comandaReopen()">Reabrir comanda</button>` : ''}`;
+    ${isManager ? `<button type="button" class="btn-falcon btn-secondary" style="margin-top:6px; width:100%;" onclick="comandaReopen()">Reabrir comanda para edição</button>` : ''}`;
 
   body.innerHTML = `
-    <div style="font-size:0.85rem; color:var(--muted);">${escHtml(c.clientName || 'Cliente')} · ${escHtml(prof ? prof.name : '')}</div>
+    ${headerHtml}
     <div style="display:flex; flex-direction:column; gap:8px;">${itemsHtml}</div>
     ${addHtml}${totalsHtml}${payHtml}`;
 }
@@ -8118,7 +8404,9 @@ function comandaSyncAppointment(c) {
   if (!a) return;
   a.comanda = { status: c.status, items: c.items, discount: c.discount, paymentMethod: c.paymentMethod };
   a.price = c.servicesTotal - Math.min(c.discount, c.servicesTotal);
-  const svc = c.items.filter(i => i.type === 'servico');
+  if (c.professionalId) a.professionalId = c.professionalId;
+  if (c.clientName) a.clientName = c.clientName;
+  const svc = c.items.filter(i => i.type === 'servico' || i.type === 'avulso');
   if (svc.length) { a.serviceName = svc.map(i => i.name).join(' + '); a.serviceId = svc[0].refId; }
   if (c.status === 'fechada') a.status = 'concluido'; else if (a.status === 'concluido') a.status = 'agendado';
   window.__comandaDirty = true;
@@ -8126,8 +8414,14 @@ function comandaSyncAppointment(c) {
 
 async function comandaPush() {
   const cur = window.__comanda; if (!cur) return;
-  const data = await comandaRequest(`/api/appointments/${cur.appointmentId}/comanda`, 'PUT',
-    { items: cur.items.map(i => ({ type: i.type, refId: i.refId, qty: i.qty, unitPrice: i.unitPrice })), discount: cur.discount });
+  const data = await comandaRequest(`/api/appointments/${cur.appointmentId}/comanda`, 'PUT', {
+    items: cur.items.map(i => ({ type: i.type, refId: i.refId, name: i.name, qty: i.qty, unitPrice: i.unitPrice })),
+    discount: cur.discount,
+    professionalId: cur.professionalId,
+    clientName: cur.clientName,
+    clientPhone: cur.clientPhone,
+    deposit: cur.deposit
+  });
   if (data) { window.__comanda = data; comandaSyncAppointment(data); }
   renderComandaBody(window.__comanda);
 }
@@ -8137,6 +8431,7 @@ window.comandaAddService = async function() {
   window.__comanda.items.push({ type: 'servico', refId: s.id, name: s.name, qty: 1, unitPrice: s.price, total: s.price });
   await comandaPush();
 };
+
 window.comandaAddProduct = async function() {
   const id = document.getElementById('comandaAddProd')?.value; const p = (state.products || []).find(x => x.id === id); if (!p) return;
   const ex = window.__comanda.items.find(i => i.type === 'produto' && i.refId === p.id);
@@ -8144,24 +8439,66 @@ window.comandaAddProduct = async function() {
   else window.__comanda.items.push({ type: 'produto', refId: p.id, name: p.name, qty: 1, unitPrice: p.price, total: p.price });
   await comandaPush();
 };
+
+window.comandaAddAvulso = async function() {
+  const name = (document.getElementById('comandaAvulsoName')?.value || '').trim();
+  const price = Number(String(document.getElementById('comandaAvulsoPrice')?.value || 0).replace(',', '.'));
+  if (!name) { asyncAlert('Informe o nome ou descrição do item avulso.'); return; }
+  if (isNaN(price) || price < 0) { asyncAlert('Informe um valor válido.'); return; }
+  window.__comanda.items.push({ type: 'avulso', refId: null, name, qty: 1, unitPrice: price, total: price });
+  await comandaPush();
+};
+
 window.comandaChangeQty = async function(idx, delta) {
   const it = window.__comanda.items[idx]; if (!it) return;
   const p = (state.products || []).find(x => x.id === it.refId);
   const next = it.qty + delta;
   if (next < 1) return;
   if (p && next > (Number(p.stock) || 0)) { asyncAlert(`Estoque insuficiente: só há ${p.stock} un. de "${p.name}".`); return; }
-  it.qty = next; await comandaPush();
+  it.qty = next;
+  it.total = round2(it.unitPrice * next);
+  await comandaPush();
 };
+
 window.comandaSetPrice = async function(idx, v) {
   const it = window.__comanda.items[idx]; const n = Number(String(v).replace(',', '.')); if (!it || !Number.isFinite(n) || n < 0) { renderComandaBody(window.__comanda); return; }
-  it.unitPrice = n; await comandaPush();
+  it.unitPrice = n;
+  it.total = round2(n * (it.qty || 1));
+  await comandaPush();
 };
+
+window.comandaSetDeposit = async function(v) {
+  const n = Number(String(v).replace(',', '.'));
+  if (Number.isFinite(n) && n >= 0) {
+    window.__comanda.deposit = n;
+    await comandaPush();
+  }
+};
+
+window.comandaPromptRename = async function(idx) {
+  const it = window.__comanda.items[idx];
+  if (!it) return;
+  const newName = prompt('Editar nome do item:', it.name);
+  if (newName && newName.trim()) {
+    it.name = newName.trim();
+    await comandaPush();
+  }
+};
+
+window.comandaChangeProfessional = async function(newProfId) {
+  if (!newProfId || !window.__comanda) return;
+  window.__comanda.professionalId = newProfId;
+  await comandaPush();
+};
+
 window.comandaSetDiscount = async function(v) {
   const n = Number(String(v).replace(',', '.')); window.__comanda.discount = Number.isFinite(n) && n > 0 ? n : 0; await comandaPush();
 };
+
 window.comandaRemove = async function(idx) {
   const items = window.__comanda.items; items.splice(idx, 1); await comandaPush();
 };
+
 window.comandaReopen = async function() {
   const cur = window.__comanda; if (!cur) return;
   const ok = await asyncConfirm('Reabrir a comanda? A venda dos produtos será estornada e o estoque devolvido.', 'Reabrir comanda');
@@ -8207,21 +8544,27 @@ window.openComandaModal = async function(appId, ev) {
   }, { once: true });
 };
 
-window.filterModalServicesByProf = function() {
+window.filterModalServicesByProf = function(preferredServiceId) {
   const profId = document.getElementById('modalAppProf')?.value;
   const servSelect = document.getElementById('modalAppService');
   if (!servSelect || !profId) return;
 
-  const prof = state.professionals.find(p => p.id === profId);
-  const eligibleServices = (prof && Array.isArray(prof.serviceIds) && prof.serviceIds.length > 0)
+  const prof = (state.professionals || []).find(p => p.id === profId);
+  let eligibleServices = (prof && Array.isArray(prof.serviceIds) && prof.serviceIds.length > 0)
     ? state.services.filter(s => prof.serviceIds.includes(s.id))
-    : state.services;
+    : [...(state.services || [])];
 
-  const prevVal = servSelect.value;
+  const targetId = preferredServiceId || servSelect.value;
+  // Se o serviço selecionado/editado não estiver no filtro do profissional, mantém visível
+  if (targetId && !eligibleServices.some(s => s.id === targetId)) {
+    const targetObj = (state.services || []).find(x => x.id === targetId);
+    if (targetObj) eligibleServices.push(targetObj);
+  }
+
   servSelect.innerHTML = eligibleServices.map(s => `<option value="${s.id}" data-price="${s.price}" data-duration="${s.durationMinutes}">${s.name} (${formatDurationHours(s.durationMinutes)}) - R$ ${Number(s.price).toFixed(2)}</option>`).join('');
 
-  if (eligibleServices.some(s => s.id === prevVal)) {
-    servSelect.value = prevVal;
+  if (targetId && eligibleServices.some(s => s.id === targetId)) {
+    servSelect.value = targetId;
   }
   updateModalEndTime();
 
@@ -8756,14 +9099,22 @@ window.updateModalEndTime = function() {
   const endInput = document.getElementById('modalAppEnd');
   if (!serviceSelect || !startInput || !endInput) return;
 
-  const duration = Number(serviceSelect.options[serviceSelect.selectedIndex]?.dataset?.duration) || 30;
+  const selOpt = serviceSelect.options[serviceSelect.selectedIndex];
+  const duration = Number(selOpt?.dataset?.duration) || 30;
   const [h, m] = startInput.value.split(':').map(Number);
-  if (isNaN(h) || isNaN(m)) return;
+  if (!isNaN(h) && !isNaN(m)) {
+    const totalMin = h * 60 + m + duration;
+    const endH = Math.floor(totalMin / 60);
+    const endM = totalMin % 60;
+    endInput.value = `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
+  }
 
-  const totalMin = h * 60 + m + duration;
-  const endH = Math.floor(totalMin / 60);
-  const endM = totalMin % 60;
-  endInput.value = `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
+  // Sincroniza o campo de valor do serviço se existir
+  const priceInput = document.getElementById('modalAppPrice');
+  if (priceInput && selOpt && (!priceInput.value || priceInput.dataset.lastAutoSvcId !== serviceSelect.value)) {
+    priceInput.value = Number(selOpt.dataset.price || 0).toFixed(2);
+    priceInput.dataset.lastAutoSvcId = serviceSelect.value;
+  }
 };
 
 // ==========================================
@@ -9940,6 +10291,7 @@ window.openNewServiceModal = function(onDone) {
     let created = null;
     try { created = resNew.ok ? await resNew.json() : null; } catch (e) {}
 
+    window.__apptShortcutReturn = null;
     closeModal();
     await loadInitialData();
     if (onDone) { onDone(created); return; }
@@ -9992,6 +10344,7 @@ window.openNewClientModal = function(onDone, prefill) {
     let createdCli = null;
     try { createdCli = resCli.ok ? await resCli.json() : null; } catch (e) {}
 
+    window.__apptShortcutReturn = null;
     closeModal();
     await loadInitialData();
     if (onDone) { onDone(createdCli); return; }
@@ -11030,6 +11383,7 @@ window.openEditServiceModal = function(serviceId, onDone) {
       return;
     }
 
+    window.__apptShortcutReturn = null;
     closeModal();
     await loadInitialData();
     if (onDone) { onDone({ id: serviceId }); return; }
