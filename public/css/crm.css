@@ -3734,81 +3734,132 @@ input[type="checkbox"] {
 .agenda-list-item-card {
   background: #ffffff;
   border: 1px solid #e2e8f0;
-  border-radius: 16px;
+  border-radius: 18px;
   padding: 14px 16px;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
+  flex-direction: column;
+  gap: 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
   transition: transform 0.15s, box-shadow 0.15s;
 }
 
 .agenda-list-item-card:hover {
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06);
 }
 
-.agenda-list-client-info {
+/* 1. Topo: Cliente à esquerda, Horário e Status à direita */
+.agenda-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+}
+
+.agenda-card-client-wrap {
   display: flex;
   align-items: center;
   gap: 12px;
-  flex: 1;
   min-width: 0;
+  flex: 1;
 }
 
 .agenda-list-client-avatar {
   width: 42px;
   height: 42px;
   border-radius: 50%;
-  background: #f1f5f9;
+  background: #fff7ed;
+  border: 1.5px solid #fed7aa;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #64748b;
   flex-shrink: 0;
+}
+
+.agenda-card-client-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
 }
 
 .agenda-list-client-name {
   font-weight: 700;
-  font-size: 0.98rem;
+  font-size: 1.02rem;
   color: #0f172a;
-  margin-bottom: 2px;
-  white-space: normal;
-  word-break: break-word;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   line-height: 1.25;
 }
 
-.agenda-list-service-sub {
-  font-size: 0.84rem;
+.agenda-list-time-range {
+  font-size: 0.82rem;
+  font-weight: 600;
   color: #64748b;
-  white-space: normal;
-  word-break: break-word;
-  line-height: 1.4;
+  line-height: 1.2;
 }
 
-.agenda-list-badge-time {
+.agenda-card-badge-wrap {
+  flex-shrink: 0;
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 6px;
+  align-items: center;
+}
+
+/* 2. Meio: Serviço em largura completa com preço */
+.agenda-card-service-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 12px;
+  background: #f8fafc;
+  border: 1px solid #f1f5f9;
+  border-radius: 12px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.agenda-card-service-text {
+  font-size: 0.88rem;
+  color: #475569;
+  line-height: 1.35;
+  flex: 1;
+  min-width: 0;
+  word-break: normal;
+  overflow-wrap: break-word;
+}
+
+.agenda-card-service-title {
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.agenda-card-price-tag {
+  font-weight: 800;
+  font-size: 0.95rem;
+  color: #ea580c;
+  white-space: nowrap;
   flex-shrink: 0;
 }
 
+/* 3. Base: Ações em 2 Colunas Simétricas (50% cada) */
 .agenda-list-actions-grid {
-  display: flex !important;
-  align-items: stretch !important;
-  justify-content: flex-end !important;
+  display: grid !important;
+  grid-template-columns: 1fr 1fr !important;
   gap: 8px !important;
-  margin-top: 6px !important;
+  width: 100% !important;
+  margin-top: 2px !important;
 }
 
 .agenda-actions-col {
   display: flex !important;
   flex-direction: column !important;
   gap: 6px !important;
-  min-width: 98px !important;
+  width: 100% !important;
 }
 
 .status-badge-pill {
