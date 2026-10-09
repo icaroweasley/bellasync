@@ -151,7 +151,7 @@ let selectedProfessionalId = null;
 let selectedDate = new Date().toISOString().split('T')[0];
 let activeProfessionalsTab = 'equipe'; // 'equipe' | 'cadeiras'
 let activeProductsTab = 'estoque'; // 'estoque' | 'vendas'
-let activeBalancoTab = 'salao'; // 'salao' | 'pessoal'
+let activeBalancoTab = 'salao'; // 'salao' | 'pessoal' | 'comandas'
 
 let state = {
   settings: {},
@@ -5330,6 +5330,9 @@ function renderBalanco(container, actions) {
       <button class="subnav-tab-btn ${activeBalancoTab === 'salao' ? 'active' : ''}" onclick="switchBalancoTab('salao')">
         🏢 <span class="subnav-label-desktop">Gestão do Salão</span><span class="subnav-label-mobile">Salão</span>
       </button>
+      <button class="subnav-tab-btn ${activeBalancoTab === 'comandas' ? 'active' : ''}" onclick="switchBalancoTab('comandas')">
+        📋 <span class="subnav-label-desktop">Comandas & Vendas</span><span class="subnav-label-mobile">Comandas</span>
+      </button>
       <button class="subnav-tab-btn ${activeBalancoTab === 'pessoal' ? 'active' : ''}" onclick="switchBalancoTab('pessoal')">
         👤 <span class="subnav-label-desktop">Gestão Pessoal</span><span class="subnav-label-mobile">Pessoal</span>
       </button>
@@ -5352,6 +5355,11 @@ function renderBalanco(container, actions) {
       </select>
     </div>
   `;
+
+  if (activeBalancoTab === 'comandas') {
+    renderBalancoComandasTab(container, actions, monthApps, monthSales, subnavTabsHtml, monthSelectorCardHtml);
+    return;
+  }
 
   const myProf = (state.professionals || []).find(p => 
     (currentUser?.professionalId && p.id === currentUser.professionalId) ||
@@ -5718,6 +5726,25 @@ function renderBalanco(container, actions) {
     `;
   }).join('');
 
+  const comandasBannerHtml = `
+    <div class="balanco-comandas-banner" onclick="switchBalancoTab('comandas')" style="margin: 18px 0; background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%); border: 1px solid #fed7aa; border-radius: 16px; padding: 14px 18px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; transition: all 0.2s ease; box-shadow: 0 2px 8px rgba(255, 105, 0, 0.06);">
+      <div style="display: flex; align-items: center; gap: 12px; min-width: 0;">
+        <div style="width: 42px; height: 42px; border-radius: 12px; background: #ff6900; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 1.25rem; flex-shrink: 0; box-shadow: 0 2px 6px rgba(255, 105, 0, 0.3);">
+          📋
+        </div>
+        <div style="min-width: 0;">
+          <div style="font-weight: 700; color: #9a3412; font-size: 0.95rem;">Extrato Detalhado de Comandas & Vendas</div>
+          <div style="font-size: 0.8rem; color: #c2410c; margin-top: 2px;">Consulte todos os serviços e produtos vendidos por mês e por dia, edite comandas fechadas ou retorne-as para a agenda.</div>
+        </div>
+      </div>
+      <div style="flex-shrink: 0; margin-left: 12px;">
+        <button class="btn-falcon btn-primary" style="padding: 7px 14px; font-size: 0.82rem; white-space: nowrap; pointer-events: none;">
+          Ver Comandas →
+        </button>
+      </div>
+    </div>
+  `;
+
   if (!profCardsHtml) {
     profCardsHtml = `<div class="card-shell" style="text-align:center; color:var(--muted);">Nenhum profissional cadastrado.</div>`;
   }
@@ -5726,11 +5753,603 @@ function renderBalanco(container, actions) {
     ${subnavTabsHtml}
     ${monthSelectorCardHtml}
     ${overallSummaryHtml}
+    ${comandasBannerHtml}
     ${chartsGridHtml}
     <div style="margin-top: 24px;">
       <h3 style="margin-bottom: 16px; font-size: 1.1rem; font-weight: 700; color: var(--ink);">🎯 Desempenho e Metas Individuais</h3>
       ${profCardsHtml}
     </div>
+  `;
+}
+
+// ============================================================================
+// ABA DE COMANDAS & VENDAS EM BALANÇOS & METAS
+// ============================================================================
+let selectedBalancoComandaDay = ''; // '' = Todos os dias do mês selecionado
+let balancoComandaSearchTerm = '';
+let balancoComandaTypeFilter = 'todos'; // 'todos' | 'servicos' | 'produtos' | 'fechadas' | 'abertas'
+let balancoComandaViewSubTab = 'comandas'; // 'comandas' | 'resumo_itens'
+let comandaSearchDebounceTimeout = null;
+
+window.setBalancoComandaDay = function(day) {
+  selectedBalancoComandaDay = day;
+  const container = document.getElementById('viewContainer');
+  const actions = document.getElementById('topBarActions');
+  renderBalanco(container, actions);
+};
+
+window.setBalancoComandaType = function(type) {
+  balancoComandaTypeFilter = type;
+  const container = document.getElementById('viewContainer');
+  const actions = document.getElementById('topBarActions');
+  renderBalanco(container, actions);
+};
+
+window.setBalancoComandaSubTab = function(subTab) {
+  balancoComandaViewSubTab = subTab;
+  const container = document.getElementById('viewContainer');
+  const actions = document.getElementById('topBarActions');
+  renderBalanco(container, actions);
+};
+
+window.handleBalancoComandaSearch = function(val) {
+  clearTimeout(comandaSearchDebounceTimeout);
+  comandaSearchDebounceTimeout = setTimeout(() => {
+    balancoComandaSearchTerm = (val || '').trim();
+    const container = document.getElementById('viewContainer');
+    const actions = document.getElementById('topBarActions');
+    renderBalanco(container, actions);
+    const inp = document.getElementById('balancoComandaSearchInput');
+    if (inp) {
+      inp.focus();
+      inp.selectionStart = inp.selectionEnd = inp.value.length;
+    }
+  }, 250);
+};
+
+window.comandaEditAndReopen = async function(appId) {
+  const app = (state.appointments || []).find(a => a.id === appId);
+  if (!app) {
+    if (typeof asyncAlert === 'function') await asyncAlert('Agendamento não encontrado.');
+    return;
+  }
+  const isClosed = (app.comanda && app.comanda.status === 'fechada') || app.status === 'concluido';
+  if (isClosed) {
+    const ok = await asyncConfirm(
+      'Esta comanda está fechada. Para editá-la, ela será reaberta temporariamente (o estoque de eventuais produtos será estornado até você concluir o fechamento novamente).\n\nDeseja reabrir e editar agora?',
+      'Editar Comanda'
+    );
+    if (!ok) return;
+    const data = await comandaRequest(`/api/appointments/${appId}/comanda/reopen`, 'POST');
+    if (!data) return;
+    comandaSyncAppointment(data);
+    await loadInitialData();
+  }
+  openComandaModal(appId);
+};
+
+window.comandaReturnToAgenda = async function(appId) {
+  const app = (state.appointments || []).find(a => a.id === appId);
+  if (!app) {
+    if (typeof asyncAlert === 'function') await asyncAlert('Agendamento não encontrado.');
+    return;
+  }
+  const ok = await asyncConfirm(
+    `Deseja voltar o atendimento de "${app.clientName || 'Cliente'}" para a Agenda?\n\nA comanda será reaberta, o estoque de produtos estornado e o status voltará para "Agendado" na agenda do salão.`,
+    'Voltar para a Agenda'
+  );
+  if (!ok) return;
+  const data = await comandaRequest(`/api/appointments/${appId}/comanda/reopen`, 'POST');
+  if (!data) return;
+  comandaSyncAppointment(data);
+  await loadInitialData();
+  if (typeof asyncAlert === 'function') {
+    await asyncAlert('Atendimento retornado para a Agenda com sucesso!\nO agendamento agora está ativo como "Agendado".');
+  }
+  const container = document.getElementById('viewContainer');
+  const actions = document.getElementById('topBarActions');
+  renderBalanco(container, actions);
+};
+
+function renderBalancoConsolidatedItems(sortedServices, sortedProducts, totalServicesRev, totalProductsRev) {
+  const maxServRev = sortedServices.length > 0 ? sortedServices[0].total : 1;
+  const maxProdRev = sortedProducts.length > 0 ? sortedProducts[0].total : 1;
+
+  const servicesHtml = sortedServices.length > 0 ? sortedServices.map((s, idx) => {
+    const pct = Math.round((s.total / maxServRev) * 100);
+    return `
+      <div style="padding: 12px 14px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; margin-bottom: 8px;">
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 6px;">
+          <div style="display: flex; align-items: center; gap: 8px; min-width: 0;">
+            <span style="width: 22px; height: 22px; border-radius: 6px; background: #e0e7ff; color: #4338ca; font-size: 0.75rem; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">#${idx + 1}</span>
+            <span style="font-weight: 700; color: #0f172a; font-size: 0.9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(s.name)}</span>
+          </div>
+          <span style="font-weight: 700; color: #16a34a; font-size: 0.95rem; flex-shrink: 0;">R$ ${s.total.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+        </div>
+        <div style="display: flex; align-items: center; justify-content: space-between; font-size: 0.78rem; color: #64748b; margin-bottom: 6px;">
+          <span>${s.qty} ${s.qty === 1 ? 'atendimento' : 'atendimentos'}</span>
+          <span>Méd: R$ ${(s.total / s.qty).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+        </div>
+        <div style="width: 100%; height: 6px; background: #e2e8f0; border-radius: 99px; overflow: hidden;">
+          <div style="width: ${pct}%; height: 100%; background: linear-gradient(90deg, #3b82f6 0%, #6366f1 100%); border-radius: 99px;"></div>
+        </div>
+      </div>
+    `;
+  }).join('') : `
+    <div style="text-align: center; padding: 28px; color: #94a3b8; font-size: 0.88rem;">
+      Nenhum serviço realizado no período selecionado.
+    </div>
+  `;
+
+  const productsHtml = sortedProducts.length > 0 ? sortedProducts.map((p, idx) => {
+    const pct = Math.round((p.total / maxProdRev) * 100);
+    return `
+      <div style="padding: 12px 14px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; margin-bottom: 8px;">
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 6px;">
+          <div style="display: flex; align-items: center; gap: 8px; min-width: 0;">
+            <span style="width: 22px; height: 22px; border-radius: 6px; background: #dcfce7; color: #15803d; font-size: 0.75rem; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">#${idx + 1}</span>
+            <span style="font-weight: 700; color: #0f172a; font-size: 0.9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(p.name)}</span>
+          </div>
+          <span style="font-weight: 700; color: #16a34a; font-size: 0.95rem; flex-shrink: 0;">R$ ${p.total.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+        </div>
+        <div style="display: flex; align-items: center; justify-content: space-between; font-size: 0.78rem; color: #64748b; margin-bottom: 6px;">
+          <span>${p.qty} ${p.qty === 1 ? 'unidade vendida' : 'unidades vendidas'}</span>
+          <span>Méd: R$ ${(p.total / p.qty).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+        </div>
+        <div style="width: 100%; height: 6px; background: #e2e8f0; border-radius: 99px; overflow: hidden;">
+          <div style="width: ${pct}%; height: 100%; background: linear-gradient(90deg, #10b981 0%, #059669 100%); border-radius: 99px;"></div>
+        </div>
+      </div>
+    `;
+  }).join('') : `
+    <div style="text-align: center; padding: 28px; color: #94a3b8; font-size: 0.88rem;">
+      Nenhum produto vendido no período selecionado.
+    </div>
+  `;
+
+  return `
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; margin-top: 16px;">
+      <div class="card-shell" style="padding: 20px; background: #fff; border-radius: 16px; border: 1px solid #e2e8f0;">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
+          <div>
+            <h4 style="margin: 0; font-size: 1.05rem; font-weight: 700; color: #0f172a; display: flex; align-items: center; gap: 8px;">
+              <span>💇‍♀️</span> <span>Serviços Mais Vendidos</span>
+            </h4>
+            <div style="font-size: 0.78rem; color: #64748b; margin-top: 2px;">Faturamento em serviços: <strong>R$ ${totalServicesRev.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></div>
+          </div>
+          <span class="badge" style="background: #eff6ff; color: #1d4ed8; padding: 4px 10px; border-radius: 12px; font-weight: 700; font-size: 0.8rem;">${sortedServices.length} tipos</span>
+        </div>
+        <div>${servicesHtml}</div>
+      </div>
+
+      <div class="card-shell" style="padding: 20px; background: #fff; border-radius: 16px; border: 1px solid #e2e8f0;">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
+          <div>
+            <h4 style="margin: 0; font-size: 1.05rem; font-weight: 700; color: #0f172a; display: flex; align-items: center; gap: 8px;">
+              <span>🛍️</span> <span>Produtos Mais Vendidos</span>
+            </h4>
+            <div style="font-size: 0.78rem; color: #64748b; margin-top: 2px;">Faturamento em produtos: <strong>R$ ${totalProductsRev.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></div>
+          </div>
+          <span class="badge" style="background: #ecfdf5; color: #047857; padding: 4px 10px; border-radius: 12px; font-weight: 700; font-size: 0.8rem;">${sortedProducts.length} itens</span>
+        </div>
+        <div>${productsHtml}</div>
+      </div>
+    </div>
+  `;
+}
+
+function renderBalancoComandasTab(container, actions, monthApps, monthSales, subnavTabsHtml, monthSelectorCardHtml) {
+  const comandaRecords = [];
+
+  (monthApps || []).forEach(a => {
+    if (!a.comanda && a.status !== 'concluido') return;
+
+    const hasComanda = !!a.comanda;
+    const isClosed = (hasComanda && a.comanda.status === 'fechada') || a.status === 'concluido';
+    const services = [];
+    const products = [];
+    let discount = hasComanda ? (Number(a.comanda.discount) || 0) : 0;
+
+    if (hasComanda && Array.isArray(a.comanda.items) && a.comanda.items.length > 0) {
+      a.comanda.items.forEach(it => {
+        const q = Math.max(1, Number(it.qty) || 1);
+        const u = Number(it.unitPrice) || 0;
+        const t = Number.isFinite(Number(it.total)) ? Number(it.total) : (u * q);
+        if (it.type === 'produto') {
+          products.push({ id: it.refId, name: it.name || 'Produto', qty: q, unitPrice: u, total: t });
+        } else {
+          services.push({ id: it.refId, name: it.name || 'Serviço', qty: q, unitPrice: u, total: t });
+        }
+      });
+    } else {
+      if (Array.isArray(a.servicesList) && a.servicesList.length > 0) {
+        a.servicesList.forEach(s => {
+          const p = Number(s.price) || 0;
+          services.push({ id: s.id, name: s.name || 'Serviço', qty: 1, unitPrice: p, total: p });
+        });
+      } else {
+        const p = Number(a.price) || 0;
+        services.push({ id: a.serviceId, name: a.serviceName || 'Atendimento', qty: 1, unitPrice: p, total: p });
+      }
+      const linked = (monthSales || []).find(s => s.appointmentId === a.id);
+      if (linked && Array.isArray(linked.items)) {
+        linked.items.forEach(pi => {
+          const q = Math.max(1, Number(pi.quantity) || 1);
+          const u = Number(pi.unitPrice) || 0;
+          const t = Number.isFinite(Number(pi.total)) ? Number(pi.total) : (u * q);
+          products.push({ id: pi.productId, name: pi.productName || 'Produto', qty: q, unitPrice: u, total: t });
+        });
+        if (linked.discount) discount += Number(linked.discount) || 0;
+      }
+    }
+
+    const servicesTotal = services.reduce((acc, s) => acc + s.total, 0);
+    const productsTotal = products.reduce((acc, p) => acc + p.total, 0);
+    const subtotal = servicesTotal + productsTotal;
+    const netTotal = Math.max(0, subtotal - discount);
+
+    let paymentMethod = a.comanda?.paymentMethod || a.paymentMethod || (isClosed ? 'Concluído' : 'A receber');
+    if (a.comanda?.paymentMethod2 && a.comanda?.paymentValue2 > 0) {
+      const v2 = Number(a.comanda.paymentValue2);
+      const v1 = Math.max(0, netTotal - v2);
+      paymentMethod = `${a.comanda.paymentMethod} (R$ ${v1.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}) + ${a.comanda.paymentMethod2} (R$ ${v2.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})`;
+    }
+
+    const prof = (state.professionals || []).find(p => p.id === a.professionalId);
+
+    comandaRecords.push({
+      type: 'appointment',
+      appointmentId: a.id,
+      date: a.date,
+      time: a.time || '00:00',
+      clientName: a.clientName || 'Cliente',
+      clientPhone: a.clientPhone || '',
+      professionalId: a.professionalId,
+      professionalName: prof ? prof.name : (a.professionalName || 'Profissional'),
+      isClosed,
+      status: isClosed ? 'fechada' : 'aberta',
+      services,
+      products,
+      servicesTotal,
+      productsTotal,
+      discount,
+      subtotal,
+      netTotal,
+      paymentMethod
+    });
+  });
+
+  // Vendas avulsas de balcão (produtos vendidos diretamente)
+  (monthSales || []).forEach(s => {
+    if (s.appointmentId || s.source === 'comanda') return;
+    const products = (s.items || []).map(pi => {
+      const q = Math.max(1, Number(pi.quantity) || 1);
+      const u = Number(pi.unitPrice) || 0;
+      const t = Number.isFinite(Number(pi.total)) ? Number(pi.total) : (u * q);
+      return { id: pi.productId, name: pi.productName || 'Produto', qty: q, unitPrice: u, total: t };
+    });
+    const productsTotal = products.reduce((acc, p) => acc + p.total, 0);
+    const discount = Number(s.discount) || 0;
+    const netTotal = Number(s.total) || Math.max(0, productsTotal - discount);
+    const prof = (state.professionals || []).find(p => p.id === s.professionalId);
+
+    comandaRecords.push({
+      type: 'standalone_sale',
+      saleId: s.id,
+      date: s.date || (s.createdAt ? s.createdAt.substring(0, 10) : ''),
+      time: s.createdAt ? s.createdAt.substring(11, 16) : '00:00',
+      clientName: s.clientName || 'Venda Avulsa de Balcão',
+      clientPhone: s.clientPhone || '',
+      professionalId: s.professionalId,
+      professionalName: prof ? prof.name : (s.professionalName || 'Balcão'),
+      isClosed: true,
+      status: 'fechada',
+      services: [],
+      products,
+      servicesTotal: 0,
+      productsTotal,
+      discount,
+      subtotal: productsTotal,
+      netTotal,
+      paymentMethod: s.paymentMethod || 'Balcão'
+    });
+  });
+
+  comandaRecords.sort((a, b) => {
+    const dtA = `${a.date || ''} ${a.time || ''}`;
+    const dtB = `${b.date || ''} ${b.time || ''}`;
+    return dtB.localeCompare(dtA);
+  });
+
+  const daysMap = {};
+  comandaRecords.forEach(r => {
+    if (!r.date) return;
+    if (!daysMap[r.date]) daysMap[r.date] = { count: 0, total: 0 };
+    daysMap[r.date].count++;
+    daysMap[r.date].total += r.netTotal;
+  });
+  const availableDays = Object.keys(daysMap).sort().reverse();
+
+  let filtered = comandaRecords;
+  if (selectedBalancoComandaDay) {
+    filtered = filtered.filter(r => r.date === selectedBalancoComandaDay);
+  }
+  if (balancoComandaTypeFilter === 'servicos') {
+    filtered = filtered.filter(r => r.services && r.services.length > 0);
+  } else if (balancoComandaTypeFilter === 'produtos') {
+    filtered = filtered.filter(r => r.products && r.products.length > 0);
+  } else if (balancoComandaTypeFilter === 'fechadas') {
+    filtered = filtered.filter(r => r.isClosed);
+  } else if (balancoComandaTypeFilter === 'abertas') {
+    filtered = filtered.filter(r => !r.isClosed);
+  }
+  if (balancoComandaSearchTerm) {
+    const term = balancoComandaSearchTerm.toLowerCase();
+    filtered = filtered.filter(r => {
+      const cName = (r.clientName || '').toLowerCase();
+      const cPhone = (r.clientPhone || '').toLowerCase();
+      const pName = (r.professionalName || '').toLowerCase();
+      const svcNames = (r.services || []).map(s => s.name.toLowerCase()).join(' ');
+      const prodNames = (r.products || []).map(p => p.name.toLowerCase()).join(' ');
+      return cName.includes(term) || cPhone.includes(term) || pName.includes(term) || svcNames.includes(term) || prodNames.includes(term);
+    });
+  }
+
+  const totalNet = filtered.reduce((acc, r) => acc + r.netTotal, 0);
+  const totalServicesRev = filtered.reduce((acc, r) => acc + r.servicesTotal, 0);
+  const totalProductsRev = filtered.reduce((acc, r) => acc + r.productsTotal, 0);
+  const totalServicesCount = filtered.reduce((acc, r) => acc + r.services.reduce((sAcc, s) => sAcc + s.qty, 0), 0);
+  const totalProductsCount = filtered.reduce((acc, r) => acc + r.products.reduce((pAcc, p) => pAcc + p.qty, 0), 0);
+  const closedCount = filtered.filter(r => r.isClosed).length;
+  const openCount = filtered.filter(r => !r.isClosed).length;
+
+  const serviceStats = {};
+  filtered.forEach(r => {
+    r.services.forEach(s => {
+      const key = s.name;
+      if (!serviceStats[key]) serviceStats[key] = { name: s.name, qty: 0, total: 0 };
+      serviceStats[key].qty += s.qty;
+      serviceStats[key].total += s.total;
+    });
+  });
+  const sortedServices = Object.values(serviceStats).sort((a, b) => b.total - a.total);
+
+  const productStats = {};
+  filtered.forEach(r => {
+    r.products.forEach(p => {
+      const key = p.name;
+      if (!productStats[key]) productStats[key] = { name: p.name, qty: 0, total: 0 };
+      productStats[key].qty += p.qty;
+      productStats[key].total += p.total;
+    });
+  });
+  const sortedProducts = Object.values(productStats).sort((a, b) => b.total - a.total);
+
+  const metricsHtml = `
+    <div class="balanco-summary-cards">
+      <div class="balanco-card">
+        <div class="balanco-card-title">💰 Total Comandas & Vendas</div>
+        <div class="balanco-card-value" style="color: #16a34a;">R$ ${totalNet.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+        <div class="balanco-card-sub">${closedCount} fechadas ${openCount > 0 ? `• <span style="color:#c2410c; font-weight:600;">${openCount} em aberto</span>` : ''}</div>
+      </div>
+      <div class="balanco-card">
+        <div class="balanco-card-title">💇‍♀️ Serviços Realizados</div>
+        <div class="balanco-card-value" style="color: #2563eb;">R$ ${totalServicesRev.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+        <div class="balanco-card-sub">${totalServicesCount} atendimentos executados</div>
+      </div>
+      <div class="balanco-card">
+        <div class="balanco-card-title">🛍️ Produtos Vendidos</div>
+        <div class="balanco-card-value" style="color: #059669;">R$ ${totalProductsRev.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+        <div class="balanco-card-sub">${totalProductsCount} unidades comercializadas</div>
+      </div>
+      <div class="balanco-card">
+        <div class="balanco-card-title">🎯 Ticket Médio</div>
+        <div class="balanco-card-value" style="color: var(--orange, #ff6900);">R$ ${(closedCount > 0 ? (totalNet / closedCount) : 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+        <div class="balanco-card-sub">Por comanda fechada</div>
+      </div>
+    </div>
+  `;
+
+  const filtersHtml = `
+    <div class="balanco-comanda-filters-card">
+      <div style="display: flex; gap: 12px; flex-wrap: wrap; align-items: center; justify-content: space-between;">
+        <div style="flex: 1; min-width: 220px;">
+          <label style="display: block; font-size: 0.76rem; font-weight: 700; color: #64748b; text-transform: uppercase; margin-bottom: 4px;">📅 Dia Específico</label>
+          <select class="form-control" style="font-size: 0.88rem; border-radius: 10px;" onchange="setBalancoComandaDay(this.value)">
+            <option value="" ${!selectedBalancoComandaDay ? 'selected' : ''}>Todos os dias do mês (${comandaRecords.length} lançamentos)</option>
+            ${availableDays.map(d => {
+              const [y, m, dayNum] = d.split('-');
+              const info = daysMap[d];
+              return `<option value="${d}" ${selectedBalancoComandaDay === d ? 'selected' : ''}>Dia ${dayNum}/${m}/${y} (${info.count} comandas · R$ ${info.total.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})</option>`;
+            }).join('')}
+          </select>
+        </div>
+
+        <div style="flex: 1; min-width: 180px;">
+          <label style="display: block; font-size: 0.76rem; font-weight: 700; color: #64748b; text-transform: uppercase; margin-bottom: 4px;">🏷️ Tipo / Status</label>
+          <select class="form-control" style="font-size: 0.88rem; border-radius: 10px;" onchange="setBalancoComandaType(this.value)">
+            <option value="todos" ${balancoComandaTypeFilter === 'todos' ? 'selected' : ''}>Todos os Registros</option>
+            <option value="servicos" ${balancoComandaTypeFilter === 'servicos' ? 'selected' : ''}>💇‍♀️ Com Serviços</option>
+            <option value="produtos" ${balancoComandaTypeFilter === 'produtos' ? 'selected' : ''}>🛍️ Com Produtos</option>
+            <option value="fechadas" ${balancoComandaTypeFilter === 'fechadas' ? 'selected' : ''}>✓ Apenas Fechadas</option>
+            <option value="abertas" ${balancoComandaTypeFilter === 'abertas' ? 'selected' : ''}>⏳ Apenas em Aberto</option>
+          </select>
+        </div>
+
+        <div style="flex: 2; min-width: 240px;">
+          <label style="display: block; font-size: 0.76rem; font-weight: 700; color: #64748b; text-transform: uppercase; margin-bottom: 4px;">🔍 Busca Rápida</label>
+          <input type="text" class="form-control" id="balancoComandaSearchInput" placeholder="Buscar cliente, profissional, serviço ou produto..." value="${escapeHtml(balancoComandaSearchTerm)}" oninput="handleBalancoComandaSearch(this.value)" style="font-size: 0.88rem; border-radius: 10px;">
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 8px; margin-top: 14px; border-top: 1px solid #f1f5f9; padding-top: 12px; flex-wrap: wrap;">
+        <button class="btn-falcon ${balancoComandaViewSubTab === 'comandas' ? 'btn-primary' : 'btn-secondary'}" style="padding: 7px 16px; font-size: 0.84rem; display: inline-flex; align-items: center; gap: 6px; border-radius: 10px;" onclick="setBalancoComandaSubTab('comandas')">
+          <span>📋</span>
+          <span>Lista Detalhada de Comandas (${filtered.length})</span>
+        </button>
+        <button class="btn-falcon ${balancoComandaViewSubTab === 'resumo_itens' ? 'btn-primary' : 'btn-secondary'}" style="padding: 7px 16px; font-size: 0.84rem; display: inline-flex; align-items: center; gap: 6px; border-radius: 10px;" onclick="setBalancoComandaSubTab('resumo_itens')">
+          <span>📊</span>
+          <span>Resumo de Serviços & Produtos Vendidos (${sortedServices.length + sortedProducts.length})</span>
+        </button>
+      </div>
+    </div>
+  `;
+
+  let mainContentHtml = '';
+
+  if (balancoComandaViewSubTab === 'resumo_itens') {
+    mainContentHtml = renderBalancoConsolidatedItems(sortedServices, sortedProducts, totalServicesRev, totalProductsRev);
+  } else {
+    if (filtered.length === 0) {
+      mainContentHtml = `
+        <div class="card-shell" style="text-align: center; padding: 48px 20px; color: var(--muted); background: #fff; border-radius: 16px; border: 1px dashed #cbd5e1;">
+          <div style="font-size: 2.4rem; margin-bottom: 10px;">📋</div>
+          <div style="font-weight: 700; font-size: 1.05rem; color: var(--ink);">Nenhuma comanda ou venda encontrada</div>
+          <div style="font-size: 0.84rem; margin-top: 4px;">Tente alterar os filtros de data, tipo ou termo de busca acima.</div>
+          ${(selectedBalancoComandaDay || balancoComandaSearchTerm || balancoComandaTypeFilter !== 'todos') ? `
+            <button class="btn-falcon btn-secondary" style="margin-top: 16px; padding: 8px 16px;" onclick="
+              selectedBalancoComandaDay = '';
+              balancoComandaSearchTerm = '';
+              balancoComandaTypeFilter = 'todos';
+              renderBalanco(document.getElementById('viewContainer'), document.getElementById('topBarActions'));
+            ">
+              Limpar Todos os Filtros
+            </button>
+          ` : ''}
+        </div>
+      `;
+    } else {
+      const cardsHtml = filtered.map(r => {
+        const cleanPhone = (r.clientPhone || '').replace(/\D/g, '');
+        const waLink = cleanPhone ? `https://wa.me/55${cleanPhone.replace(/^55/, '')}` : null;
+
+        const itemsRowsHtml = [
+          ...r.services.map(s => `
+            <div class="comanda-item-row">
+              <div style="display:flex; align-items:center; gap:6px; min-width:0;">
+                <span class="comanda-item-badge-svc">Serviço</span>
+                <span style="color:#1e293b; font-weight:500; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHtml(s.name)}</span>
+                ${s.qty > 1 ? `<span style="color:#64748b; font-size:0.8rem;">(x${s.qty})</span>` : ''}
+              </div>
+              <span style="font-weight:600; color:#0f172a; flex-shrink:0;">R$ ${s.total.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+            </div>
+          `),
+          ...r.products.map(p => `
+            <div class="comanda-item-row">
+              <div style="display:flex; align-items:center; gap:6px; min-width:0;">
+                <span class="comanda-item-badge-prod">Produto</span>
+                <span style="color:#1e293b; font-weight:500; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHtml(p.name)}</span>
+                <span style="color:#047857; font-size:0.78rem; font-weight:600;">(${p.qty} un · R$ ${p.unitPrice.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})</span>
+              </div>
+              <span style="font-weight:600; color:#0f172a; flex-shrink:0;">R$ ${p.total.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+            </div>
+          `)
+        ].join('') || `<div style="font-size:0.82rem; color:#94a3b8; font-style:italic;">Nenhum item discriminado.</div>`;
+
+        let actionsHtml = '';
+        if (r.type === 'appointment') {
+          actionsHtml = `
+            <button class="btn-falcon btn-secondary btn-comanda-action" onclick="openComandaModal('${r.appointmentId}')" title="Visualizar ou editar comanda">
+              <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+              <span>Ver Comanda</span>
+            </button>
+            <button class="btn-falcon btn-primary btn-comanda-action" onclick="comandaEditAndReopen('${r.appointmentId}')" title="${r.isClosed ? 'Reabrir e editar comanda' : 'Editar comanda'}">
+              <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+              <span>Editar Comanda</span>
+            </button>
+            <button class="btn-falcon btn-secondary btn-comanda-action btn-return-agenda" onclick="comandaReturnToAgenda('${r.appointmentId}')" title="Reabre a comanda e devolve o agendamento para a agenda">
+              <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="9 14 4 9 9 4"></polyline><path d="M20 20v-7a4 4 0 0 0-4-4H4"></path></svg>
+              <span>Voltar para Agenda</span>
+            </button>
+          `;
+        } else {
+          actionsHtml = `
+            <div style="font-size: 0.8rem; color: #64748b; font-style: italic;">
+              Venda avulsa lançada diretamente no caixa
+            </div>
+          `;
+        }
+
+        return `
+          <div class="comanda-balanco-card ${r.isClosed ? 'is-closed' : 'is-open'}">
+            <div class="comanda-card-topbar">
+              <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                <span class="comanda-card-id">${r.type === 'appointment' ? `📋 #${r.appointmentId.slice(-6).toUpperCase()}` : '🛍️ VENDA DE BALCÃO'}</span>
+                <span class="comanda-card-datetime">
+                  📅 ${r.date ? r.date.split('-').reverse().join('/') : ''} às ${r.time}
+                </span>
+              </div>
+              <div>
+                ${r.isClosed 
+                  ? `<span class="badge-comanda-closed">✓ Comanda Fechada</span>`
+                  : `<span class="badge-comanda-open">⏳ Em Aberto</span>`
+                }
+              </div>
+            </div>
+
+            <div class="comanda-card-parties">
+              <div class="party-box">
+                <span class="party-label">Cliente</span>
+                <div class="party-name">
+                  <strong>${escapeHtml(r.clientName)}</strong>
+                  ${waLink ? `<a href="${waLink}" target="_blank" class="party-phone" title="Abrir WhatsApp">💬 ${escapeHtml(r.clientPhone)}</a>` : (r.clientPhone ? `<span class="party-phone">📞 ${escapeHtml(r.clientPhone)}</span>` : '')}
+                </div>
+              </div>
+              <div class="party-box">
+                <span class="party-label">Profissional</span>
+                <div class="party-name">
+                  <strong>✂️ ${escapeHtml(r.professionalName)}</strong>
+                </div>
+              </div>
+            </div>
+
+            <div class="comanda-card-items-box">
+              <div style="font-size: 0.74rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px;">
+                Itens (${r.services.length} serviços · ${r.products.length} produtos)
+              </div>
+              ${itemsRowsHtml}
+              ${r.discount > 0 ? `
+                <div class="comanda-item-row" style="color: #dc2626; border-top: 1px dashed #e2e8f0; padding-top: 6px; margin-top: 4px;">
+                  <span>Desconto Concedido</span>
+                  <span>- R$ ${r.discount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                </div>
+              ` : ''}
+              <div class="comanda-item-row" style="font-weight: 700; font-size: 0.98rem; color: #0f172a; border-top: 1px solid #cbd5e1; padding-top: 6px; margin-top: 4px;">
+                <span>Total Recebido</span>
+                <span style="color: var(--orange, #ff6900);">R$ ${r.netTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+              </div>
+            </div>
+
+            <div class="comanda-card-footer">
+              <div class="comanda-payment-info">
+                <div style="font-size: 0.72rem; color: #64748b; font-weight: 700; text-transform: uppercase;">FORMA DE PAGAMENTO</div>
+                <div style="font-size: 0.88rem; font-weight: 600; color: #0f172a; display: flex; align-items: center; gap: 6px; margin-top: 2px;">
+                  <span>💳</span>
+                  <span>${escapeHtml(r.paymentMethod)}</span>
+                </div>
+              </div>
+              <div class="comanda-card-actions">
+                ${actionsHtml}
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      mainContentHtml = `
+        <div class="comandas-balanco-grid">
+          ${cardsHtml}
+        </div>
+      `;
+    }
+  }
+
+  container.innerHTML = `
+    ${subnavTabsHtml}
+    ${monthSelectorCardHtml}
+    ${metricsHtml}
+    ${filtersHtml}
+    ${mainContentHtml}
   `;
 }
 
@@ -7578,13 +8197,13 @@ window.openComandaModal = async function(appId, ev) {
     const res = await comandaRequest(`/api/appointments/${cur.appointmentId}/comanda/close`, 'POST', payload);
     if (!res) return;
     closeModal(); window.__comandaDirty = false;
-    await loadInitialData(); renderView('agenda');
+    await loadInitialData(); renderView(currentView === 'balanco' ? 'balanco' : 'agenda');
   } : null, 'Fechar comanda e receber');
   renderComandaBody(data);
   const cancelBtn = document.getElementById('modalCancelBtn');
   if (cancelBtn && open) cancelBtn.innerText = 'Voltar';
   if (cancelBtn) cancelBtn.addEventListener('click', () => {
-    if (window.__comandaDirty) { window.__comandaDirty = false; loadInitialData().then(() => renderView('agenda')); }
+    if (window.__comandaDirty) { window.__comandaDirty = false; loadInitialData().then(() => renderView(currentView === 'balanco' ? 'balanco' : 'agenda')); }
   }, { once: true });
 };
 
