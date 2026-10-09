@@ -2768,6 +2768,7 @@ function updateScheduleView() {
                 <span class="agenda-list-time-range">${app.startTime} - ${app.endTime}</span>
                 <div class="agenda-list-actions-vertical">
                   <div class="agenda-list-actions-top-row">
+                    ${canManageThis && !['cancelado','faltou','indisponivel'].includes(app.status) ? `<button class="btn-remind-app" style="background:#fff7ed; color:#c2410c; border-color:#fed7aa;" onclick="openComandaModal('${app.id}', event)" title="Abrir comanda do atendimento"><span>${app.comanda && app.comanda.status === 'fechada' ? 'Comanda ✓' : 'Comanda'}</span></button>` : ''}
                     ${app.clientPhone ? `
                     <button class="btn-remind-app" onclick="sendAppointmentReminder('${app.id}', event)" title="Lembrete WhatsApp (${app.clientPhone})">
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91C2.13 13.66 2.59 15.36 3.45 16.86L2.05 22L7.3 20.62C8.75 21.41 10.38 21.83 12.04 21.83C17.5 21.83 21.95 17.38 21.95 11.92C21.95 9.27 20.92 6.78 19.05 4.91C17.18 3.03 14.69 2 12.04 2ZM12.05 20.16C10.57 20.16 9.12 19.76 7.85 19.01L7.55 18.83L4.43 19.65L5.26 16.61L5.06 16.29C4.24 14.99 3.81 13.47 3.81 11.91C3.81 7.37 7.5 3.68 12.05 3.68C14.25 3.68 16.31 4.54 17.87 6.1C19.42 7.66 20.28 9.72 20.27 11.92C20.28 16.46 16.59 20.16 12.05 20.16ZM16.56 14.46C16.31 14.33 15.09 13.73 14.86 13.65C14.63 13.56 14.47 13.52 14.3 13.77C14.14 14.02 13.66 14.58 13.52 14.75C13.37 14.92 13.23 14.94 12.98 14.81C12.73 14.69 11.93 14.42 10.98 13.58C10.24 12.92 9.74 12.11 9.6 11.86C9.45 11.61 9.58 11.48 9.71 11.35C9.82 11.24 9.96 11.06 10.08 10.91C10.21 10.77 10.25 10.66 10.33 10.5C10.41 10.33 10.37 10.19 10.31 10.06C10.25 9.94 9.76 8.73 9.55 8.24C9.35 7.75 9.15 7.82 8.99 7.81C8.85 7.8 8.68 7.8 8.52 7.8C8.35 7.8 8.08 7.86 7.85 8.11C7.62 8.36 6.98 8.96 6.98 10.18C6.98 11.4 7.87 12.58 7.99 12.74C8.11 12.91 9.74 15.42 12.23 16.5C12.82 16.76 13.28 16.91 13.64 17.03C14.23 17.22 14.77 17.19 15.2 17.13C15.68 17.06 16.67 16.53 16.88 15.95C17.08 15.37 17.08 14.88 17.02 14.77C16.96 14.67 16.81 14.59 16.56 14.46Z"/></svg>
@@ -2881,6 +2882,7 @@ function updateScheduleView() {
                 </div>
 
                 <div class="app-actions">
+                  ${canManageThisApp && !['cancelado','faltou','indisponivel'].includes(appStartingHere.status) ? `<button class="btn-remind-app" style="background:#fff7ed; color:#c2410c; border-color:#fed7aa;" onclick="openComandaModal('${appStartingHere.id}', event)" title="Abrir comanda do atendimento"><span>${appStartingHere.comanda && appStartingHere.comanda.status === 'fechada' ? 'Comanda ✓' : 'Comanda'}</span></button>` : ''}
                   ${appStartingHere.clientPhone ? `
                     <button class="btn-remind-app" onclick="sendAppointmentReminder('${appStartingHere.id}', event)" title="Enviar lembrete via WhatsApp (${appStartingHere.clientPhone})">
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91C2.13 13.66 2.59 15.36 3.45 16.86L2.05 22L7.3 20.62C8.75 21.41 10.38 21.83 12.04 21.83C17.5 21.83 21.95 17.38 21.95 11.92C21.95 9.27 20.92 6.78 19.05 4.91C17.18 3.03 14.69 2 12.04 2ZM12.05 20.16C10.57 20.16 9.12 19.76 7.85 19.01L7.55 18.83L4.43 19.65L5.26 16.61L5.06 16.29C4.24 14.99 3.81 13.47 3.81 11.91C3.81 7.37 7.5 3.68 12.05 3.68C14.25 3.68 16.31 4.54 17.87 6.1C19.42 7.66 20.28 9.72 20.27 11.92C20.28 16.46 16.59 20.16 12.05 20.16ZM16.56 14.46C16.31 14.33 15.09 13.73 14.86 13.65C14.63 13.56 14.47 13.52 14.3 13.77C14.14 14.02 13.66 14.58 13.52 14.75C13.37 14.92 13.23 14.94 12.98 14.81C12.73 14.69 11.93 14.42 10.98 13.58C10.24 12.92 9.74 12.11 9.6 11.86C9.45 11.61 9.58 11.48 9.71 11.35C9.82 11.24 9.96 11.06 10.08 10.91C10.21 10.77 10.25 10.66 10.33 10.5C10.41 10.33 10.37 10.19 10.31 10.06C10.25 9.94 9.76 8.73 9.55 8.24C9.35 7.75 9.15 7.82 8.99 7.81C8.85 7.8 8.68 7.8 8.52 7.8C8.35 7.8 8.08 7.86 7.85 8.11C7.62 8.36 6.98 8.96 6.98 10.18C6.98 11.4 7.87 12.58 7.99 12.74C8.11 12.91 9.74 15.42 12.23 16.5C12.82 16.76 13.28 16.91 13.64 17.03C14.23 17.22 14.77 17.19 15.2 17.13C15.68 17.06 16.67 16.53 16.88 15.95C17.08 15.37 17.08 14.88 17.02 14.77C16.96 14.67 16.81 14.59 16.56 14.46Z"/></svg>
@@ -7350,6 +7352,183 @@ window.openNewAppointmentModal = function(defaultTime = "10:00", draft = null) {
     }
     apptToggleNewClientFields();
   }, 80);
+};
+
+// =============================================================
+// COMANDA DO ATENDIMENTO (interface)
+// =============================================================
+window.__comanda = null;
+const COMANDA_PAY = ['Pix', 'Dinheiro', 'Cartão de débito', 'Cartão de crédito', 'Outro'];
+const brl = n => 'R$ ' + (Number(n) || 0).toFixed(2).replace('.', ',');
+const escHtml = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+function comandaRowStyle() { return 'display:flex; align-items:center; gap:10px; padding:10px 12px; border:1px solid #e2e8f0; border-radius:12px; background:#fff;'; }
+
+function renderComandaBody(c) {
+  const open = c.status !== 'fechada';
+  const body = document.getElementById('modalBody');
+  if (!body) return;
+  const profs = state.professionals || [];
+  const prof = profs.find(p => p.id === c.professionalId);
+  const services = state.services || [];
+  const products = (state.products || []).filter(p => (Number(p.stock) || 0) > 0);
+
+  const itemsHtml = c.items.map((it, idx) => {
+    const isSvc = it.type === 'servico';
+    const qtyHtml = !isSvc ? (open ? `
+        <span style="display:inline-flex; align-items:center; gap:6px;">
+          <button type="button" class="btn-falcon btn-secondary btn-sm" style="padding:0 9px;" onclick="comandaChangeQty(${idx}, -1)">−</button>
+          <b style="min-width:18px; text-align:center;">${it.qty}</b>
+          <button type="button" class="btn-falcon btn-secondary btn-sm" style="padding:0 9px;" onclick="comandaChangeQty(${idx}, 1)">+</button>
+        </span>` : `<b>${it.qty}x</b>`) : '';
+    const priceHtml = isSvc && open
+      ? `<input type="number" class="form-control" style="width:96px; padding:6px 8px; text-align:right;" step="0.5" min="0" value="${Number(it.unitPrice).toFixed(2)}" onchange="comandaSetPrice(${idx}, this.value)">`
+      : `<b>${brl(it.total)}</b>`;
+    const removable = open && (!isSvc || c.items.filter(x => x.type === 'servico').length > 1);
+    return `<div style="${comandaRowStyle()} flex-direction:column; align-items:stretch; gap:8px;">
+      <div style="display:flex; align-items:flex-start; gap:8px;">
+        <span style="font-size:1.1rem;">${isSvc ? '✂️' : '🧴'}</span>
+        <div style="flex:1; min-width:0;"><div style="font-weight:600; line-height:1.25;">${escHtml(it.name)}</div><small style="color:var(--muted);">${isSvc ? 'Serviço' : 'Produto · ' + brl(it.unitPrice) + ' cada'}</small></div>
+        ${removable ? `<button type="button" title="Remover" style="background:none;border:none;color:#b91c1c;font-size:1.2rem;cursor:pointer;line-height:1;" onclick="comandaRemove(${idx})">✕</button>` : ''}
+      </div>
+      <div style="display:flex; align-items:center; justify-content:${isSvc ? 'flex-end' : 'space-between'}; gap:10px;">${qtyHtml}${priceHtml}</div>
+    </div>`;
+  }).join('');
+
+  const addHtml = open ? `
+    <div class="form-group" style="margin-top:6px;">
+      <label>Adicionar serviço</label>
+      <div style="display:flex; gap:8px;">
+        <select class="form-control" id="comandaAddSvc">${services.map(s => `<option value="${s.id}">${escHtml(s.name)} — ${brl(s.price)}</option>`).join('')}</select>
+        <button type="button" class="btn-falcon btn-primary" onclick="comandaAddService()">Adicionar</button>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Adicionar produto</label>
+      ${products.length ? `<div style="display:flex; gap:8px;">
+        <select class="form-control" id="comandaAddProd">${products.map(p => `<option value="${p.id}">${escHtml(p.name)} — ${brl(p.price)} (estoque ${p.stock})</option>`).join('')}</select>
+        <button type="button" class="btn-falcon btn-primary" onclick="comandaAddProduct()">Adicionar</button>
+      </div>` : `<small style="color:var(--muted);">Nenhum produto com estoque disponível.</small>`}
+    </div>
+    <div class="form-group">
+      <label>Desconto (R$)</label>
+      <input type="number" class="form-control" id="comandaDiscount" min="0" step="0.5" value="${Number(c.discount || 0).toFixed(2)}" onchange="comandaSetDiscount(this.value)">
+    </div>` : '';
+
+  const totalsHtml = `
+    <div style="border:1px solid #fed7aa; background:#fffaf5; border-radius:14px; padding:12px 14px; display:flex; flex-direction:column; gap:6px; font-size:0.9rem;">
+      <div style="display:flex; justify-content:space-between;"><span>Serviços</span><b>${brl(c.servicesTotal)}</b></div>
+      <div style="display:flex; justify-content:space-between;"><span>Produtos</span><b>${brl(c.productsTotal)}</b></div>
+      ${c.discount > 0 ? `<div style="display:flex; justify-content:space-between; color:#b91c1c;"><span>Desconto</span><b>− ${brl(c.discount)}</b></div>` : ''}
+      <div style="display:flex; justify-content:space-between; font-size:1.05rem; border-top:1px dashed #fed7aa; padding-top:6px;"><span><b>Total</b></span><b style="color:var(--orange);">${brl(c.total)}</b></div>
+      ${c.deposit > 0 ? `<div style="display:flex; justify-content:space-between; color:#166534;"><span>Sinal já pago</span><b>− ${brl(c.deposit)}</b></div>
+      <div style="display:flex; justify-content:space-between; font-size:1.05rem;"><span><b>A receber agora</b></span><b>${brl(c.balanceDue)}</b></div>` : ''}
+    </div>`;
+
+  const payHtml = open ? `
+    <div class="form-group">
+      <label>Forma de pagamento (ao fechar)</label>
+      <select class="form-control" id="comandaPay">${COMANDA_PAY.map(m => `<option value="${m}" ${c.paymentMethod === m ? 'selected' : ''}>${m}</option>`).join('')}</select>
+    </div>` : `
+    <div style="padding:10px 12px; border-radius:12px; background:#ecfdf5; border:1px solid #a7f3d0; color:#065f46; font-weight:600;">
+      ✓ Comanda fechada · pagamento: ${escHtml(c.paymentMethod || '—')}
+    </div>
+    ${isManager ? `<button type="button" class="btn-falcon btn-secondary" style="margin-top:6px;" onclick="comandaReopen()">Reabrir comanda</button>` : ''}`;
+
+  body.innerHTML = `
+    <div style="font-size:0.85rem; color:var(--muted);">${escHtml(c.clientName || 'Cliente')} · ${escHtml(prof ? prof.name : '')}</div>
+    <div style="display:flex; flex-direction:column; gap:8px;">${itemsHtml}</div>
+    ${addHtml}${totalsHtml}${payHtml}`;
+}
+
+async function comandaRequest(url, method, payload) {
+  const res = await tenantFetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: payload ? JSON.stringify(payload) : undefined });
+  let data = null; try { data = await res.json(); } catch (e) {}
+  if (!res.ok) { await asyncAlert((data && data.error) || 'Não foi possível atualizar a comanda.'); return null; }
+  return data;
+}
+
+function comandaSyncAppointment(c) {
+  const a = (state.appointments || []).find(x => x.id === c.appointmentId);
+  if (!a) return;
+  a.comanda = { status: c.status, items: c.items, discount: c.discount, paymentMethod: c.paymentMethod };
+  a.price = c.servicesTotal - Math.min(c.discount, c.servicesTotal);
+  const svc = c.items.filter(i => i.type === 'servico');
+  if (svc.length) { a.serviceName = svc.map(i => i.name).join(' + '); a.serviceId = svc[0].refId; }
+  if (c.status === 'fechada') a.status = 'concluido'; else if (a.status === 'concluido') a.status = 'agendado';
+  window.__comandaDirty = true;
+}
+
+async function comandaPush() {
+  const cur = window.__comanda; if (!cur) return;
+  const data = await comandaRequest(`/api/appointments/${cur.appointmentId}/comanda`, 'PUT',
+    { items: cur.items.map(i => ({ type: i.type, refId: i.refId, qty: i.qty, unitPrice: i.unitPrice })), discount: cur.discount });
+  if (data) { window.__comanda = data; comandaSyncAppointment(data); }
+  renderComandaBody(window.__comanda);
+}
+
+window.comandaAddService = async function() {
+  const id = document.getElementById('comandaAddSvc')?.value; const s = (state.services || []).find(x => x.id === id); if (!s) return;
+  window.__comanda.items.push({ type: 'servico', refId: s.id, name: s.name, qty: 1, unitPrice: s.price, total: s.price });
+  await comandaPush();
+};
+window.comandaAddProduct = async function() {
+  const id = document.getElementById('comandaAddProd')?.value; const p = (state.products || []).find(x => x.id === id); if (!p) return;
+  const ex = window.__comanda.items.find(i => i.type === 'produto' && i.refId === p.id);
+  if (ex) { if (ex.qty + 1 > (Number(p.stock) || 0)) { asyncAlert(`Estoque insuficiente: só há ${p.stock} un. de "${p.name}".`); return; } ex.qty += 1; }
+  else window.__comanda.items.push({ type: 'produto', refId: p.id, name: p.name, qty: 1, unitPrice: p.price, total: p.price });
+  await comandaPush();
+};
+window.comandaChangeQty = async function(idx, delta) {
+  const it = window.__comanda.items[idx]; if (!it) return;
+  const p = (state.products || []).find(x => x.id === it.refId);
+  const next = it.qty + delta;
+  if (next < 1) return;
+  if (p && next > (Number(p.stock) || 0)) { asyncAlert(`Estoque insuficiente: só há ${p.stock} un. de "${p.name}".`); return; }
+  it.qty = next; await comandaPush();
+};
+window.comandaSetPrice = async function(idx, v) {
+  const it = window.__comanda.items[idx]; const n = Number(String(v).replace(',', '.')); if (!it || !Number.isFinite(n) || n < 0) { renderComandaBody(window.__comanda); return; }
+  it.unitPrice = n; await comandaPush();
+};
+window.comandaSetDiscount = async function(v) {
+  const n = Number(String(v).replace(',', '.')); window.__comanda.discount = Number.isFinite(n) && n > 0 ? n : 0; await comandaPush();
+};
+window.comandaRemove = async function(idx) {
+  const items = window.__comanda.items; items.splice(idx, 1); await comandaPush();
+};
+window.comandaReopen = async function() {
+  const cur = window.__comanda; if (!cur) return;
+  const ok = await asyncConfirm('Reabrir a comanda? A venda dos produtos será estornada e o estoque devolvido.', 'Reabrir comanda');
+  if (!ok) return;
+  const data = await comandaRequest(`/api/appointments/${cur.appointmentId}/comanda/reopen`, 'POST');
+  if (data) { window.__comanda = data; comandaSyncAppointment(data); await loadInitialData(); openComandaModal(cur.appointmentId); }
+};
+
+window.openComandaModal = async function(appId, ev) {
+  if (ev && ev.stopPropagation) ev.stopPropagation();
+  const data = await comandaRequest(`/api/appointments/${appId}/comanda`, 'GET');
+  if (!data) return;
+  window.__comanda = data; window.__comandaDirty = false;
+  const open = data.status !== 'fechada';
+  openModal(`Comanda · ${data.clientName || 'Cliente'}`, '<div id="comandaLoading">Carregando...</div>', open ? async () => {
+    const cur = window.__comanda;
+    const method = document.getElementById('comandaPay')?.value;
+    // garante que o que está na tela já foi salvo
+    await comandaPush();
+    const ok = await asyncConfirm(`Fechar a comanda de ${cur.clientName} no valor de ${brl(window.__comanda.total)} (${method})?\n\nIsso conclui o atendimento, lança a receita no caixa e baixa o estoque dos produtos.`, 'Fechar comanda');
+    if (!ok) return;
+    const res = await comandaRequest(`/api/appointments/${cur.appointmentId}/comanda/close`, 'POST', { paymentMethod: method });
+    if (!res) return;
+    closeModal(); window.__comandaDirty = false;
+    await loadInitialData(); renderView('agenda');
+  } : null, 'Fechar comanda e receber');
+  renderComandaBody(data);
+  const cancelBtn = document.getElementById('modalCancelBtn');
+  if (cancelBtn && open) cancelBtn.innerText = 'Voltar';
+  if (cancelBtn) cancelBtn.addEventListener('click', () => {
+    if (window.__comandaDirty) { window.__comandaDirty = false; loadInitialData().then(() => renderView('agenda')); }
+  }, { once: true });
 };
 
 window.filterModalServicesByProf = function() {

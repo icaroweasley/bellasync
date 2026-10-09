@@ -2610,6 +2610,192 @@ app.delete('/api/appointments/:id', (req, res) => {
   res.json({ message: 'Agendamento removido com sucesso.', removed });
 });
 
+// =============================================================
+// COMANDA DO ATENDIMENTO
+// Abre junto com o agendamento (sob demanda), recebe serviços e produtos
+// e, ao fechar, lança a receita no caixa/balanço, baixa o estoque e conclui o atendimento.
+// Integração com o balanço existente: serviços => appointment.price; produtos => db.productSales.
+// =============================================================
+const COMANDA_PAYMENT_METHODS = ['Pix', 'Dinheiro', 'Cartão de débito', 'Cartão de crédito', 'Outro'];
+const round2 = n => Math.round((Number(n) || 0) * 100) / 100;
+
+function comandaTotals(items, discount, app) {
+  const servicesTotal = round2(items.filter(i => i.type === 'servico').reduce((a, i) => a + i.total, 0));
+  const productsTotal = round2(items.filter(i => i.type === 'produto').reduce((a, i) => a + i.total, 0));
+  const gross = round2(servicesTotal + productsTotal);
+  const disc = Math.min(Math.max(round2(discount), 0), gross);
+  const total = round2(gross - disc);
+  const deposit = app && app.hasDeposit ? round2(app.depositAmount) : 0;
+  return { servicesTotal, productsTotal, discount: disc, total, deposit, balanceDue: Math.max(0, round2(total - deposit)) };
+}
+
+function defaultComandaItems(app, db, tenantId) {
+  const items = [];
+  const list = Array.isArray(app.servicesList) ? app.servicesList : [];
+  const find = id => (db.services || []).find(s => s.id === id && s.tenantId === tenantId);
+  if (list.length > 0) {
+    list.forEach((it, idx) => {
+      const s = find(it.id);
+      const price = Number.isFinite(Number(it.price)) && it.price !== undefined ? Number(it.price) : (s ? Number(s.price) : 0);
+      items.push({ id: 'ci_' + idx, type: 'servico', refId: it.id, name: (s && s.name) || it.name || 'Serviço', qty: 1, unitPrice: round2(price), total: round2(price) });
+    });
+  } else {
+    items.push({ id: 'ci_0', type: 'servico', refId: app.serviceId || null, name: app.serviceName || 'Atendimento', qty: 1, unitPrice: round2(app.price), total: round2(app.price) });
+  }
+  return items;
+}
+
+function getComandaView(app, db, tenantId) {
+  const c = app.comanda || { status: 'aberta', items: defaultComandaItems(app, db, tenantId), discount: 0, paymentMethod: null, createdAt: null };
+  return { ...c, ...comandaTotals(c.items, c.discount, app), appointmentId: app.id, clientName: app.clientName, professionalId: app.professionalId, hasDeposit: !!app.hasDeposit };
+}
+
+function loadComandaApp(req, res) {
+  const db = getDb();
+  const tenantId = getTenantId(req);
+  const app = (db.appointments || []).find(a => a.id === req.params.id && a.tenantId === tenantId);
+  if (!app) { res.status(404).json({ error: 'Agendamento não encontrado.' }); return null; }
+  if (!canUserManageAppointment(req, app, db)) {
+    res.status(403).json({ error: 'Apenas o gestor e o profissional do agendamento podem usar a comanda.' });
+    return null;
+  }
+  return { db, tenantId, app };
+}
+
+app.get('/api/appointments/:id/comanda', (req, res) => {
+  const ctx = loadComandaApp(req, res); if (!ctx) return;
+  res.json(getComandaView(ctx.app, ctx.db, ctx.tenantId));
+});
+
+// Salva os itens (serviços/produtos) e o desconto da comanda aberta
+app.put('/api/appointments/:id/comanda', (req, res) => {
+  const ctx = loadComandaApp(req, res); if (!ctx) return;
+  const { db, tenantId, app } = ctx;
+  if (app.comanda && app.comanda.status === 'fechada') {
+    return res.status(409).json({ error: 'Esta comanda já foi fechada. Reabra para editar.' });
+  }
+  if (app.status === 'cancelado' || app.status === 'faltou' || app.status === 'indisponivel') {
+    return res.status(409).json({ error: 'Não é possível abrir comanda para este agendamento.' });
+  }
+  const incoming = Array.isArray(req.body.items) ? req.body.items : [];
+  if (incoming.length === 0) return res.status(400).json({ error: 'A comanda precisa ter ao menos um serviço.' });
+  if (incoming.length > 60) return res.status(400).json({ error: 'Itens demais na comanda.' });
+
+  const items = [];
+  for (let i = 0; i < incoming.length; i++) {
+    const it = incoming[i] || {};
+    if (it.type === 'servico') {
+      const s = (db.services || []).find(x => x.id === it.refId && x.tenantId === tenantId);
+      if (!s) return res.status(404).json({ error: 'Serviço não encontrado na comanda.' });
+      const custom = Number(it.unitPrice);
+      const unit = Number.isFinite(custom) && custom >= 0 ? round2(custom) : round2(s.price);
+      items.push({ id: 'ci_' + i, type: 'servico', refId: s.id, name: s.name, qty: 1, unitPrice: unit, total: unit });
+    } else if (it.type === 'produto') {
+      const p = (db.products || []).find(x => x.id === it.refId && x.tenantId === tenantId);
+      if (!p) return res.status(404).json({ error: 'Produto não encontrado na comanda.' });
+      const qty = Math.min(999, Math.max(1, parseInt(it.qty, 10) || 1));
+      const unit = round2(p.price);
+      items.push({ id: 'ci_' + i, type: 'produto', refId: p.id, name: p.name, qty, unitPrice: unit, total: round2(unit * qty) });
+    } else {
+      return res.status(400).json({ error: 'Tipo de item inválido.' });
+    }
+  }
+  if (!items.some(i => i.type === 'servico')) return res.status(400).json({ error: 'A comanda precisa ter ao menos um serviço.' });
+
+  const t = comandaTotals(items, req.body.discount, app);
+  app.comanda = {
+    status: 'aberta', items, discount: t.discount, paymentMethod: null,
+    createdAt: (app.comanda && app.comanda.createdAt) || new Date().toISOString(), updatedAt: new Date().toISOString()
+  };
+  // Serviços alimentam a receita de serviços do balanço (desconto abate primeiro dos serviços)
+  const svcDiscount = Math.min(t.discount, t.servicesTotal);
+  app.price = round2(t.servicesTotal - svcDiscount);
+  const svc = items.filter(i => i.type === 'servico');
+  app.serviceId = svc[0].refId;
+  app.serviceName = svc.map(i => i.name).join(' + ');
+  saveDb(db);
+  res.json(getComandaView(app, db, tenantId));
+});
+
+// Fecha a comanda: registra pagamento, vende os produtos (baixa estoque) e conclui o atendimento
+app.post('/api/appointments/:id/comanda/close', (req, res) => {
+  const ctx = loadComandaApp(req, res); if (!ctx) return;
+  const { db, tenantId, app } = ctx;
+  if (app.comanda && app.comanda.status === 'fechada') return res.status(409).json({ error: 'Esta comanda já está fechada.' });
+  if (!app.comanda) return res.status(400).json({ error: 'Salve a comanda antes de fechar.' });
+  const paymentMethod = String(req.body.paymentMethod || '');
+  if (!COMANDA_PAYMENT_METHODS.includes(paymentMethod)) return res.status(400).json({ error: 'Escolha a forma de pagamento.' });
+
+  const items = app.comanda.items;
+  const t = comandaTotals(items, app.comanda.discount, app);
+  const productItems = items.filter(i => i.type === 'produto');
+
+  // Confere estoque de tudo antes de baixar qualquer item
+  const need = {};
+  productItems.forEach(i => { need[i.refId] = (need[i.refId] || 0) + i.qty; });
+  for (const pid of Object.keys(need)) {
+    const p = (db.products || []).find(x => x.id === pid && x.tenantId === tenantId);
+    if (!p) return res.status(404).json({ error: 'Produto da comanda não existe mais.' });
+    if ((Number(p.stock) || 0) < need[pid]) {
+      return res.status(400).json({ error: `Estoque insuficiente para "${p.name}". Disponível: ${p.stock} un.` });
+    }
+  }
+
+  let saleId = null;
+  if (productItems.length > 0) {
+    productItems.forEach(i => {
+      const p = db.products.find(x => x.id === i.refId && x.tenantId === tenantId);
+      p.stock = (Number(p.stock) || 0) - i.qty;
+    });
+    const prof = (db.professionals || []).find(p => p.id === app.professionalId && p.tenantId === tenantId);
+    const today = getTodayDateStr();
+    const svcDiscount = Math.min(t.discount, t.servicesTotal);
+    const prodDiscount = round2(t.discount - svcDiscount);
+    const subtotal = t.productsTotal;
+    saleId = 'sale_' + Date.now();
+    if (!db.productSales) db.productSales = [];
+    db.productSales.push({
+      id: saleId, tenantId, appointmentId: app.id, source: 'comanda',
+      clientId: app.clientId || null, clientName: app.clientName || 'Cliente', clientPhone: app.clientPhone || '',
+      professionalId: app.professionalId || null, professionalName: prof ? prof.name : null,
+      items: productItems.map(i => ({ productId: i.refId, productName: i.name, quantity: i.qty, unitPrice: i.unitPrice, total: i.total,
+        commissionPercent: ((db.products.find(x => x.id === i.refId) || {}).commissionPercent) || 0 })),
+      subtotal, discount: prodDiscount, total: round2(Math.max(0, subtotal - prodDiscount)),
+      paymentMethod, notes: 'Comanda do atendimento', date: today, monthYear: today.substring(0, 7), createdAt: new Date().toISOString()
+    });
+  }
+
+  app.comanda.status = 'fechada';
+  app.comanda.paymentMethod = paymentMethod;
+  app.comanda.closedAt = new Date().toISOString();
+  app.comanda.saleId = saleId;
+  app.comanda.totalPaid = t.total;
+  app.paymentMethod = paymentMethod;
+  app.status = 'concluido';
+  app.isNoShow = false; app.noShowWithDeposit = false;
+  saveDb(db);
+  res.json(getComandaView(app, db, tenantId));
+});
+
+// Reabre uma comanda fechada (estorna a venda de produtos e devolve ao estoque) — só gestor
+app.post('/api/appointments/:id/comanda/reopen', requireManager, (req, res) => {
+  const ctx = loadComandaApp(req, res); if (!ctx) return;
+  const { db, tenantId, app } = ctx;
+  if (!app.comanda || app.comanda.status !== 'fechada') return res.status(409).json({ error: 'Esta comanda não está fechada.' });
+  const saleIdx = (db.productSales || []).findIndex(s => s.id === app.comanda.saleId && s.tenantId === tenantId);
+  if (saleIdx !== -1) {
+    const sale = db.productSales.splice(saleIdx, 1)[0];
+    (sale.items || []).forEach(it => {
+      const p = (db.products || []).find(x => x.id === it.productId && x.tenantId === tenantId);
+      if (p) p.stock = (Number(p.stock) || 0) + (Number(it.quantity) || 1);
+    });
+  }
+  app.comanda.status = 'aberta'; app.comanda.paymentMethod = null; app.comanda.saleId = null; app.comanda.closedAt = null;
+  app.status = 'agendado'; delete app.paymentMethod;
+  saveDb(db);
+  res.json(getComandaView(app, db, tenantId));
+});
+
 // 6. Produtos
 app.get('/api/products', (req, res) => {
   const db = getDb();
