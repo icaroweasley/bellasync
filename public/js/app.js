@@ -5814,7 +5814,7 @@ window.openProfComandasModal = function(profId) {
 
   const modal = document.getElementById('profComandasModal');
   if (!modal) return;
-  modal.style.display = 'grid';
+  modal.style.display = 'flex';
   modal.classList.add('open');
   modal.classList.add('active');
   updateBodyScrollLock();
@@ -6199,14 +6199,6 @@ window.renderProfComandasModalBody = function() {
     });
   }
 
-  // Estatísticas
-  const totalNet = comandaRecords.reduce((acc, r) => acc + r.netTotal, 0);
-  const closedCount = comandaRecords.filter(r => r.isClosed).length;
-  const commRate = prof ? ((Number(prof.commissionDefault) || 50) / 100) : 0.5;
-  const profComm = totalNet * commRate;
-  const goal = prof ? (Number(prof.monthlyGoal) || 3000) : 3000;
-  const pct = goal > 0 ? Math.min(100, Math.round((totalNet / goal) * 100)) : 0;
-
   // Itens agregados (para aba resumo de itens)
   const serviceStats = {};
   filtered.forEach(r => {
@@ -6232,79 +6224,12 @@ window.renderProfComandasModalBody = function() {
   let managerProfSelectorHtml = '';
   if (isManager) {
     managerProfSelectorHtml = `
-      <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 8px 12px; margin-bottom: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.03);">
-        <div style="display: flex; align-items: center; gap: 6px; font-size: 0.8rem; font-weight: 700; color: #475569; flex-shrink: 0;">
-          <span>👤</span> <span>Profissional:</span>
-        </div>
-        <select class="form-control" onchange="changeProfModalProf(this.value)" style="flex: 1; max-width: 240px; font-size: 0.82rem; height: 34px; padding: 4px 10px; border-radius: 8px; font-weight: 600; color: #0f172a; background: #f8fafc; border: 1px solid #cbd5e1;">
+      <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 10px 12px; margin-bottom: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.03);">
+        <label style="display: block; font-size: 0.7rem; font-weight: 700; color: #64748b; text-transform: uppercase; margin-bottom: 4px;">👤 Profissional Selecionado</label>
+        <select class="form-control" onchange="changeProfModalProf(this.value)" style="width: 100%; box-sizing: border-box; font-size: 0.85rem; height: 38px; padding: 4px 10px; border-radius: 8px; font-weight: 700; color: #0f172a; background: #f8fafc; border: 1px solid #cbd5e1;">
           ${(state.professionals || []).map(p => `<option value="${p.id}" ${prof && p.id === prof.id ? 'selected' : ''}>${escapeHtml(p.name)}</option>`).join('')}
-          <option value="todos" ${!prof ? 'selected' : ''}>Todos os Profissionais (Salão)</option>
+          <option value="todos" ${!prof ? 'selected' : ''}>Todos os Profissionais (Salão Completo)</option>
         </select>
-      </div>
-    `;
-  }
-
-  // 1. Hero do Profissional
-  let heroHtml = '';
-  if (prof) {
-    heroHtml = `
-      <div style="background: linear-gradient(135deg, #fff7ed 0%, #ffffff 100%); border: 1px solid #fed7aa; border-radius: 16px; padding: 14px 14px; margin-bottom: 14px;">
-        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
-          <img src="${prof.avatar || getButterflyAvatar(prof.name)}" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover; border: 2px solid var(--orange, #ff6900); flex-shrink: 0;" alt="${prof.name}">
-          <div style="min-width: 0; flex: 1;">
-            <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
-              <h4 style="margin: 0; font-size: 1.05rem; font-weight: 800; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(prof.name)}</h4>
-              <span style="font-size: 0.72rem; background: rgba(255,105,0,0.12); color: var(--orange, #ff6900); font-weight: 700; padding: 2px 8px; border-radius: 99px;">${prof.role || 'Profissional'}</span>
-            </div>
-            <div style="font-size: 0.76rem; color: #64748b; margin-top: 2px;">
-              Comissão padrão: <strong>${prof.commissionDefault || 50}%</strong> • Meta: <strong>${pct}%</strong> (${pct >= 100 ? '🎉 Batida!' : 'em andamento'})
-            </div>
-          </div>
-        </div>
-
-        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;">
-          <div style="background: #ffffff; border: 1px solid #fed7aa; border-radius: 12px; padding: 8px 4px; text-align: center; box-shadow: 0 1px 2px rgba(0,0,0,0.03); display: flex; flex-direction: column; justify-content: center; min-width: 0;">
-            <div style="font-size: 0.65rem; color: #64748b; font-weight: 700; text-transform: uppercase; letter-spacing: 0.2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">💰 Faturado</div>
-            <div style="font-size: clamp(0.76rem, 2.5vw, 0.95rem); font-weight: 800; color: #16a34a; margin: 3px 0 1px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="R$ ${totalNet.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}">R$ ${totalNet.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-            <div style="font-size: 0.63rem; color: #94a3b8; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${closedCount} comanda(s)</div>
-          </div>
-          <div style="background: #ffffff; border: 1px solid #fed7aa; border-radius: 12px; padding: 8px 4px; text-align: center; box-shadow: 0 1px 2px rgba(0,0,0,0.03); display: flex; flex-direction: column; justify-content: center; min-width: 0;">
-            <div style="font-size: 0.65rem; color: #64748b; font-weight: 700; text-transform: uppercase; letter-spacing: 0.2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">🤝 Comissão</div>
-            <div style="font-size: clamp(0.76rem, 2.5vw, 0.95rem); font-weight: 800; color: #d97706; margin: 3px 0 1px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="R$ ${profComm.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}">R$ ${profComm.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-            <div style="font-size: 0.63rem; color: #94a3b8; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${prof.commissionDefault || 50}% base</div>
-          </div>
-          <div style="background: #ffffff; border: 1px solid #fed7aa; border-radius: 12px; padding: 8px 4px; text-align: center; box-shadow: 0 1px 2px rgba(0,0,0,0.03); display: flex; flex-direction: column; justify-content: center; min-width: 0;">
-            <div style="font-size: 0.65rem; color: #64748b; font-weight: 700; text-transform: uppercase; letter-spacing: 0.2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">🎯 Meta</div>
-            <div style="font-size: clamp(0.76rem, 2.5vw, 0.95rem); font-weight: 800; color: var(--orange, #ff6900); margin: 3px 0 1px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="R$ ${goal.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}">R$ ${goal.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}</div>
-            <div style="font-size: 0.63rem; color: ${pct >= 100 ? '#16a34a' : '#64748b'}; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${pct}% atingida</div>
-          </div>
-        </div>
-      </div>
-    `;
-  } else {
-    heroHtml = `
-      <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 16px; padding: 14px 14px; margin-bottom: 14px;">
-        <div style="margin-bottom: 12px;">
-          <h4 style="margin: 0; font-size: 1.05rem; font-weight: 800; color: #0f172a;">Todas as Comandas do Salão</h4>
-          <div style="font-size: 0.76rem; color: #64748b; margin-top: 2px;">Visualizando lançamentos de toda a equipe</div>
-        </div>
-        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;">
-          <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 8px 4px; text-align: center; box-shadow: 0 1px 2px rgba(0,0,0,0.02); min-width: 0;">
-            <div style="font-size: 0.65rem; color: #64748b; font-weight: 700; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">💰 Faturado</div>
-            <div style="font-size: clamp(0.76rem, 2.5vw, 0.95rem); font-weight: 800; color: #16a34a; margin: 3px 0 1px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">R$ ${totalNet.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-            <div style="font-size: 0.63rem; color: #94a3b8; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${closedCount} fechadas</div>
-          </div>
-          <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 8px 4px; text-align: center; box-shadow: 0 1px 2px rgba(0,0,0,0.02); min-width: 0;">
-            <div style="font-size: 0.65rem; color: #64748b; font-weight: 700; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">🤝 Comissões</div>
-            <div style="font-size: clamp(0.76rem, 2.5vw, 0.95rem); font-weight: 800; color: #d97706; margin: 3px 0 1px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">R$ ${profComm.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-            <div style="font-size: 0.63rem; color: #94a3b8; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Total equipe</div>
-          </div>
-          <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 8px 4px; text-align: center; box-shadow: 0 1px 2px rgba(0,0,0,0.02); min-width: 0;">
-            <div style="font-size: 0.65rem; color: #64748b; font-weight: 700; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">📋 Comandas</div>
-            <div style="font-size: clamp(0.76rem, 2.5vw, 0.95rem); font-weight: 800; color: var(--orange, #ff6900); margin: 3px 0 1px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${comandaRecords.length}</div>
-            <div style="font-size: 0.63rem; color: #94a3b8; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">No mês</div>
-          </div>
-        </div>
       </div>
     `;
   }
@@ -6411,10 +6336,10 @@ window.renderProfComandasModalBody = function() {
         return `
           <div style="background: #ffffff; border: 1px solid #e2e8f0; border-left: 4px solid ${r.isClosed ? '#16a34a' : '#f59e0b'}; border-radius: 12px; padding: 12px 14px; margin-bottom: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
             <!-- Topo: #ID, Data e Sinal de Status no Canto Direito Superior -->
-            <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; width: 100%;">
-              <div style="display: flex; align-items: center; gap: 6px; min-width: 0; flex: 1;">
-                <span style="font-family: monospace; font-weight: 700; font-size: 0.78rem; background: #f1f5f9; color: #334155; padding: 2px 6px; border-radius: 5px; flex-shrink: 0;">#${appIdShort}</span>
-                <span style="font-size: 0.76rem; color: #64748b; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">📅 ${dateFormatted} às ${r.time}</span>
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; flex-wrap: wrap;">
+              <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                <span style="font-family: monospace; font-weight: 700; font-size: 0.76rem; background: #f1f5f9; color: #334155; padding: 2px 6px; border-radius: 5px;">#${appIdShort}</span>
+                <span style="font-size: 0.76rem; color: #64748b; font-weight: 600;">📅 ${dateFormatted} às ${r.time}</span>
               </div>
               <span style="font-size: 0.72rem; font-weight: 700; padding: 3px 8px; border-radius: 99px; flex-shrink: 0; white-space: nowrap; ${r.isClosed ? 'background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0;' : 'background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa;'}">
                 ${r.isClosed ? '✓ Fechada' : '⏳ Em Aberto'}
@@ -6489,7 +6414,6 @@ window.renderProfComandasModalBody = function() {
 
   bodyEl.innerHTML = `
     ${managerProfSelectorHtml}
-    ${heroHtml}
     ${controlsHtml}
     ${contentHtml}
   `;
