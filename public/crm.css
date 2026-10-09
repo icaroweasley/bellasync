@@ -5481,4 +5481,12 @@ input[type="checkbox"] {
   }
 }
 
+/* Modais de Confirmação e Alerta do Sistema SEMPRE no topo de qualquer outro modal */
+#customConfirmModal {
+  z-index: 20000 !important;
+}
+#customAlertModal {
+  z-index: 20001 !important;
+}
+
 

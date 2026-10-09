@@ -6203,69 +6203,82 @@ window.renderProfComandasModalBody = function() {
   });
   const sortedProducts = Object.values(productStats).sort((a, b) => b.total - a.total);
 
+  // Seletor de Profissional (para Gestores)
+  let managerProfSelectorHtml = '';
+  if (isManager) {
+    managerProfSelectorHtml = `
+      <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 8px 12px; margin-bottom: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.03);">
+        <div style="display: flex; align-items: center; gap: 6px; font-size: 0.8rem; font-weight: 700; color: #475569; flex-shrink: 0;">
+          <span>👤</span> <span>Profissional:</span>
+        </div>
+        <select class="form-control" onchange="changeProfModalProf(this.value)" style="flex: 1; max-width: 240px; font-size: 0.82rem; height: 34px; padding: 4px 10px; border-radius: 8px; font-weight: 600; color: #0f172a; background: #f8fafc; border: 1px solid #cbd5e1;">
+          ${(state.professionals || []).map(p => `<option value="${p.id}" ${prof && p.id === prof.id ? 'selected' : ''}>${escapeHtml(p.name)}</option>`).join('')}
+          <option value="todos" ${!prof ? 'selected' : ''}>Todos os Profissionais (Salão)</option>
+        </select>
+      </div>
+    `;
+  }
+
   // 1. Hero do Profissional
   let heroHtml = '';
   if (prof) {
     heroHtml = `
-      <div style="background: linear-gradient(135deg, #fff7ed 0%, #ffffff 100%); border: 1px solid #fed7aa; border-radius: 16px; padding: 14px 16px; margin-bottom: 14px;">
-        <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; flex-wrap: wrap;">
-          <div style="display: flex; align-items: center; gap: 12px; min-width: 0;">
-            <img src="${prof.avatar || getButterflyAvatar(prof.name)}" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover; border: 2px solid var(--orange, #ff6900); flex-shrink: 0;" alt="${prof.name}">
-            <div style="min-width: 0;">
-              <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
-                <h4 style="margin: 0; font-size: 1.05rem; font-weight: 800; color: #0f172a;">${escapeHtml(prof.name)}</h4>
-                <span style="font-size: 0.72rem; background: rgba(255,105,0,0.12); color: var(--orange, #ff6900); font-weight: 700; padding: 2px 8px; border-radius: 99px;">${prof.role || 'Profissional'}</span>
-              </div>
-              <div style="font-size: 0.78rem; color: #64748b; margin-top: 2px;">
-                Comissão: <strong>${prof.commissionDefault || 50}%</strong> • Meta: <strong>${pct}%</strong> (${pct >= 100 ? '🎉 Batida!' : 'em andamento'})
-              </div>
+      <div style="background: linear-gradient(135deg, #fff7ed 0%, #ffffff 100%); border: 1px solid #fed7aa; border-radius: 16px; padding: 14px 14px; margin-bottom: 14px;">
+        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+          <img src="${prof.avatar || getButterflyAvatar(prof.name)}" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover; border: 2px solid var(--orange, #ff6900); flex-shrink: 0;" alt="${prof.name}">
+          <div style="min-width: 0; flex: 1;">
+            <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+              <h4 style="margin: 0; font-size: 1.05rem; font-weight: 800; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(prof.name)}</h4>
+              <span style="font-size: 0.72rem; background: rgba(255,105,0,0.12); color: var(--orange, #ff6900); font-weight: 700; padding: 2px 8px; border-radius: 99px;">${prof.role || 'Profissional'}</span>
+            </div>
+            <div style="font-size: 0.76rem; color: #64748b; margin-top: 2px;">
+              Comissão padrão: <strong>${prof.commissionDefault || 50}%</strong> • Meta: <strong>${pct}%</strong> (${pct >= 100 ? '🎉 Batida!' : 'em andamento'})
             </div>
           </div>
-          ${isManager ? `
-            <div>
-              <select class="form-control" onchange="changeProfModalProf(this.value)" style="font-size: 0.8rem; height: 34px; padding: 4px 10px; border-radius: 9px; max-width: 180px;">
-                ${(state.professionals || []).map(p => `<option value="${p.id}" ${p.id === prof.id ? 'selected' : ''}>${escapeHtml(p.name)}</option>`).join('')}
-                <option value="todos">Todos os Profissionais</option>
-              </select>
-            </div>
-          ` : ''}
         </div>
 
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px;">
-          <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 8px 10px;">
-            <div style="font-size: 0.68rem; color: #64748b; font-weight: 700; text-transform: uppercase;">💰 Faturado Mês</div>
-            <div style="font-size: 1rem; font-weight: 800; color: #16a34a; margin-top: 1px;">R$ ${totalNet.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-            <div style="font-size: 0.68rem; color: #94a3b8;">${closedCount} comanda(s)</div>
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;">
+          <div style="background: #ffffff; border: 1px solid #fed7aa; border-radius: 12px; padding: 8px 4px; text-align: center; box-shadow: 0 1px 2px rgba(0,0,0,0.03); display: flex; flex-direction: column; justify-content: center; min-width: 0;">
+            <div style="font-size: 0.65rem; color: #64748b; font-weight: 700; text-transform: uppercase; letter-spacing: 0.2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">💰 Faturado</div>
+            <div style="font-size: clamp(0.76rem, 2.5vw, 0.95rem); font-weight: 800; color: #16a34a; margin: 3px 0 1px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="R$ ${totalNet.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}">R$ ${totalNet.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+            <div style="font-size: 0.63rem; color: #94a3b8; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${closedCount} comanda(s)</div>
           </div>
-          <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 8px 10px;">
-            <div style="font-size: 0.68rem; color: #64748b; font-weight: 700; text-transform: uppercase;">🤝 Sua Comissão</div>
-            <div style="font-size: 1rem; font-weight: 800; color: #d97706; margin-top: 1px;">R$ ${profComm.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-            <div style="font-size: 0.68rem; color: #94a3b8;">A repassar (${prof.commissionDefault || 50}%)</div>
+          <div style="background: #ffffff; border: 1px solid #fed7aa; border-radius: 12px; padding: 8px 4px; text-align: center; box-shadow: 0 1px 2px rgba(0,0,0,0.03); display: flex; flex-direction: column; justify-content: center; min-width: 0;">
+            <div style="font-size: 0.65rem; color: #64748b; font-weight: 700; text-transform: uppercase; letter-spacing: 0.2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">🤝 Comissão</div>
+            <div style="font-size: clamp(0.76rem, 2.5vw, 0.95rem); font-weight: 800; color: #d97706; margin: 3px 0 1px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="R$ ${profComm.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}">R$ ${profComm.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+            <div style="font-size: 0.63rem; color: #94a3b8; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${prof.commissionDefault || 50}% base</div>
           </div>
-          <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 8px 10px;">
-            <div style="font-size: 0.68rem; color: #64748b; font-weight: 700; text-transform: uppercase;">🎯 Meta Mensal</div>
-            <div style="font-size: 1rem; font-weight: 800; color: var(--orange, #ff6900); margin-top: 1px;">R$ ${goal.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}</div>
-            <div style="font-size: 0.68rem; color: ${pct >= 100 ? '#16a34a' : '#64748b'}; font-weight: 600;">${pct}% atingida</div>
+          <div style="background: #ffffff; border: 1px solid #fed7aa; border-radius: 12px; padding: 8px 4px; text-align: center; box-shadow: 0 1px 2px rgba(0,0,0,0.03); display: flex; flex-direction: column; justify-content: center; min-width: 0;">
+            <div style="font-size: 0.65rem; color: #64748b; font-weight: 700; text-transform: uppercase; letter-spacing: 0.2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">🎯 Meta</div>
+            <div style="font-size: clamp(0.76rem, 2.5vw, 0.95rem); font-weight: 800; color: var(--orange, #ff6900); margin: 3px 0 1px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="R$ ${goal.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}">R$ ${goal.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}</div>
+            <div style="font-size: 0.63rem; color: ${pct >= 100 ? '#16a34a' : '#64748b'}; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${pct}% atingida</div>
           </div>
         </div>
       </div>
     `;
   } else {
     heroHtml = `
-      <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 16px; padding: 14px 16px; margin-bottom: 14px;">
-        <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
-          <div>
-            <h4 style="margin: 0; font-size: 1.05rem; font-weight: 800; color: #0f172a;">Todas as Comandas do Salão</h4>
-            <div style="font-size: 0.78rem; color: #64748b; margin-top: 2px;">Visualizando lançamentos de toda a equipe</div>
+      <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 16px; padding: 14px 14px; margin-bottom: 14px;">
+        <div style="margin-bottom: 12px;">
+          <h4 style="margin: 0; font-size: 1.05rem; font-weight: 800; color: #0f172a;">Todas as Comandas do Salão</h4>
+          <div style="font-size: 0.76rem; color: #64748b; margin-top: 2px;">Visualizando lançamentos de toda a equipe</div>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;">
+          <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 8px 4px; text-align: center; box-shadow: 0 1px 2px rgba(0,0,0,0.02); min-width: 0;">
+            <div style="font-size: 0.65rem; color: #64748b; font-weight: 700; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">💰 Faturado</div>
+            <div style="font-size: clamp(0.76rem, 2.5vw, 0.95rem); font-weight: 800; color: #16a34a; margin: 3px 0 1px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">R$ ${totalNet.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+            <div style="font-size: 0.63rem; color: #94a3b8; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${closedCount} fechadas</div>
           </div>
-          ${isManager ? `
-            <div>
-              <select class="form-control" onchange="changeProfModalProf(this.value)" style="font-size: 0.8rem; height: 34px; padding: 4px 10px; border-radius: 9px; max-width: 180px;">
-                <option value="todos" selected>Todos os Profissionais</option>
-                ${(state.professionals || []).map(p => `<option value="${p.id}">${escapeHtml(p.name)}</option>`).join('')}
-              </select>
-            </div>
-          ` : ''}
+          <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 8px 4px; text-align: center; box-shadow: 0 1px 2px rgba(0,0,0,0.02); min-width: 0;">
+            <div style="font-size: 0.65rem; color: #64748b; font-weight: 700; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">🤝 Comissões</div>
+            <div style="font-size: clamp(0.76rem, 2.5vw, 0.95rem); font-weight: 800; color: #d97706; margin: 3px 0 1px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">R$ ${profComm.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+            <div style="font-size: 0.63rem; color: #94a3b8; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Total equipe</div>
+          </div>
+          <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 8px 4px; text-align: center; box-shadow: 0 1px 2px rgba(0,0,0,0.02); min-width: 0;">
+            <div style="font-size: 0.65rem; color: #64748b; font-weight: 700; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">📋 Comandas</div>
+            <div style="font-size: clamp(0.76rem, 2.5vw, 0.95rem); font-weight: 800; color: var(--orange, #ff6900); margin: 3px 0 1px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${comandaRecords.length}</div>
+            <div style="font-size: 0.63rem; color: #94a3b8; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">No mês</div>
+          </div>
         </div>
       </div>
     `;
@@ -6274,25 +6287,28 @@ window.renderProfComandasModalBody = function() {
   // 2. Controles de Filtro e Segmented Pills
   const controlsHtml = `
     <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 14px; padding: 12px 14px; margin-bottom: 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; margin-bottom: 10px;">
-        <div>
-          <label style="display: block; font-size: 0.7rem; font-weight: 700; color: #64748b; text-transform: uppercase; margin-bottom: 3px;">🔍 Buscar</label>
-          <input type="text" class="form-control" id="profModalSearchInput" placeholder="Cliente ou item..." value="${escapeHtml(profModalSearchTerm)}" oninput="handleProfModalSearch(this.value)" style="font-size: 0.82rem; padding: 6px 10px; border-radius: 8px; height: 34px;">
-        </div>
+      <!-- Campo Buscar ocupando 100% da largura -->
+      <div style="margin-bottom: 8px;">
+        <label style="display: block; font-size: 0.7rem; font-weight: 700; color: #64748b; text-transform: uppercase; margin-bottom: 3px;">🔍 Buscar</label>
+        <input type="text" class="form-control" id="profModalSearchInput" placeholder="Buscar por cliente, telefone ou serviço..." value="${escapeHtml(profModalSearchTerm)}" oninput="handleProfModalSearch(this.value)" style="width: 100%; box-sizing: border-box; font-size: 0.82rem; padding: 7px 10px; border-radius: 8px; height: 36px;">
+      </div>
+
+      <!-- Seletores Dia e Status logo abaixo em grid de 2 colunas -->
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px;">
         <div>
           <label style="display: block; font-size: 0.7rem; font-weight: 700; color: #64748b; text-transform: uppercase; margin-bottom: 3px;">📅 Dia</label>
-          <select class="form-control" style="font-size: 0.82rem; padding: 5px 8px; border-radius: 8px; height: 34px;" onchange="setProfModalDayFilter(this.value)">
+          <select class="form-control" style="width: 100%; box-sizing: border-box; font-size: 0.8rem; padding: 6px 8px; border-radius: 8px; height: 36px;" onchange="setProfModalDayFilter(this.value)">
             <option value="" ${!profModalDayFilter ? 'selected' : ''}>Todos os dias (${comandaRecords.length})</option>
             ${availableDays.map(d => {
               const [y, m, dayNum] = d.split('-');
               const info = daysMap[d];
-              return `<option value="${d}" ${profModalDayFilter === d ? 'selected' : ''}>${dayNum}/${m} (${info.count} comandas · R$ ${info.total.toLocaleString('pt-BR', { minimumFractionDigits: 0 })})</option>`;
+              return `<option value="${d}" ${profModalDayFilter === d ? 'selected' : ''}>${dayNum}/${m} (${info.count} · R$ ${info.total.toLocaleString('pt-BR', { minimumFractionDigits: 0 })})</option>`;
             }).join('')}
           </select>
         </div>
         <div>
           <label style="display: block; font-size: 0.7rem; font-weight: 700; color: #64748b; text-transform: uppercase; margin-bottom: 3px;">🏷️ Status</label>
-          <select class="form-control" style="font-size: 0.82rem; padding: 5px 8px; border-radius: 8px; height: 34px;" onchange="setProfModalStatusFilter(this.value)">
+          <select class="form-control" style="width: 100%; box-sizing: border-box; font-size: 0.8rem; padding: 6px 8px; border-radius: 8px; height: 36px;" onchange="setProfModalStatusFilter(this.value)">
             <option value="todos" ${profModalStatusFilter === 'todos' ? 'selected' : ''}>Todos os Status</option>
             <option value="fechadas" ${profModalStatusFilter === 'fechadas' ? 'selected' : ''}>✓ Fechadas</option>
             <option value="abertas" ${profModalStatusFilter === 'abertas' ? 'selected' : ''}>⏳ Em Aberto</option>
@@ -6420,21 +6436,23 @@ window.renderProfComandasModalBody = function() {
             </div>
 
             <!-- Botões de Ação -->
-            <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+            <div style="display: flex; flex-direction: column; gap: 6px; margin-top: 8px;">
               ${r.appointmentId ? `
-                <button type="button" class="btn-falcon btn-secondary" onclick="openComandaModal('${r.appointmentId}', event)" style="flex: 1; min-width: 90px; padding: 6px 10px; font-size: 0.78rem; font-weight: 600; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; gap: 4px;">
-                  <span>👁️</span> <span>Ver Comanda</span>
-                </button>
-                <button type="button" class="btn-falcon btn-primary" onclick="comandaEditAndReopen('${r.appointmentId}')" style="flex: 1; min-width: 90px; padding: 6px 10px; font-size: 0.78rem; font-weight: 600; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; gap: 4px;">
-                  <span>✏️</span> <span>Editar</span>
-                </button>
-                <button type="button" class="btn-falcon btn-secondary" onclick="comandaReturnToAgenda('${r.appointmentId}')" style="padding: 6px 10px; font-size: 0.78rem; font-weight: 600; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; gap: 4px; color: #64748b;" title="Retornar para a Agenda">
-                  <span>↩️</span> <span>Agenda</span>
+                <div style="display: flex; gap: 8px;">
+                  <button type="button" class="btn-falcon btn-secondary" onclick="openComandaModal('${r.appointmentId}', event)" style="flex: 1; padding: 8px 10px; font-size: 0.82rem; font-weight: 700; border-radius: 9px; display: inline-flex; align-items: center; justify-content: center; gap: 5px; white-space: nowrap;">
+                    <span>👁️</span> <span>Ver Comanda</span>
+                  </button>
+                  <button type="button" class="btn-falcon btn-primary" onclick="comandaEditAndReopen('${r.appointmentId}')" style="flex: 1; padding: 8px 10px; font-size: 0.82rem; font-weight: 700; border-radius: 9px; display: inline-flex; align-items: center; justify-content: center; gap: 5px; white-space: nowrap;">
+                    <span>✏️</span> <span>Editar</span>
+                  </button>
+                </div>
+                <button type="button" onclick="comandaReturnToAgenda('${r.appointmentId}')" style="width: 100%; padding: 6px 10px; font-size: 0.76rem; font-weight: 600; border-radius: 8px; background: transparent; border: 1px dashed #cbd5e1; color: #64748b; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 5px; transition: all 0.15s;" onmouseover="this.style.background='#f1f5f9'; this.style.borderColor='#94a3b8'; this.style.color='#334155';" onmouseout="this.style.background='transparent'; this.style.borderColor='#cbd5e1'; this.style.color='#64748b';">
+                  <span>↩️</span> <span>Voltar atendimento para a Agenda</span>
                 </button>
               ` : `
-                <button type="button" class="btn-falcon btn-secondary" style="flex: 1; padding: 6px 10px; font-size: 0.78rem; font-weight: 600; border-radius: 8px;" disabled>
-                  Venda Avulsa
-                </button>
+                <div style="padding: 7px 10px; font-size: 0.78rem; font-weight: 600; border-radius: 8px; background: #f8fafc; border: 1px solid #e2e8f0; color: #64748b; text-align: center;">
+                  🛍️ Venda de Balcão (Avulsa)
+                </div>
               `}
             </div>
           </div>
@@ -6444,6 +6462,7 @@ window.renderProfComandasModalBody = function() {
   }
 
   bodyEl.innerHTML = `
+    ${managerProfSelectorHtml}
     ${heroHtml}
     ${controlsHtml}
     ${contentHtml}
